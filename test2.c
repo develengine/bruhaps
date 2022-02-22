@@ -129,6 +129,9 @@ int bagE_main(int argc, char *argv[])
     int fragmentShader = loadShader("shaders/fragment.glsl", GL_FRAGMENT_SHADER);
     int program = glCreateProgram();
 
+
+    bagE_getWindowSize(&windowWidth, &windowHeight);
+
     glAttachShader(program, vertexShader);
     glAttachShader(program, fragmentShader);
     // FIXME check if linking went well
@@ -138,10 +141,6 @@ int bagE_main(int argc, char *argv[])
     glDeleteShader(vertexShader);
     glDetachShader(program, fragmentShader);
     glDeleteShader(fragmentShader);
-
-    glProgramUniform2i(program, 1, 100, 100);
-    glProgramUniform2i(program, 2, 500, 500);
-    glProgramUniform4f(program, 3, 1.0f, 0.0f, 0.0f, 1.0f);
 
     unsigned vao;
     glGenVertexArrays(1, &vao);
@@ -155,15 +154,18 @@ int bagE_main(int argc, char *argv[])
         if (!running)
             break;
 
-        glProgramUniform2i(program, 0, windowWidth, windowHeight);
-
         glClearColor(
-                (float)(rand() % 256) / 255.f,
-                (float)(rand() % 256) / 255.f,
-                (float)(rand() % 256) / 255.f,
+		0.0f,
+		0.0f,
+		0.0f,
                 1.0f
         );
         glClear(GL_COLOR_BUFFER_BIT);
+
+        glProgramUniform2i(program, 1, 100, 100);
+        glProgramUniform2i(program, 2, 500, 500);
+        glProgramUniform4f(program, 3, 1.0f, 0.0f, 0.0f, 1.0f);
+        glProgramUniform2i(program, 0, windowWidth, windowHeight);
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 

@@ -16,7 +16,6 @@ out V_OUT
     vec4 color;
 } frag;
 
-
 layout(location = 0) uniform ivec2 u_winRes;
 layout(location = 1) uniform ivec2 u_position;
 layout(location = 2) uniform ivec2 u_size;
