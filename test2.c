@@ -109,10 +109,8 @@ int loadShader(const char *path, GLenum type)
 }
 
 
-int bagE_main(int argc, char *argv[])
+void printContextInfo()
 {
-    glEnable(GL_DEBUG_OUTPUT);
-    glDebugMessageCallback(openglCallback, 0); 
 
     printf("Adaptive vsync: %d\n", bagE_isAdaptiveVsyncAvailable());
 
@@ -122,6 +120,15 @@ int bagE_main(int argc, char *argv[])
     const char *shadingLanguageVersionString = (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
     printf("Vendor: %s\nRenderer: %s\nVersion: %s\nShading Language version: %s\n",
         vendorString, rendererString, versionString, shadingLanguageVersionString);
+}
+
+
+int bagE_main(int argc, char *argv[])
+{
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(openglCallback, 0); 
+
+    printContextInfo();
 
     bagE_setWindowTitle("BRUHAPS");
 
@@ -141,6 +148,10 @@ int bagE_main(int argc, char *argv[])
     glDeleteShader(vertexShader);
     glDetachShader(program, fragmentShader);
     glDeleteShader(fragmentShader);
+
+    glProgramUniform2i(program, 1, 100, 100);
+    glProgramUniform2i(program, 2, 500, 500);
+    glProgramUniform4f(program, 3, 1.0f, 0.0f, 0.0f, 1.0f);
 
     unsigned vao;
     glGenVertexArrays(1, &vao);
@@ -162,9 +173,6 @@ int bagE_main(int argc, char *argv[])
         );
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glProgramUniform2i(program, 1, 100, 100);
-        glProgramUniform2i(program, 2, 500, 500);
-        glProgramUniform4f(program, 3, 1.0f, 0.0f, 0.0f, 1.0f);
         glProgramUniform2i(program, 0, windowWidth, windowHeight);
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
