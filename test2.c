@@ -101,7 +101,7 @@ int loadShader(const char *path, GLenum type)
         glGetShaderInfoLog(shader, 512, NULL, infoLog);
         fprintf(stderr, "[\033[1;31mERROR\033[0m] Failed to compile shader '%s'!\n"
                         "%s", path, infoLog);
-        exit(-1);
+        exit(1);
     }
 
     free(source);
@@ -132,17 +132,25 @@ int bagE_main(int argc, char *argv[])
 
     bagE_setWindowTitle("BRUHAPS");
 
+    bagE_getWindowSize(&windowWidth, &windowHeight);
+
     int vertexShader = loadShader("shaders/vertex.glsl", GL_VERTEX_SHADER);
     int fragmentShader = loadShader("shaders/fragment.glsl", GL_FRAGMENT_SHADER);
     int program = glCreateProgram();
 
-
-    bagE_getWindowSize(&windowWidth, &windowHeight);
-
     glAttachShader(program, vertexShader);
     glAttachShader(program, fragmentShader);
-    // FIXME check if linking went well
     glLinkProgram(program);
+
+    int success;
+    char infoLog[512];
+    glGetProgramiv(program, GL_LINK_STATUS, &success);
+    if (!success) {
+        glGetProgramInfoLog(program, 512, NULL, infoLog);
+        fprintf(stderr, "[\033[1;31mERROR\033[0m] Failed to link shader program!\n"
+                        "%s", infoLog);
+        exit(1);
+    }
 
     glDetachShader(program, vertexShader);
     glDeleteShader(vertexShader);
@@ -151,7 +159,6 @@ int bagE_main(int argc, char *argv[])
 
     glProgramUniform2i(program, 1, 100, 100);
     glProgramUniform2i(program, 2, 500, 500);
-    glProgramUniform4f(program, 3, 1.0f, 0.0f, 0.0f, 1.0f);
 
     unsigned vao;
     glGenVertexArrays(1, &vao);
@@ -166,20 +173,27 @@ int bagE_main(int argc, char *argv[])
             break;
 
         glClearColor(
-		0.0f,
-		0.0f,
-		0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
                 1.0f
         );
         glClear(GL_COLOR_BUFFER_BIT);
 
         glProgramUniform2i(program, 0, windowWidth, windowHeight);
+        glProgramUniform4f(program, 3,
+                (float)(rand() % 256) / 255.f,
+                (float)(rand() % 256) / 255.f,
+                (float)(rand() % 256) / 255.f,
+                1.0f
+        );
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         bagE_swapBuffers();
     }
 
+  
     glDeleteVertexArrays(1, &vao);
     glDeleteProgram(program);
 
