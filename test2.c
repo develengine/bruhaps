@@ -126,7 +126,7 @@ void printContextInfo()
 int bagE_main(int argc, char *argv[])
 {
     glEnable(GL_DEBUG_OUTPUT);
-    glDebugMessageCallback(openglCallback, 0); 
+    glDebugMessageCallback(openglCallback, 0);
 
     printContextInfo();
 
