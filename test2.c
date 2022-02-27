@@ -27,6 +27,20 @@ void GLAPIENTRY openglCallback(
 }
 
 
+void printContextInfo()
+{
+
+    printf("Adaptive vsync: %d\n", bagE_isAdaptiveVsyncAvailable());
+
+    const char *vendorString = (const char*)glGetString(GL_VENDOR);
+    const char *rendererString = (const char*)glGetString(GL_RENDERER);
+    const char *versionString = (const char*)glGetString(GL_VERSION);
+    const char *shadingLanguageVersionString = (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+    printf("Vendor: %s\nRenderer: %s\nVersion: %s\nShading Language version: %s\n",
+        vendorString, rendererString, versionString, shadingLanguageVersionString);
+}
+
+
 /* WOAH */
 char *readFile(const char *name)
 {
@@ -109,33 +123,10 @@ int loadShader(const char *path, GLenum type)
 }
 
 
-void printContextInfo()
+int createProgram(const char *vertexPath, const char *fragmentPath)
 {
-
-    printf("Adaptive vsync: %d\n", bagE_isAdaptiveVsyncAvailable());
-
-    const char *vendorString = (const char*)glGetString(GL_VENDOR);
-    const char *rendererString = (const char*)glGetString(GL_RENDERER);
-    const char *versionString = (const char*)glGetString(GL_VERSION);
-    const char *shadingLanguageVersionString = (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
-    printf("Vendor: %s\nRenderer: %s\nVersion: %s\nShading Language version: %s\n",
-        vendorString, rendererString, versionString, shadingLanguageVersionString);
-}
-
-
-int bagE_main(int argc, char *argv[])
-{
-    glEnable(GL_DEBUG_OUTPUT);
-    glDebugMessageCallback(openglCallback, 0);
-
-    printContextInfo();
-
-    bagE_setWindowTitle("BRUHAPS");
-
-    bagE_getWindowSize(&windowWidth, &windowHeight);
-
-    int vertexShader = loadShader("shaders/vertex.glsl", GL_VERTEX_SHADER);
-    int fragmentShader = loadShader("shaders/fragment.glsl", GL_FRAGMENT_SHADER);
+    int vertexShader = loadShader(vertexPath, GL_VERTEX_SHADER);
+    int fragmentShader = loadShader(fragmentPath, GL_FRAGMENT_SHADER);
     int program = glCreateProgram();
 
     glAttachShader(program, vertexShader);
@@ -157,6 +148,22 @@ int bagE_main(int argc, char *argv[])
     glDetachShader(program, fragmentShader);
     glDeleteShader(fragmentShader);
 
+    return program;
+}
+
+
+int bagE_main(int argc, char *argv[])
+{
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(openglCallback, 0);
+
+    printContextInfo();
+
+    bagE_setWindowTitle("BRUHAPS");
+
+    bagE_getWindowSize(&windowWidth, &windowHeight);
+
+    int program = createProgram("shaders/vertex.glsl", "shaders/fragment.glsl");
     glProgramUniform2i(program, 1, 100, 100);
     glProgramUniform2i(program, 2, 500, 500);
 
