@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 
 static int running = 1;
 int windowWidth, windowHeight;
@@ -27,7 +28,7 @@ void GLAPIENTRY openglCallback(
 }
 
 
-void printContextInfo()
+static void printContextInfo()
 {
 
     printf("Adaptive vsync: %d\n", bagE_isAdaptiveVsyncAvailable());
@@ -42,7 +43,7 @@ void printContextInfo()
 
 
 /* WOAH */
-char *readFile(const char *name)
+static char *readFile(const char *name)
 {
     FILE *file = NULL;
     char *contents = NULL;
@@ -98,7 +99,7 @@ error_exit:
 }
 
 
-int loadShader(const char *path, GLenum type)
+static int loadShader(const char *path, GLenum type)
 {
     char *source = readFile(path);
     if (!source)
@@ -123,7 +124,7 @@ int loadShader(const char *path, GLenum type)
 }
 
 
-int createProgram(const char *vertexPath, const char *fragmentPath)
+static int createProgram(const char *vertexPath, const char *fragmentPath)
 {
     int vertexShader = loadShader(vertexPath, GL_VERTEX_SHADER);
     int fragmentShader = loadShader(fragmentPath, GL_FRAGMENT_SHADER);
@@ -152,6 +153,26 @@ int createProgram(const char *vertexPath, const char *fragmentPath)
 }
 
 
+static float cubeVertices[] = {
+    // front face
+    -1.0f, 1.0f, 1.0f,
+    -1.0f,-1.0f, 1.0f,
+     1.0f,-1.0f, 1.0f,
+     1.0f, 1.0f, 1.0f,
+    // back face
+    -1.0f, 1.0f,-1.0f,
+    -1.0f,-1.0f,-1.0f,
+     1.0f,-1.0f,-1.0f,
+     1.0f, 1.0f,-1.0f,
+};
+
+static int cubeIndices[] = {
+    // front face
+    0, 1, 2,
+    2, 3, 0,
+};
+
+
 int bagE_main(int argc, char *argv[])
 {
     glEnable(GL_DEBUG_OUTPUT);
@@ -160,18 +181,25 @@ int bagE_main(int argc, char *argv[])
     printContextInfo();
 
     bagE_setWindowTitle("BRUHAPS");
-
     bagE_getWindowSize(&windowWidth, &windowHeight);
+    bagE_setSwapInterval(1);
 
-    int program = createProgram("shaders/vertex.glsl", "shaders/fragment.glsl");
-    glProgramUniform2i(program, 1, 100, 100);
-    glProgramUniform2i(program, 2, 500, 500);
+    int program = createProgram("shaders/proper_vert.glsl", "shaders/proper_frag.glsl");
+
+    unsigned vbo;
+    glCreateBuffers(1, &vbo);
+    glNamedBufferStorage(vbo, sizeof(cubeVertices), cubeVertices, 0);
 
     unsigned vao;
-    glGenVertexArrays(1, &vao);
+    glCreateVertexArrays(1, &vao);
+    glVertexArrayVertexBuffer(vao, 0, vbo, 0, sizeof(float) * 3);
+    glEnableVertexArrayAttrib(vao, 0);
+    // glVertexArrayAttribFormat(vao, 0, 
 
     glBindVertexArray(vao);
     glUseProgram(program);
+
+    double dt = 0;
 
     while (running) {
         bagE_pollEvents();
@@ -187,21 +215,25 @@ int bagE_main(int argc, char *argv[])
         );
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glProgramUniform2i(program, 0, windowWidth, windowHeight);
-        glProgramUniform4f(program, 3,
-                (float)(rand() % 256) / 255.f,
-                (float)(rand() % 256) / 255.f,
-                (float)(rand() % 256) / 255.f,
+        glProgramUniform3f(program, 0, 0.0f, 0.0f, 0.0f);
+        glProgramUniform3f(program, 1, 1.0f, 1.0f, 1.0f);
+        glProgramUniform4f(program, 2,
+                0.1f,
+                (sinf(dt) + 1.0) * 0.5,
+                0.5f,
                 1.0f
         );
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         bagE_swapBuffers();
+
+        dt += 0.1;
     }
 
   
     glDeleteVertexArrays(1, &vao);
+    glDeleteBuffers(1, &vbo);
     glDeleteProgram(program);
 
     return 0;
