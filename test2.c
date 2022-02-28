@@ -6,6 +6,8 @@
 #include <time.h>
 #include <math.h>
 
+#define length(x) (sizeof(x)/sizeof(*x))
+
 static int running = 1;
 int windowWidth, windowHeight;
 
@@ -28,7 +30,7 @@ void GLAPIENTRY openglCallback(
 }
 
 
-static void printContextInfo()
+static void printContextInfo(void)
 {
 
     printf("Adaptive vsync: %d\n", bagE_isAdaptiveVsyncAvailable());
@@ -155,22 +157,120 @@ static int createProgram(const char *vertexPath, const char *fragmentPath)
 
 static float cubeVertices[] = {
     // front face
-    -1.0f, 1.0f, 1.0f,
-    -1.0f,-1.0f, 1.0f,
-     1.0f,-1.0f, 1.0f,
-     1.0f, 1.0f, 1.0f,
+    -1.0f, 1.0f, 1.0f,  // 0      3
+    -1.0f,-1.0f, 1.0f,  // 
+     1.0f,-1.0f, 1.0f,  // 
+     1.0f, 1.0f, 1.0f,  // 1      2
     // back face
-    -1.0f, 1.0f,-1.0f,
-    -1.0f,-1.0f,-1.0f,
-     1.0f,-1.0f,-1.0f,
-     1.0f, 1.0f,-1.0f,
+    -1.0f, 1.0f,-1.0f,  // 4      7
+    -1.0f,-1.0f,-1.0f,  // 
+     1.0f,-1.0f,-1.0f,  // 
+     1.0f, 1.0f,-1.0f,  // 5      6
 };
 
-static int cubeIndices[] = {
+static unsigned cubeIndices[] = {
     // front face
     0, 1, 2,
     2, 3, 0,
+    // TODO
 };
+
+
+typedef struct {
+    float data[16];
+} Matrix;
+
+
+static inline Matrix matrixIdentity(void)
+{
+    Matrix res = {{
+         1.0f, 0.0f, 0.0f, 0.0f,
+         0.0f, 1.0f, 0.0f, 0.0f,
+         0.0f, 0.0f, 1.0f, 0.0f,
+         0.0f, 0.0f, 0.0f, 1.0f,
+    }};
+    return res;
+}
+
+
+static inline Matrix matrixScale(float x, float y, float z)
+{
+    Matrix res = {{
+         x,    0.0f, 0.0f, 0.0f,
+         0.0f, y,    0.0f, 0.0f,
+         0.0f, 0.0f, z,    0.0f,
+         0.0f, 0.0f, 0.0f, 1.0f,
+    }};
+    return res;
+}
+
+
+static inline Matrix matrixTranslation(float x, float y, float z)
+{
+    Matrix res = {{
+         1.0f, 0.0f, 0.0f, x,
+         0.0f, 1.0f, 0.0f, y,
+         0.0f, 0.0f, 1.0f, z,
+         0.0f, 0.0f, 0.0f, 1.0f,
+    }};
+    return res;
+}
+
+
+static inline Matrix matrixRotationX(float angle)
+{
+    Matrix res = {{
+         1.0f, 0.0f,        0.0f,        0.0f,
+         0.0f, cosf(angle),-sinf(angle), 0.0f,
+         0.0f, sinf(angle), cosf(angle), 0.0f,
+         0.0f, 0.0f,        0.0f,        1.0f,
+    }};
+    return res;
+}
+
+
+static inline Matrix matrixRotationY(float angle)
+{
+    Matrix res = {{
+         cosf(angle), 0.0f, sinf(angle), 0.0f,
+         0.0f,        1.0f, 0.0f,        0.0f,
+        -sinf(angle), 0.0f, cosf(angle), 0.0f,
+         0.0f,        0.0f, 0.0f,        1.0f,
+    }};
+    return res;
+}
+
+
+static inline Matrix matrixMultiply(const Matrix *mat1, const Matrix *mat2)
+{
+    const float *m1 = mat1->data;
+    const float *m2 = mat2->data;
+
+    Matrix res;
+
+    for (int y = 0; y < 4; ++y) {
+        for (int x = 0; x < 4; ++x) {
+            res.data[y * 4 + x] = m1[y * 4 + 0] * m2[0 * 4 + x]
+                                + m1[y * 4 + 1] * m2[1 * 4 + x]
+                                + m1[y * 4 + 2] * m2[2 * 4 + x]
+                                + m1[y * 4 + 3] * m2[3 * 4 + x];
+        }
+    }
+
+    return res;
+}
+
+
+static void printMatrix(const Matrix *mat)
+{
+    for (int y = 0; y < 4; ++y) {
+        printf("[ ");
+        for (int x = 0; x < 4; ++x) {
+            printf("%f ", mat->data[y * 4 + x]);
+        }
+        printf("]\n");
+    }
+}
 
 
 int bagE_main(int argc, char *argv[])
@@ -184,17 +284,32 @@ int bagE_main(int argc, char *argv[])
     bagE_getWindowSize(&windowWidth, &windowHeight);
     bagE_setSwapInterval(1);
 
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    Matrix mat = matrixScale(3.0f, 1.0f, 2.0f);
+    Matrix tmp = matrixTranslation(0.5f, 0.6f, 0.3f);
+    mat = matrixMultiply(&mat, &tmp);
+    printMatrix(&mat);
+
     int program = createProgram("shaders/proper_vert.glsl", "shaders/proper_frag.glsl");
 
     unsigned vbo;
     glCreateBuffers(1, &vbo);
     glNamedBufferStorage(vbo, sizeof(cubeVertices), cubeVertices, 0);
 
+    unsigned ebo;
+    glCreateBuffers(1, &ebo);
+    glNamedBufferStorage(ebo, sizeof(cubeIndices), cubeIndices, 0);
+
     unsigned vao;
     glCreateVertexArrays(1, &vao);
     glVertexArrayVertexBuffer(vao, 0, vbo, 0, sizeof(float) * 3);
     glEnableVertexArrayAttrib(vao, 0);
-    // glVertexArrayAttribFormat(vao, 0, 
+    glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribBinding(vao, 0, 0);
+
+    glVertexArrayElementBuffer(vao, ebo);
+    
 
     glBindVertexArray(vao);
     glUseProgram(program);
@@ -208,23 +323,23 @@ int bagE_main(int argc, char *argv[])
             break;
 
         glClearColor(
-                0.0f,
-                0.0f,
-                0.0f,
+                0.1f,
+                0.2f,
+                0.3f,
                 1.0f
         );
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glProgramUniform3f(program, 0, 0.0f, 0.0f, 0.0f);
-        glProgramUniform3f(program, 1, 1.0f, 1.0f, 1.0f);
+        glProgramUniform3f(program, 0, 0.25f, 0.0f, 0.0f);
+        glProgramUniform3f(program, 1, 0.5f, 0.5f, 0.5f);
         glProgramUniform4f(program, 2,
                 0.1f,
-                (sinf(dt) + 1.0) * 0.5,
+                (sin(dt) + 1.0) * 0.5,
                 0.5f,
                 1.0f
         );
 
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawElements(GL_TRIANGLES, length(cubeIndices), GL_UNSIGNED_INT, 0);
 
         bagE_swapBuffers();
 
@@ -234,6 +349,7 @@ int bagE_main(int argc, char *argv[])
   
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &ebo);
     glDeleteProgram(program);
 
     return 0;
