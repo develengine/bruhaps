@@ -173,7 +173,15 @@ static unsigned cubeIndices[] = {
     // front face
     0, 1, 2,
     2, 3, 0,
-    // TODO
+    // right face
+    3, 2, 6,
+    6, 7, 3,
+    // left face
+    4, 5, 1,
+    1, 0, 4,
+    // back face
+    7, 6, 5,
+    5, 4, 7,
 };
 
 
@@ -254,23 +262,50 @@ static inline Matrix matrixRotationZ(float angle)
 }
 
 
+#if 1
 static inline Matrix matrixProjection(float fov, float width, float height, float np, float fp)
 {
     float ar = width / height;
-    float ys = (1.0f / tanf((fov / 2.0f) * M_PI / 180)) * ar;
+    float ys = (float)((1.0 / tan((fov / 2.0) * M_PI / 180)) * ar);
     float xs = ys / ar;
     float flen = fp - np;
 
+#if 1
+    Matrix res = {{
+         xs,   0.0f, 0.0f,                   0.0f,
+         0.0f, ys,   0.0f,                   0.0f,
+         0.0f, 0.0f,-((fp + np) / flen),    -1.0f,
+         0.0f, 0.0f,-((2 * np * fp) / flen), 1.0f,
+    }};
+#else
     Matrix res = {{
          xs, 0, 0,                      0,
          0, ys, 0,                      0,
-         0,  0,-((fp + np) / flen),    -1,
-         0,  0,-((2 * np * fp) / flen), 1,
+         0,  0,-((fp + np) / flen),-((2 * np * fp) / flen),
+         0,  0, -1, 1,
+    }};
+#endif
+
+    return res;
+}
+#else
+static inline Matrix matrixProjection(float fov, float width, float height, float np, float fp)
+{
+    float top = np * tanf((M_PI * fov) / 360.0f);
+    float bottom = -top;
+    float right = top * (width / height);
+    float left = -right;
+
+    Matrix res = {{
+         (2 * np) / (right - left), 0.0f, 0.0f, 0.0f,
+         0.0f, (2 * np) / (top - bottom), 0.0f, 0.0f,
+         (right + left)/ (right - left), (top + bottom) / (top - bottom),-((fp + np)/(fp - np)),-1.0f,
+         0.0f, 0.0f, -((2 * fp * np)/(fp - np)), 0.0f,
     }};
 
     return res;
 }
-
+#endif
 
 static inline Matrix matrixMultiply(const Matrix *mat1, const Matrix *mat2)
 {
@@ -311,6 +346,11 @@ static int running = 1;
 static int windowWidth, windowHeight;
 static int windowChanged = 0;
 
+static int leftDown  = 0;
+static int rightDown = 0;
+static int forthDown = 0;
+static int backDown  = 0;
+
 
 int bagE_main(int argc, char *argv[])
 {
@@ -323,7 +363,13 @@ int bagE_main(int argc, char *argv[])
     bagE_getWindowSize(&windowWidth, &windowHeight);
     bagE_setSwapInterval(1);
 
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glFrontFace(GL_CCW);
+    glCullFace(GL_BACK);
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     int program = createProgram("shaders/proper_vert.glsl", "shaders/proper_frag.glsl");
 
@@ -368,17 +414,30 @@ int bagE_main(int argc, char *argv[])
                 0.3f,
                 1.0f
         );
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        objX = cos(t / 2);
-        objY = sin(t / 2);
-        objZ = -2.0f;
+        if (leftDown)
+            camX -= 0.1;
+        if (rightDown)
+            camX += 0.1;
+        if (forthDown)
+            camZ -= 0.1;
+        if (backDown)
+            camZ += 0.1;
+
+        // objX = cos(t / 2);
+        // objY = sin(t / 2);
+        objX = 0.0f;
+        objY = 0.0f;
+        objZ = -10.0f;
+
 
         /* model */
         Matrix mvp = matrixScale(objScale, objScale, objScale);
 
-        Matrix mul = matrixRotationZ(t);
-        mvp = matrixMultiply(&mul, &mvp);
+        Matrix mul;
+        // Matrix mul = matrixRotationZ(t);
+        // mvp = matrixMultiply(&mul, &mvp);
 
         mul = matrixTranslation(objX, objY, objZ);
         mvp = matrixMultiply(&mul, &mvp);
@@ -395,9 +454,9 @@ int bagE_main(int argc, char *argv[])
 
         /* projection */
         mul = matrixProjection(90.0f, windowWidth, windowHeight, 0.1f, 100.0f);
-        printMatrix(&mul);
-        printf("\n");
         mvp = matrixMultiply(&mul, &mvp);
+        // printMatrix(&mul);
+        // printf("\n");
 
         glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, mvp.data);
         glProgramUniform4f(program, 1,
@@ -413,7 +472,6 @@ int bagE_main(int argc, char *argv[])
 
         t += 0.1;
     }
-
   
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
@@ -426,6 +484,8 @@ int bagE_main(int argc, char *argv[])
 
 int bagE_eventHandler(bagE_Event *event)
 {
+    int keyDown = 0;
+
     switch (event->type)
     {
         case bagE_EventWindowClose:
@@ -439,6 +499,27 @@ int bagE_eventHandler(bagE_Event *event)
             windowChanged = 1;
             glViewport(0, 0, wr->width, wr->height);
         } break;
+
+        case bagE_EventKeyDown: 
+            keyDown = 1;
+        case bagE_EventKeyUp: {
+            bagE_Key *key = &(event->data.key);
+            switch (key->key) {
+                case KEY_A:
+                    leftDown = keyDown;
+                    break;
+                case KEY_D:
+                    rightDown = keyDown;
+                    break;
+                case KEY_W:
+                    forthDown = keyDown;
+                    break;
+                case KEY_S:
+                    backDown = keyDown;
+                    break;
+            }
+        } break;
+
 
         default: break;
     }
