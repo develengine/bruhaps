@@ -6,10 +6,11 @@
 #include <time.h>
 #include <math.h>
 
-#define length(x) (sizeof(x)/sizeof(*x))
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
-static int running = 1;
-int windowWidth, windowHeight;
+#define length(x) (sizeof(x)/sizeof(*x))
 
 
 void GLAPIENTRY openglCallback(
@@ -208,10 +209,10 @@ static inline Matrix matrixScale(float x, float y, float z)
 static inline Matrix matrixTranslation(float x, float y, float z)
 {
     Matrix res = {{
-         1.0f, 0.0f, 0.0f, x,
-         0.0f, 1.0f, 0.0f, y,
-         0.0f, 0.0f, 1.0f, z,
-         0.0f, 0.0f, 0.0f, 1.0f,
+         1.0f, 0.0f, 0.0f, 0.0f,
+         0.0f, 1.0f, 0.0f, 0.0f,
+         0.0f, 0.0f, 1.0f, 0.0f,
+         x,    y,    z,    1.0f,
     }};
     return res;
 }
@@ -221,8 +222,8 @@ static inline Matrix matrixRotationX(float angle)
 {
     Matrix res = {{
          1.0f, 0.0f,        0.0f,        0.0f,
-         0.0f, cosf(angle),-sinf(angle), 0.0f,
-         0.0f, sinf(angle), cosf(angle), 0.0f,
+         0.0f, cosf(angle), sinf(angle), 0.0f,
+         0.0f,-sinf(angle), cosf(angle), 0.0f,
          0.0f, 0.0f,        0.0f,        1.0f,
     }};
     return res;
@@ -232,11 +233,41 @@ static inline Matrix matrixRotationX(float angle)
 static inline Matrix matrixRotationY(float angle)
 {
     Matrix res = {{
-         cosf(angle), 0.0f, sinf(angle), 0.0f,
+         cosf(angle), 0.0f,-sinf(angle), 0.0f,
          0.0f,        1.0f, 0.0f,        0.0f,
-        -sinf(angle), 0.0f, cosf(angle), 0.0f,
+         sinf(angle), 0.0f, cosf(angle), 0.0f,
          0.0f,        0.0f, 0.0f,        1.0f,
     }};
+    return res;
+}
+
+
+static inline Matrix matrixRotationZ(float angle)
+{
+    Matrix res = {{
+         cosf(angle), sinf(angle), 0.0f, 0.0f,
+        -sinf(angle), cosf(angle), 0.0f, 0.0f,
+         0.0f,        0.0f,        1.0f, 0.0f,
+         0.0f,        0.0f,        0.0f, 1.0f,
+    }};
+    return res;
+}
+
+
+static inline Matrix matrixProjection(float fov, float width, float height, float np, float fp)
+{
+    float ar = width / height;
+    float ys = (1.0f / tanf((fov / 2.0f) * M_PI / 180)) * ar;
+    float xs = ys / ar;
+    float flen = fp - np;
+
+    Matrix res = {{
+         xs, 0, 0,                      0,
+         0, ys, 0,                      0,
+         0,  0,-((fp + np) / flen),    -1,
+         0,  0,-((2 * np * fp) / flen), 1,
+    }};
+
     return res;
 }
 
@@ -250,15 +281,18 @@ static inline Matrix matrixMultiply(const Matrix *mat1, const Matrix *mat2)
 
     for (int y = 0; y < 4; ++y) {
         for (int x = 0; x < 4; ++x) {
-            res.data[y * 4 + x] = m1[y * 4 + 0] * m2[0 * 4 + x]
-                                + m1[y * 4 + 1] * m2[1 * 4 + x]
-                                + m1[y * 4 + 2] * m2[2 * 4 + x]
-                                + m1[y * 4 + 3] * m2[3 * 4 + x];
+            float value = 0;
+
+            for (int i = 0; i < 4; ++i)
+                value += m2[i * 4 + x] * m1[y * 4 + i];
+
+            res.data[4 * y + x] = value;
         }
     }
 
     return res;
 }
+
 
 
 static void printMatrix(const Matrix *mat)
@@ -273,6 +307,11 @@ static void printMatrix(const Matrix *mat)
 }
 
 
+static int running = 1;
+static int windowWidth, windowHeight;
+static int windowChanged = 0;
+
+
 int bagE_main(int argc, char *argv[])
 {
     glEnable(GL_DEBUG_OUTPUT);
@@ -285,11 +324,6 @@ int bagE_main(int argc, char *argv[])
     bagE_setSwapInterval(1);
 
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-    Matrix mat = matrixScale(3.0f, 1.0f, 2.0f);
-    Matrix tmp = matrixTranslation(0.5f, 0.6f, 0.3f);
-    mat = matrixMultiply(&mat, &tmp);
-    printMatrix(&mat);
 
     int program = createProgram("shaders/proper_vert.glsl", "shaders/proper_frag.glsl");
 
@@ -314,7 +348,13 @@ int bagE_main(int argc, char *argv[])
     glBindVertexArray(vao);
     glUseProgram(program);
 
-    double dt = 0;
+    double t = 0;
+
+    float camX = 0.0f, camY = 0.0f, camZ = 0.0f;
+    float camPitch = 0.0f, camYaw = 0.0f;
+
+    float objX, objY, objZ;
+    float objScale = 0.5f;
 
     while (running) {
         bagE_pollEvents();
@@ -330,11 +370,39 @@ int bagE_main(int argc, char *argv[])
         );
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glProgramUniform3f(program, 0, 0.25f, 0.0f, 0.0f);
-        glProgramUniform3f(program, 1, 0.5f, 0.5f, 0.5f);
-        glProgramUniform4f(program, 2,
+        objX = cos(t / 2);
+        objY = sin(t / 2);
+        objZ = -2.0f;
+
+        /* model */
+        Matrix mvp = matrixScale(objScale, objScale, objScale);
+
+        Matrix mul = matrixRotationZ(t);
+        mvp = matrixMultiply(&mul, &mvp);
+
+        mul = matrixTranslation(objX, objY, objZ);
+        mvp = matrixMultiply(&mul, &mvp);
+
+        /* view */
+        mul = matrixTranslation(-camX,-camY,-camZ);
+        mvp = matrixMultiply(&mul, &mvp);
+
+        mul = matrixRotationY(-camYaw);
+        mvp = matrixMultiply(&mul, &mvp);
+
+        mul = matrixRotationX(-camPitch);
+        mvp = matrixMultiply(&mul, &mvp);
+
+        /* projection */
+        mul = matrixProjection(90.0f, windowWidth, windowHeight, 0.1f, 100.0f);
+        printMatrix(&mul);
+        printf("\n");
+        mvp = matrixMultiply(&mul, &mvp);
+
+        glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, mvp.data);
+        glProgramUniform4f(program, 1,
                 0.1f,
-                (sin(dt) + 1.0) * 0.5,
+                (sin(t) + 1.0) * 0.5,
                 0.5f,
                 1.0f
         );
@@ -343,7 +411,7 @@ int bagE_main(int argc, char *argv[])
 
         bagE_swapBuffers();
 
-        dt += 0.1;
+        t += 0.1;
     }
 
   
@@ -368,6 +436,7 @@ int bagE_eventHandler(bagE_Event *event)
             bagE_WindowResize *wr = &(event->data.windowResize);
             windowWidth = wr->width;
             windowHeight = wr->height;
+            windowChanged = 1;
             glViewport(0, 0, wr->width, wr->height);
         } break;
 
