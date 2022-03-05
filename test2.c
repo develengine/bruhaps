@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
+#include <stdbool.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -280,7 +281,7 @@ static inline Matrix matrixProjection(float fov, float width, float height, floa
          xs,   0.0f, 0.0f,                   0.0f,
          0.0f, ys,   0.0f,                   0.0f,
          0.0f, 0.0f,-((fp + np) / flen),    -1.0f,
-         0.0f, 0.0f,-((2 * np * fp) / flen), 1.0f, // NOTE if 1.0f removes far plane clipping ???
+         0.0f, 0.0f,-((2 * np * fp) / flen), 0.0f, // NOTE if 1.0f removes far plane clipping ???
     }};
 
     return res;
@@ -340,16 +341,21 @@ void printMatrix(const Matrix *mat)
 }
 
 
+static const float MOUSE_SENSITIVITY = 0.005f;
+
+
 static int running = 1;
 static int windowWidth, windowHeight;
 static int windowChanged = 0;
 
 static int playerInput = 0;
 
-static int leftDown  = 0;
-static int rightDown = 0;
-static int forthDown = 0;
-static int backDown  = 0;
+static bool leftDown    = false;
+static bool rightDown   = false;
+static bool forthDown   = false;
+static bool backDown    = false;
+static bool ascendDown  = false;
+static bool descendDown = false;
 
 static int altDown     = 0;
 static float motionYaw   = 0.0f;
@@ -370,7 +376,7 @@ int bagE_main(int argc, char *argv[])
     glEnable(GL_CULL_FACE);
     glFrontFace(GL_CCW);
     glCullFace(GL_BACK);
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -419,28 +425,32 @@ int bagE_main(int argc, char *argv[])
         );
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        camPitch += motionPitch * 0.01f;
-        camYaw   += motionYaw   * 0.01f;
+        camPitch += motionPitch * MOUSE_SENSITIVITY;
+        camYaw   += motionYaw   * MOUSE_SENSITIVITY;
         motionPitch = 0.0f;
         motionYaw   = 0.0f;
 
         if (playerInput) {
             if (leftDown) {
-                camX -= 0.1 * cosf(camYaw);
-                camZ -= 0.1 * sinf(camYaw);
+                camX -= 0.1f * cosf(camYaw);
+                camZ -= 0.1f * sinf(camYaw);
             }
             if (rightDown) {
-                camX += 0.1 * cosf(camYaw);
-                camZ += 0.1 * sinf(camYaw);
+                camX += 0.1f * cosf(camYaw);
+                camZ += 0.1f * sinf(camYaw);
             }
             if (forthDown) {
-                camX += 0.1 * sinf(camYaw);
-                camZ -= 0.1 * cosf(camYaw);
+                camX += 0.1f * sinf(camYaw);
+                camZ -= 0.1f * cosf(camYaw);
             }
             if (backDown) {
-                camX -= 0.1 * sinf(camYaw);
-                camZ += 0.1 * cosf(camYaw);
+                camX -= 0.1f * sinf(camYaw);
+                camZ += 0.1f * cosf(camYaw);
             }
+            if (ascendDown)
+                camY += 0.1f;
+            if (descendDown)
+                camY -= 0.1f;
         }
 
         objX = 0.0f;
@@ -496,7 +506,7 @@ int bagE_main(int argc, char *argv[])
 
 int bagE_eventHandler(bagE_Event *event)
 {
-    int keyDown = 0;
+    bool keyDown = false;
 
     switch (event->type)
     {
@@ -513,7 +523,7 @@ int bagE_eventHandler(bagE_Event *event)
         } break;
 
         case bagE_EventKeyDown: 
-            keyDown = 1;
+            keyDown = true;
         case bagE_EventKeyUp: {
             bagE_Key *key = &(event->data.key);
             switch (key->key) {
@@ -528,6 +538,12 @@ int bagE_eventHandler(bagE_Event *event)
                     break;
                 case KEY_S:
                     backDown = keyDown;
+                    break;
+                case KEY_SPACE:
+                    ascendDown = keyDown;
+                    break;
+                case KEY_SHIFT_LEFT:
+                    descendDown = keyDown;
                     break;
                 case KEY_ALT_LEFT:
                     if (keyDown) {
