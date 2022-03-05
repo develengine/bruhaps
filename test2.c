@@ -182,6 +182,12 @@ static unsigned cubeIndices[] = {
     // back face
     7, 6, 5,
     5, 4, 7,
+    // top face
+    3, 7, 4,
+    4, 0, 3,
+    // bottom face
+    1, 5, 6,
+    6, 2, 1,
 };
 
 
@@ -265,26 +271,17 @@ static inline Matrix matrixRotationZ(float angle)
 #if 1
 static inline Matrix matrixProjection(float fov, float width, float height, float np, float fp)
 {
-    float ar = width / height;
-    float ys = (float)((1.0 / tan((fov / 2.0) * M_PI / 180)) * ar);
-    float xs = ys / ar;
+    float ar = height / width;
+    float xs = (float)((1.0 / tan((fov / 2.0) * M_PI / 180)) * ar);
+    float ys = xs / ar;
     float flen = fp - np;
 
-#if 1
     Matrix res = {{
          xs,   0.0f, 0.0f,                   0.0f,
          0.0f, ys,   0.0f,                   0.0f,
          0.0f, 0.0f,-((fp + np) / flen),    -1.0f,
-         0.0f, 0.0f,-((2 * np * fp) / flen), 1.0f,
+         0.0f, 0.0f,-((2 * np * fp) / flen), 1.0f, // NOTE if 1.0f removes far plane clipping ???
     }};
-#else
-    Matrix res = {{
-         xs, 0, 0,                      0,
-         0, ys, 0,                      0,
-         0,  0,-((fp + np) / flen),-((2 * np * fp) / flen),
-         0,  0, -1, 1,
-    }};
-#endif
 
     return res;
 }
@@ -299,7 +296,7 @@ static inline Matrix matrixProjection(float fov, float width, float height, floa
     Matrix res = {{
          (2 * np) / (right - left), 0.0f, 0.0f, 0.0f,
          0.0f, (2 * np) / (top - bottom), 0.0f, 0.0f,
-         (right + left)/ (right - left), (top + bottom) / (top - bottom),-((fp + np)/(fp - np)),-1.0f,
+         (right + left) / (right - left), (top + bottom) / (top - bottom),-((fp + np) / (fp - np)),-1.0f,
          0.0f, 0.0f, -((2 * fp * np)/(fp - np)), 0.0f,
     }};
 
@@ -314,14 +311,14 @@ static inline Matrix matrixMultiply(const Matrix *mat1, const Matrix *mat2)
 
     Matrix res;
 
-    for (int y = 0; y < 4; ++y) {
-        for (int x = 0; x < 4; ++x) {
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
             float value = 0;
 
-            for (int i = 0; i < 4; ++i)
-                value += m2[i * 4 + x] * m1[y * 4 + i];
+            for (int k = 0; k < 4; k++)
+                value += m2[j * 4 + k] * m1[k * 4 + i];
 
-            res.data[4 * y + x] = value;
+            res.data[j * 4 + i] = value;
         }
     }
 
@@ -330,8 +327,9 @@ static inline Matrix matrixMultiply(const Matrix *mat1, const Matrix *mat2)
 
 
 
-static void printMatrix(const Matrix *mat)
+void printMatrix(const Matrix *mat)
 {
+    printf("\n");
     for (int y = 0; y < 4; ++y) {
         printf("[ ");
         for (int x = 0; x < 4; ++x) {
@@ -346,11 +344,16 @@ static int running = 1;
 static int windowWidth, windowHeight;
 static int windowChanged = 0;
 
+static int playerInput = 0;
+
 static int leftDown  = 0;
 static int rightDown = 0;
 static int forthDown = 0;
 static int backDown  = 0;
 
+static int altDown     = 0;
+static float motionYaw   = 0.0f;
+static float motionPitch = 0.0f;
 
 int bagE_main(int argc, char *argv[])
 {
@@ -400,7 +403,7 @@ int bagE_main(int argc, char *argv[])
     float camPitch = 0.0f, camYaw = 0.0f;
 
     float objX, objY, objZ;
-    float objScale = 0.5f;
+    float objScale = 1.0f;
 
     while (running) {
         bagE_pollEvents();
@@ -416,28 +419,39 @@ int bagE_main(int argc, char *argv[])
         );
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        if (leftDown)
-            camX -= 0.1;
-        if (rightDown)
-            camX += 0.1;
-        if (forthDown)
-            camZ -= 0.1;
-        if (backDown)
-            camZ += 0.1;
+        camPitch += motionPitch * 0.01f;
+        camYaw   += motionYaw   * 0.01f;
+        motionPitch = 0.0f;
+        motionYaw   = 0.0f;
 
-        // objX = cos(t / 2);
-        // objY = sin(t / 2);
+        if (playerInput) {
+            if (leftDown) {
+                camX -= 0.1 * cosf(camYaw);
+                camZ -= 0.1 * sinf(camYaw);
+            }
+            if (rightDown) {
+                camX += 0.1 * cosf(camYaw);
+                camZ += 0.1 * sinf(camYaw);
+            }
+            if (forthDown) {
+                camX += 0.1 * sinf(camYaw);
+                camZ -= 0.1 * cosf(camYaw);
+            }
+            if (backDown) {
+                camX -= 0.1 * sinf(camYaw);
+                camZ += 0.1 * cosf(camYaw);
+            }
+        }
+
         objX = 0.0f;
         objY = 0.0f;
         objZ = -10.0f;
 
-
         /* model */
         Matrix mvp = matrixScale(objScale, objScale, objScale);
 
-        Matrix mul;
-        // Matrix mul = matrixRotationZ(t);
-        // mvp = matrixMultiply(&mul, &mvp);
+        Matrix mul = matrixRotationZ(t / 4);
+        mvp = matrixMultiply(&mul, &mvp);
 
         mul = matrixTranslation(objX, objY, objZ);
         mvp = matrixMultiply(&mul, &mvp);
@@ -446,17 +460,15 @@ int bagE_main(int argc, char *argv[])
         mul = matrixTranslation(-camX,-camY,-camZ);
         mvp = matrixMultiply(&mul, &mvp);
 
-        mul = matrixRotationY(-camYaw);
+        mul = matrixRotationY(camYaw);
         mvp = matrixMultiply(&mul, &mvp);
 
-        mul = matrixRotationX(-camPitch);
+        mul = matrixRotationX(camPitch);
         mvp = matrixMultiply(&mul, &mvp);
 
         /* projection */
         mul = matrixProjection(90.0f, windowWidth, windowHeight, 0.1f, 100.0f);
         mvp = matrixMultiply(&mul, &mvp);
-        // printMatrix(&mul);
-        // printf("\n");
 
         glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, mvp.data);
         glProgramUniform4f(program, 1,
@@ -517,9 +529,27 @@ int bagE_eventHandler(bagE_Event *event)
                 case KEY_S:
                     backDown = keyDown;
                     break;
+                case KEY_ALT_LEFT:
+                    if (keyDown) {
+                        if (!altDown) {
+                            altDown = 1;
+                            playerInput = !playerInput;
+                            bagE_setHiddenCursor(playerInput);
+                        }
+                    } else {
+                        altDown = 0;
+                    }
+                    break;
             }
         } break;
 
+        case bagE_EventMouseMotion:
+            if (playerInput) {
+                bagE_MouseMotion *mm = &(event->data.mouseMotion);
+                motionYaw   += mm->x;
+                motionPitch += mm->y;
+            }
+            break;
 
         default: break;
     }
