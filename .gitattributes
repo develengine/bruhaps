@@ -1,2 +1,2 @@
-models/*.obj eol=nf
+models/*.obj eol=lf
 models/*.mtl eol=lf
