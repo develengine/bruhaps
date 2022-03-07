@@ -270,8 +270,13 @@ static inline Matrix matrixRotationZ(float angle)
 
 
 #if 1
-static inline Matrix matrixProjection(float fov, float width, float height, float np, float fp)
-{
+static inline Matrix matrixProjection(
+        float fov,
+        float width,
+        float height,
+        float np,
+        float fp
+) {
     float ar = height / width;
     float xs = (float)((1.0 / tan((fov / 2.0) * M_PI / 180)) * ar);
     float ys = xs / ar;
@@ -287,8 +292,13 @@ static inline Matrix matrixProjection(float fov, float width, float height, floa
     return res;
 }
 #else
-static inline Matrix matrixProjection(float fov, float width, float height, float np, float fp)
-{
+static inline Matrix matrixProjection(
+        float fov,
+        float width,
+        float height,
+        float np,
+        float fp
+) {
     float top = np * tanf((M_PI * fov) / 360.0f);
     float bottom = -top;
     float right = top * (width / height);
@@ -356,8 +366,8 @@ static bool forthDown   = false;
 static bool backDown    = false;
 static bool ascendDown  = false;
 static bool descendDown = false;
+static bool altDown     = false;
 
-static int altDown     = 0;
 static float motionYaw   = 0.0f;
 static float motionPitch = 0.0f;
 
@@ -548,12 +558,12 @@ int bagE_eventHandler(bagE_Event *event)
                 case KEY_ALT_LEFT:
                     if (keyDown) {
                         if (!altDown) {
-                            altDown = 1;
+                            altDown = true;
                             playerInput = !playerInput;
                             bagE_setHiddenCursor(playerInput);
                         }
                     } else {
-                        altDown = 0;
+                        altDown = false;
                     }
                     break;
             }
