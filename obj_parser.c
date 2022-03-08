@@ -211,6 +211,9 @@ static void parse(const ObjInfo *info, const char *text, FILE *out)
     fwrite(vertices, sizeof(Vertex), vertexCount, out);
     fwrite(indexData, sizeof(unsigned), indexCount, out);
 
+    printf("v: %d\n", vertexCount);
+    printf("i: %d\n", indexCount);
+
     free(positions);
     free(indices);
     free(vertices);
@@ -228,10 +231,6 @@ int main(int argc, char *argv[])
     char *text = readFile(argv[1]);
 
     ObjInfo info = loadInfo(text);
-    printf("v:  %d\n", info.vertexCount);
-    printf("vt: %d\n", info.textureCount);
-    printf("vn: %d\n", info.normalCount);
-    printf("i:  %d\n", info.indexCount);
 
     FILE *out = fopen(argv[2], "wb");
 
