@@ -315,6 +315,94 @@ static bool altDown     = false;
 static float motionYaw   = 0.0f;
 static float motionPitch = 0.0f;
 
+
+typedef struct
+{
+    float positions[3];
+    float textures[2];
+    float normals[3];
+} Vertex;
+
+
+typedef struct
+{
+    int vertexCount;
+    int indexCount;
+    Vertex *vertices;
+    unsigned *indices;
+} Model;
+
+
+static Model modelLoad(const char *path)
+{
+    Model model;
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        fprintf(stderr, "Failed to open file \"%s\"!\n", path);
+        fprintf(stderr, "File: %s, Line: %d\n", __FILE__, __LINE__);
+        exit(-1);
+    }
+
+    // TODO FIXME read failure handling
+    fread(&model.vertexCount, sizeof(int), 1, file);
+    fread(&model.indexCount, sizeof(int), 1, file);
+
+    model.vertices = malloc(sizeof(Vertex) * model.vertexCount);
+    if (!model.vertices) {
+        fprintf(stderr, "malloc fail: %s, %d\n", __FILE__, __LINE__);
+        exit(-1);
+    }
+
+    model.indices = malloc(sizeof(unsigned) * model.indexCount);
+    if (!model.indices) {
+        fprintf(stderr, "malloc fail: %s, %d\n", __FILE__, __LINE__);
+        exit(-1);
+    }
+
+    // TODO FIXME read failure handling
+    fread(model.vertices, sizeof(Vertex), model.vertexCount, file);
+    fread(model.indices, sizeof(unsigned), model.indexCount, file);
+
+    fclose(file);
+    return model;
+}
+
+
+static void modelPrint(const Model *model)
+{
+    printf("vertexCount: %d\n", model->vertexCount);
+    printf("indexCount:  %d\n", model->indexCount);
+    for (int i = 0; i < model->vertexCount; ++i) {
+        printf("[%f, %f, %f], [%f, %f], [%f, %f, %f]\n",
+                model->vertices[i].positions[0],
+                model->vertices[i].positions[1],
+                model->vertices[i].positions[2],
+
+                model->vertices[i].textures[0],
+                model->vertices[i].textures[1],
+
+                model->vertices[i].normals[0],
+                model->vertices[i].normals[1],
+                model->vertices[i].normals[2]
+        );
+    }
+    for (int i = 0; i < model->indexCount; i += 3) {
+        printf("[%u, %u, %u]\n",
+                model->indices[i],
+                model->indices[i + 1],
+                model->indices[i + 2]
+        );
+    }
+}
+
+
+static void modelFree(Model *model)
+{
+    free(model->vertices);
+    free(model->indices);
+}
+
+
 int bagE_main(int argc, char *argv[])
 {
     glEnable(GL_DEBUG_OUTPUT);
@@ -330,7 +418,7 @@ int bagE_main(int argc, char *argv[])
     glEnable(GL_CULL_FACE);
     glFrontFace(GL_CCW);
     glCullFace(GL_BACK);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -352,10 +440,43 @@ int bagE_main(int argc, char *argv[])
     glVertexArrayAttribBinding(vao, 0, 0);
 
     glVertexArrayElementBuffer(vao, ebo);
-    
 
-    glBindVertexArray(vao);
-    glUseProgram(program);
+
+
+
+    Model model = modelLoad("energy.model");
+    // modelPrint(&model);
+
+    printf("sizeof(Vertex): %lu\n", sizeof(Vertex));
+
+
+    int modelProgram = createProgram("shaders/3d_vertex.glsl", "shaders/3d_fragment.glsl");
+
+    unsigned modelVbo;
+    glCreateBuffers(1, &modelVbo);
+    glNamedBufferStorage(modelVbo, model.vertexCount * sizeof(Vertex), model.vertices, 0);
+
+    unsigned modelEbo;
+    glCreateBuffers(1, &modelEbo);
+    glNamedBufferStorage(modelEbo, model.indexCount * sizeof(unsigned), model.indices, 0);
+
+    unsigned modelVao;
+    glCreateVertexArrays(1, &modelVao);
+    glVertexArrayVertexBuffer(modelVao, 0, modelVbo, 0, sizeof(Vertex));
+
+    glEnableVertexArrayAttrib(modelVao, 0);
+    glEnableVertexArrayAttrib(modelVao, 1);
+    glEnableVertexArrayAttrib(modelVao, 2);
+
+    glVertexArrayAttribFormat(modelVao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribFormat(modelVao, 1, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 3);
+    glVertexArrayAttribFormat(modelVao, 2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5);
+
+    glVertexArrayAttribBinding(modelVao, 0, 0);
+    glVertexArrayAttribBinding(modelVao, 0, 1);
+    glVertexArrayAttribBinding(modelVao, 0, 2);
+
+    glVertexArrayElementBuffer(modelVao, modelEbo);
 
     double t = 0;
 
@@ -412,27 +533,51 @@ int bagE_main(int argc, char *argv[])
         objZ = -10.0f;
 
         /* model */
-        Matrix mvp = matrixScale(objScale, objScale, objScale);
+        Matrix modelm = matrixScale(objScale, objScale, objScale);
 
         Matrix mul = matrixRotationZ(t / 4);
-        mvp = matrixMultiply(&mul, &mvp);
+        modelm = matrixMultiply(&mul, &modelm);
 
         mul = matrixTranslation(objX, objY, objZ);
-        mvp = matrixMultiply(&mul, &mvp);
+        modelm = matrixMultiply(&mul, &modelm);
 
         /* view */
-        mul = matrixTranslation(-camX,-camY,-camZ);
-        mvp = matrixMultiply(&mul, &mvp);
+        Matrix view = matrixTranslation(-camX,-camY,-camZ);
 
         mul = matrixRotationY(camYaw);
-        mvp = matrixMultiply(&mul, &mvp);
+        view = matrixMultiply(&mul, &view);
 
         mul = matrixRotationX(camPitch);
-        mvp = matrixMultiply(&mul, &mvp);
+        view = matrixMultiply(&mul, &view);
 
         /* projection */
-        mul = matrixProjection(90.0f, windowWidth, windowHeight, 0.1f, 100.0f);
-        mvp = matrixMultiply(&mul, &mvp);
+        Matrix proj = matrixProjection(90.0f, windowWidth, windowHeight, 0.1f, 100.0f);
+
+        /* mvp */
+        Matrix mvp = matrixMultiply(&view, &modelm);
+        mvp = matrixMultiply(&proj, &mvp);
+
+        /* vp */
+        Matrix vp = matrixMultiply(&proj, &view);
+
+
+        glBindVertexArray(modelVao);
+        glUseProgram(modelProgram);
+
+        glProgramUniformMatrix4fv(modelProgram, 0, 1, GL_FALSE, vp.data);
+        glProgramUniformMatrix4fv(modelProgram, 4, 1, GL_FALSE, modelm.data);
+        glProgramUniform3f(modelProgram, 5, camX, camY, camZ);
+        glProgramUniform3f(modelProgram, 6,
+                0.1f,
+                (sin(t) + 1.0) * 0.5,
+                0.5f
+        );
+
+        glDrawElements(GL_TRIANGLES, model.indexCount, GL_UNSIGNED_INT, 0);
+
+
+        glBindVertexArray(vao);
+        glUseProgram(program);
 
         glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, mvp.data);
         glProgramUniform4f(program, 1,
@@ -444,15 +589,24 @@ int bagE_main(int argc, char *argv[])
 
         glDrawElements(GL_TRIANGLES, length(cubeIndices), GL_UNSIGNED_INT, 0);
 
+
         bagE_swapBuffers();
 
         t += 0.1;
     }
   
+    modelFree(&model);
+
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
     glDeleteBuffers(1, &ebo);
+
+    glDeleteVertexArrays(1, &modelVao);
+    glDeleteBuffers(1, &modelVbo);
+    glDeleteBuffers(1, &modelEbo);
+
     glDeleteProgram(program);
+    glDeleteProgram(modelProgram);
 
     return 0;
 }

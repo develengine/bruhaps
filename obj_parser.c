@@ -163,6 +163,7 @@ static void parse(const ObjInfo *info, const char *text, FILE *out)
                     for (int i = 0; i < 3; ++i) {
                         bool found = false;
 
+                        // TODO heap search
                         for (int j = 0; j < vertexCount; ++j) {
                             if (indexEq(inds + i, indices + j)) {
                                 indexData[indexCount++] = indices[j].index;
@@ -206,6 +207,7 @@ static void parse(const ObjInfo *info, const char *text, FILE *out)
         }
     }
 
+    // TODO FIXME write failure handling
     fwrite(&vertexCount, sizeof(int), 1, out);
     fwrite(&indexCount, sizeof(int), 1, out);
     fwrite(vertices, sizeof(Vertex), vertexCount, out);
