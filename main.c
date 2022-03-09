@@ -303,6 +303,7 @@ static int windowWidth, windowHeight;
 static int windowChanged = 0;
 
 static int playerInput = 0;
+static bool fullscreen = false;
 
 static bool leftDown    = false;
 static bool rightDown   = false;
@@ -310,7 +311,9 @@ static bool forthDown   = false;
 static bool backDown    = false;
 static bool ascendDown  = false;
 static bool descendDown = false;
-static bool altDown     = false;
+
+static bool altDown = false;
+static bool fDown   = false;
 
 static float motionYaw   = 0.0f;
 static float motionPitch = 0.0f;
@@ -421,6 +424,7 @@ int bagE_main(int argc, char *argv[])
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // glDisable(GL_MULTISAMPLE);
 
     int program = createProgram("shaders/proper_vert.glsl", "shaders/proper_frag.glsl");
 
@@ -445,7 +449,7 @@ int bagE_main(int argc, char *argv[])
 
 
     Model model = modelLoad("energy.model");
-    // modelPrint(&model);
+    modelPrint(&model);
 
     printf("sizeof(Vertex): %lu\n", sizeof(Vertex));
 
@@ -473,8 +477,8 @@ int bagE_main(int argc, char *argv[])
     glVertexArrayAttribFormat(modelVao, 2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5);
 
     glVertexArrayAttribBinding(modelVao, 0, 0);
-    glVertexArrayAttribBinding(modelVao, 0, 1);
-    glVertexArrayAttribBinding(modelVao, 0, 2);
+    glVertexArrayAttribBinding(modelVao, 1, 0);
+    glVertexArrayAttribBinding(modelVao, 2, 0);
 
     glVertexArrayElementBuffer(modelVao, modelEbo);
 
@@ -532,11 +536,13 @@ int bagE_main(int argc, char *argv[])
         objY = 0.0f;
         objZ = -10.0f;
 
+        Matrix mul;
+
         /* model */
         Matrix modelm = matrixScale(objScale, objScale, objScale);
 
-        Matrix mul = matrixRotationZ(t / 4);
-        modelm = matrixMultiply(&mul, &modelm);
+        // mul = matrixRotationY(t / 4);
+        // modelm = matrixMultiply(&mul, &modelm);
 
         mul = matrixTranslation(objX, objY, objZ);
         modelm = matrixMultiply(&mul, &modelm);
@@ -565,17 +571,19 @@ int bagE_main(int argc, char *argv[])
         glUseProgram(modelProgram);
 
         glProgramUniformMatrix4fv(modelProgram, 0, 1, GL_FALSE, vp.data);
-        glProgramUniformMatrix4fv(modelProgram, 4, 1, GL_FALSE, modelm.data);
-        glProgramUniform3f(modelProgram, 5, camX, camY, camZ);
-        glProgramUniform3f(modelProgram, 6,
+        glProgramUniformMatrix4fv(modelProgram, 1, 1, GL_FALSE, modelm.data);
+        glProgramUniform3f(modelProgram, 2, camX, camY, camZ);
+        glProgramUniform3f(modelProgram, 3,
                 0.1f,
-                (sin(t) + 1.0) * 0.5,
+                // (sin(t) + 1.0) * 0.5,
+                1.0f,
                 0.5f
         );
 
         glDrawElements(GL_TRIANGLES, model.indexCount, GL_UNSIGNED_INT, 0);
 
 
+        /*
         glBindVertexArray(vao);
         glUseProgram(program);
 
@@ -588,6 +596,7 @@ int bagE_main(int argc, char *argv[])
         );
 
         glDrawElements(GL_TRIANGLES, length(cubeIndices), GL_UNSIGNED_INT, 0);
+        */
 
 
         bagE_swapBuffers();
@@ -662,6 +671,17 @@ int bagE_eventHandler(bagE_Event *event)
                         }
                     } else {
                         altDown = false;
+                    }
+                    break;
+                case KEY_F:
+                    if (keyDown) {
+                        if(!fDown) {
+                            fDown = true;
+                            fullscreen = !fullscreen;
+                            bagE_setFullscreen(fullscreen);
+                        }
+                    } else {
+                        fDown = false;
                     }
                     break;
             }

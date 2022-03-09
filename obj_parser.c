@@ -147,7 +147,6 @@ static void parse(const ObjInfo *info, const char *text, FILE *out)
             ++at;
             while (*at != '\0' && *at != '\n') {
                 if (ic == 3) {
-                    inds[0] = inds[1];
                     inds[1] = inds[2];
                     --ic;
                 }
