@@ -450,7 +450,7 @@ int bagE_main(int argc, char *argv[])
 
 
     Model model = modelLoad("energy.model");
-    modelPrint(&model);
+    // modelPrint(&model);
 
     printf("sizeof(Vertex): %lu\n", sizeof(Vertex));
 
