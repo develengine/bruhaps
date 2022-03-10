@@ -424,7 +424,8 @@ int bagE_main(int argc, char *argv[])
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    // glDisable(GL_MULTISAMPLE);
+    glDisable(GL_MULTISAMPLE);
+    // glEnable(GL_MULTISAMPLE);
 
     int program = createProgram("shaders/proper_vert.glsl", "shaders/proper_frag.glsl");
 
