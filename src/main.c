@@ -318,6 +318,7 @@ static bool fDown   = false;
 static float motionYaw   = 0.0f;
 static float motionPitch = 0.0f;
 
+static bool spinning = true;
 
 typedef struct
 {
@@ -449,7 +450,7 @@ int bagE_main(int argc, char *argv[])
 
 
 
-    Model model = modelLoad("energy.model");
+    Model model = modelLoad("res/brug.model");
     // modelPrint(&model);
 
     printf("sizeof(Vertex): %lu\n", sizeof(Vertex));
@@ -490,6 +491,7 @@ int bagE_main(int argc, char *argv[])
 
     float objX, objY, objZ;
     float objScale = 1.0f;
+    float objRotation = 0.0f;
 
     while (running) {
         bagE_pollEvents();
@@ -537,13 +539,17 @@ int bagE_main(int argc, char *argv[])
         objY = 0.0f;
         objZ = -10.0f;
 
+        if (spinning)
+            objRotation += 0.025;
+
+
         Matrix mul;
 
         /* model */
         Matrix modelm = matrixScale(objScale, objScale, objScale);
 
-        // mul = matrixRotationY(t / 4);
-        // modelm = matrixMultiply(&mul, &modelm);
+        mul = matrixRotationY(objRotation);
+        modelm = matrixMultiply(&mul, &modelm);
 
         mul = matrixTranslation(objX, objY, objZ);
         modelm = matrixMultiply(&mul, &modelm);
@@ -575,10 +581,10 @@ int bagE_main(int argc, char *argv[])
         glProgramUniformMatrix4fv(modelProgram, 1, 1, GL_FALSE, modelm.data);
         glProgramUniform3f(modelProgram, 2, camX, camY, camZ);
         glProgramUniform3f(modelProgram, 3,
-                0.1f,
+                0.75f,
                 // (sin(t) + 1.0) * 0.5,
-                1.0f,
-                0.5f
+                0.75f,
+                0.75f
         );
 
         glDrawElements(GL_TRIANGLES, model.indexCount, GL_UNSIGNED_INT, 0);
@@ -684,6 +690,10 @@ int bagE_eventHandler(bagE_Event *event)
                     } else {
                         fDown = false;
                     }
+                    break;
+                case KEY_R:
+                    if (keyDown)
+                        spinning = !spinning;
                     break;
             }
         } break;

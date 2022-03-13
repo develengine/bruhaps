@@ -15,7 +15,7 @@ void main() {
     vec3 lightColor = vec3(1.0, 1.0, 1.0) * brightness;
 
     float ambientPower = 0.4;
-    vec3 ambientColor = vec3(0.35, 0.3, 0.8) * ambientPower;
+    vec3 ambientColor = vec3(0.1, 0.2, 0.3) * ambientPower;
 
     vec3 toCamera = normalize(u_cameraPos - o_position);
     vec3 reflection = normalize(reflect(-toLight, o_normals));
