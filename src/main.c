@@ -8,6 +8,10 @@
 #include <math.h>
 #include <stdbool.h>
 
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -295,31 +299,6 @@ void printMatrix(const Matrix *mat)
 }
 
 
-static const float MOUSE_SENSITIVITY = 0.005f;
-
-
-static int running = 1;
-static int windowWidth, windowHeight;
-static int windowChanged = 0;
-
-static int playerInput = 0;
-static bool fullscreen = false;
-
-static bool leftDown    = false;
-static bool rightDown   = false;
-static bool forthDown   = false;
-static bool backDown    = false;
-static bool ascendDown  = false;
-static bool descendDown = false;
-
-static bool altDown = false;
-static bool fDown   = false;
-
-static float motionYaw   = 0.0f;
-static float motionPitch = 0.0f;
-
-static bool spinning = true;
-
 typedef struct
 {
     float positions[3];
@@ -454,6 +433,95 @@ static void freeModelObject(ModelObject object)
 }
 
 
+static unsigned loadTexture(const char *path)
+{
+    int width, height, channelCount;
+
+    uint8_t *image = stbi_load(path, &width, &height, &channelCount, STBI_rgb_alpha);
+    if (!image) {
+        fprintf(stderr, "Failed to load image \"%s\"\n", path);
+        exit(1);
+    }
+
+    unsigned texture;
+    glCreateTextures(GL_TEXTURE_2D, 1, &texture);
+    // glGenTextures(1, &texture);
+    // glBindTexture(GL_TEXTURE_2D, texture);
+
+    /*
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        parameters.deviceFormat,
+        parameters.width,
+        parameters.height,
+        0,
+        parameters.localFormat,
+        parameters.formatType,
+        parameters.data
+    );
+        Texture::Parameters parameters
+        {
+            image,
+            width, height,
+            GL_REPEAT, GL_REPEAT,
+            GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST,
+            GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE,
+            true
+        };
+struct Parameters
+{
+    u8 *data;
+    int width, height;
+    u32 wrapS, wrapT, minFilter, magFilter;
+    u32 localFormat, deviceFormat, formatType;
+    bool mipmap;
+};
+        */
+
+    // glGenerateMipmap(GL_TEXTURE_2D);
+
+    glTextureParameteri(texture, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTextureParameteri(texture, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTextureParameteri(texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTextureParameteri(texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glTextureStorage2D(texture, 0, GL_RGBA8, width, height);
+
+    glGenerateTextureMipmap(texture);
+
+    free(image);
+
+    return texture;
+}
+
+
+static const float MOUSE_SENSITIVITY = 0.005f;
+
+
+static int running = 1;
+static int windowWidth, windowHeight;
+static int windowChanged = 0;
+
+static int playerInput = 0;
+static bool fullscreen = false;
+
+static bool leftDown    = false;
+static bool rightDown   = false;
+static bool forthDown   = false;
+static bool backDown    = false;
+static bool ascendDown  = false;
+static bool descendDown = false;
+
+static bool altDown = false;
+static bool fDown   = false;
+
+static float motionYaw   = 0.0f;
+static float motionPitch = 0.0f;
+
+static bool spinning = true;
+
+
 int bagE_main(int argc, char *argv[])
 {
     glEnable(GL_DEBUG_OUTPUT);
@@ -504,6 +572,10 @@ int bagE_main(int argc, char *argv[])
 
     Model energyModel  = modelLoad("res/energy.model");
     ModelObject energy = createModelObject(energyModel);
+
+    int textureProgram = createProgram("shaders/texture_vertex.glsl", "shaders/texture_fragment.glsl");
+    unsigned texture = loadTexture("res/monser.png");
+    
 
     double t = 0;
 
@@ -665,6 +737,8 @@ int bagE_main(int argc, char *argv[])
 
     modelFree(energyModel);
     freeModelObject(energy);
+
+    glDeleteTextures(1, &texture);
 
     glDeleteProgram(program);
     glDeleteProgram(modelProgram);
