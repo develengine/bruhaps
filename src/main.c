@@ -400,10 +400,57 @@ static void modelPrint(const Model *model)
 }
 
 
-static void modelFree(Model *model)
+static void modelFree(Model model)
 {
-    free(model->vertices);
-    free(model->indices);
+    free(model.vertices);
+    free(model.indices);
+}
+
+
+typedef struct
+{
+    unsigned vao;
+    unsigned vbo;
+    unsigned ebo;
+} ModelObject;
+
+
+static ModelObject createModelObject(Model model)
+{
+    ModelObject object;
+
+    glCreateBuffers(1, &object.vbo);
+    glNamedBufferStorage(object.vbo, model.vertexCount * sizeof(Vertex), model.vertices, 0);
+
+    glCreateBuffers(1, &object.ebo);
+    glNamedBufferStorage(object.ebo, model.indexCount * sizeof(unsigned), model.indices, 0);
+
+    glCreateVertexArrays(1, &object.vao);
+    glVertexArrayVertexBuffer(object.vao, 0, object.vbo, 0, sizeof(Vertex));
+
+    glEnableVertexArrayAttrib(object.vao, 0);
+    glEnableVertexArrayAttrib(object.vao, 1);
+    glEnableVertexArrayAttrib(object.vao, 2);
+
+    glVertexArrayAttribFormat(object.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribFormat(object.vao, 1, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 3);
+    glVertexArrayAttribFormat(object.vao, 2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5);
+
+    glVertexArrayAttribBinding(object.vao, 0, 0);
+    glVertexArrayAttribBinding(object.vao, 1, 0);
+    glVertexArrayAttribBinding(object.vao, 2, 0);
+
+    glVertexArrayElementBuffer(object.vao, object.ebo);
+
+    return object;
+}
+
+
+static void freeModelObject(ModelObject object)
+{
+    glDeleteVertexArrays(1, &object.vao);
+    glDeleteBuffers(1, &object.vbo);
+    glDeleteBuffers(1, &object.ebo);
 }
 
 
@@ -428,7 +475,9 @@ int bagE_main(int argc, char *argv[])
     glDisable(GL_MULTISAMPLE);
     // glEnable(GL_MULTISAMPLE);
 
+
     int program = createProgram("shaders/proper_vert.glsl", "shaders/proper_frag.glsl");
+
 
     unsigned vbo;
     glCreateBuffers(1, &vbo);
@@ -448,41 +497,13 @@ int bagE_main(int argc, char *argv[])
     glVertexArrayElementBuffer(vao, ebo);
 
 
-
-
-    Model model = modelLoad("res/brug.model");
-    // modelPrint(&model);
-
-    printf("sizeof(Vertex): %lu\n", sizeof(Vertex));
-
-
     int modelProgram = createProgram("shaders/3d_vertex.glsl", "shaders/3d_fragment.glsl");
 
-    unsigned modelVbo;
-    glCreateBuffers(1, &modelVbo);
-    glNamedBufferStorage(modelVbo, model.vertexCount * sizeof(Vertex), model.vertices, 0);
+    Model brugModel  = modelLoad("res/brug.model");
+    ModelObject brug = createModelObject(brugModel);
 
-    unsigned modelEbo;
-    glCreateBuffers(1, &modelEbo);
-    glNamedBufferStorage(modelEbo, model.indexCount * sizeof(unsigned), model.indices, 0);
-
-    unsigned modelVao;
-    glCreateVertexArrays(1, &modelVao);
-    glVertexArrayVertexBuffer(modelVao, 0, modelVbo, 0, sizeof(Vertex));
-
-    glEnableVertexArrayAttrib(modelVao, 0);
-    glEnableVertexArrayAttrib(modelVao, 1);
-    glEnableVertexArrayAttrib(modelVao, 2);
-
-    glVertexArrayAttribFormat(modelVao, 0, 3, GL_FLOAT, GL_FALSE, 0);
-    glVertexArrayAttribFormat(modelVao, 1, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 3);
-    glVertexArrayAttribFormat(modelVao, 2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5);
-
-    glVertexArrayAttribBinding(modelVao, 0, 0);
-    glVertexArrayAttribBinding(modelVao, 1, 0);
-    glVertexArrayAttribBinding(modelVao, 2, 0);
-
-    glVertexArrayElementBuffer(modelVao, modelEbo);
+    Model energyModel  = modelLoad("res/energy.model");
+    ModelObject energy = createModelObject(energyModel);
 
     double t = 0;
 
@@ -545,15 +566,6 @@ int bagE_main(int argc, char *argv[])
 
         Matrix mul;
 
-        /* model */
-        Matrix modelm = matrixScale(objScale, objScale, objScale);
-
-        mul = matrixRotationY(objRotation);
-        modelm = matrixMultiply(&mul, &modelm);
-
-        mul = matrixTranslation(objX, objY, objZ);
-        modelm = matrixMultiply(&mul, &modelm);
-
         /* view */
         Matrix view = matrixTranslation(-camX,-camY,-camZ);
 
@@ -566,31 +578,65 @@ int bagE_main(int argc, char *argv[])
         /* projection */
         Matrix proj = matrixProjection(90.0f, windowWidth, windowHeight, 0.1f, 100.0f);
 
-        /* mvp */
-        Matrix mvp = matrixMultiply(&view, &modelm);
-        mvp = matrixMultiply(&proj, &mvp);
-
         /* vp */
         Matrix vp = matrixMultiply(&proj, &view);
 
 
-        glBindVertexArray(modelVao);
+        /* model brug */
+        Matrix modelBrug = matrixScale(objScale, objScale, objScale);
+
+        mul = matrixRotationY(objRotation);
+        modelBrug = matrixMultiply(&mul, &modelBrug);
+
+        mul = matrixTranslation(objX, objY, objZ);
+        modelBrug = matrixMultiply(&mul, &modelBrug);
+
+
         glUseProgram(modelProgram);
+        glProgramUniform3f(modelProgram, 2, camX, camY, camZ);
+
+        glBindVertexArray(brug.vao);
 
         glProgramUniformMatrix4fv(modelProgram, 0, 1, GL_FALSE, vp.data);
-        glProgramUniformMatrix4fv(modelProgram, 1, 1, GL_FALSE, modelm.data);
-        glProgramUniform3f(modelProgram, 2, camX, camY, camZ);
-        glProgramUniform3f(modelProgram, 3,
-                0.75f,
-                // (sin(t) + 1.0) * 0.5,
-                0.75f,
-                0.75f
-        );
+        glProgramUniformMatrix4fv(modelProgram, 1, 1, GL_FALSE, modelBrug.data);
+        glProgramUniform3f(modelProgram, 3, 0.75f, 0.75f, 0.75f);
 
-        glDrawElements(GL_TRIANGLES, model.indexCount, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
 
 
-        /*
+        /* model energy */
+        Matrix modelEnergy = matrixScale(objScale, objScale, objScale);
+
+        mul = matrixRotationY(objRotation);
+        modelEnergy = matrixMultiply(&mul, &modelEnergy);
+
+        mul = matrixTranslation(objX - 5.0f, objY, objZ);
+        modelEnergy = matrixMultiply(&mul, &modelEnergy);
+
+
+        glBindVertexArray(energy.vao);
+
+        glProgramUniformMatrix4fv(modelProgram, 0, 1, GL_FALSE, vp.data);
+        glProgramUniformMatrix4fv(modelProgram, 1, 1, GL_FALSE, modelEnergy.data);
+        glProgramUniform3f(modelProgram, 3, 0.75f, 0.75f, 0.75f);
+
+        glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
+
+
+        /* model cube */
+        Matrix modelCube = matrixScale(objScale, objScale, objScale);
+
+        mul = matrixRotationY(objRotation);
+        modelCube = matrixMultiply(&mul, &modelCube);
+
+        mul = matrixTranslation(objX + 5.0f, objY, objZ);
+        modelCube = matrixMultiply(&mul, &modelCube);
+
+        /* mvp */
+        Matrix mvp = matrixMultiply(&view, &modelCube);
+        mvp = matrixMultiply(&proj, &mvp);
+
+
         glBindVertexArray(vao);
         glUseProgram(program);
 
@@ -603,7 +649,6 @@ int bagE_main(int argc, char *argv[])
         );
 
         glDrawElements(GL_TRIANGLES, length(cubeIndices), GL_UNSIGNED_INT, 0);
-        */
 
 
         bagE_swapBuffers();
@@ -611,15 +656,15 @@ int bagE_main(int argc, char *argv[])
         t += 0.1;
     }
   
-    modelFree(&model);
-
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
     glDeleteBuffers(1, &ebo);
 
-    glDeleteVertexArrays(1, &modelVao);
-    glDeleteBuffers(1, &modelVbo);
-    glDeleteBuffers(1, &modelEbo);
+    modelFree(brugModel);
+    freeModelObject(brug);
+
+    modelFree(energyModel);
+    freeModelObject(energy);
 
     glDeleteProgram(program);
     glDeleteProgram(modelProgram);

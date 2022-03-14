@@ -1,0 +1,3 @@
+#! /bin/sh
+
+cc -std=c99 -pedantic -Wall -o program x11/bag_x11.c src/main.c src/utils.c glad/src/gl.c -Isrc -Iglad/include -lGL -lX11 -lXi -ldl -lm
