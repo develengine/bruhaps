@@ -2,16 +2,18 @@
 
 layout(location = 0) in vec3 o_normals;
 layout(location = 1) in vec3 o_position;
-layout(location = 2) in vec3 o_textures;
+layout(location = 2) in vec2 o_textures;
 
 layout(location = 0) out vec4 o_color;
 
 layout(location = 2) uniform vec3 u_cameraPos;
 layout(location = 3) uniform vec3 u_objColor;
 
-layout(location = 4) uniform sampler2D textureSampler;
+layout(binding = 0) uniform sampler2D textureSampler;
 
 void main() {
+    vec3 objColor = texture(textureSampler, o_textures).rgb;
+
     vec3 toLight = vec3(0.6, 0.7, 0.5);
 
     float brightness = max(dot(o_normals, toLight), 0.0) * 0.9;
@@ -26,6 +28,6 @@ void main() {
     vec3 specular = shine * 0.5 * lightColor;
 
     o_color = vec4(ambientColor + lightColor + specular, 1.0)
-            * vec4(u_objColor, 1.0);
+            * vec4(objColor, 1.0);
 }
 

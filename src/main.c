@@ -437,6 +437,8 @@ static unsigned loadTexture(const char *path)
 {
     int width, height, channelCount;
 
+    stbi_set_flip_vertically_on_load(true);
+
     uint8_t *image = stbi_load(path, &width, &height, &channelCount, STBI_rgb_alpha);
     if (!image) {
         fprintf(stderr, "Failed to load image \"%s\"\n", path);
@@ -445,50 +447,27 @@ static unsigned loadTexture(const char *path)
 
     unsigned texture;
     glCreateTextures(GL_TEXTURE_2D, 1, &texture);
-    // glGenTextures(1, &texture);
-    // glBindTexture(GL_TEXTURE_2D, texture);
-
-    /*
-    glTexImage2D(
-        GL_TEXTURE_2D,
-        0,
-        parameters.deviceFormat,
-        parameters.width,
-        parameters.height,
-        0,
-        parameters.localFormat,
-        parameters.formatType,
-        parameters.data
-    );
-        Texture::Parameters parameters
-        {
-            image,
-            width, height,
-            GL_REPEAT, GL_REPEAT,
-            GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST,
-            GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE,
-            true
-        };
-struct Parameters
-{
-    u8 *data;
-    int width, height;
-    u32 wrapS, wrapT, minFilter, magFilter;
-    u32 localFormat, deviceFormat, formatType;
-    bool mipmap;
-};
-        */
-
-    // glGenerateMipmap(GL_TEXTURE_2D);
-
     glTextureParameteri(texture, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTextureParameteri(texture, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTextureParameteri(texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTextureParameteri(texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    glTextureStorage2D(texture, 0, GL_RGBA8, width, height);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_RGBA,
+        width,
+        height,
+        0,
+        GL_RGBA,
+        GL_UNSIGNED_BYTE,
+        image
+    );
 
     glGenerateTextureMipmap(texture);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     free(image);
 
@@ -573,7 +552,11 @@ int bagE_main(int argc, char *argv[])
     Model energyModel  = modelLoad("res/energy.model");
     ModelObject energy = createModelObject(energyModel);
 
-    int textureProgram = createProgram("shaders/texture_vertex.glsl", "shaders/texture_fragment.glsl");
+    int textureProgram = createProgram(
+            "shaders/texture_vertex.glsl",
+            "shaders/texture_fragment.glsl"
+    );
+
     unsigned texture = loadTexture("res/monser.png");
     
 
@@ -585,6 +568,9 @@ int bagE_main(int argc, char *argv[])
     float objX, objY, objZ;
     float objScale = 1.0f;
     float objRotation = 0.0f;
+
+    glBindTextureUnit(0, texture);
+    glActiveTexture(GL_TEXTURE0);
 
     while (running) {
         bagE_pollEvents();
@@ -665,12 +651,11 @@ int bagE_main(int argc, char *argv[])
 
 
         glUseProgram(modelProgram);
-        glProgramUniform3f(modelProgram, 2, camX, camY, camZ);
-
         glBindVertexArray(brug.vao);
 
         glProgramUniformMatrix4fv(modelProgram, 0, 1, GL_FALSE, vp.data);
         glProgramUniformMatrix4fv(modelProgram, 1, 1, GL_FALSE, modelBrug.data);
+        glProgramUniform3f(modelProgram, 2, camX, camY, camZ);
         glProgramUniform3f(modelProgram, 3, 0.75f, 0.75f, 0.75f);
 
         glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
@@ -686,11 +671,13 @@ int bagE_main(int argc, char *argv[])
         modelEnergy = matrixMultiply(&mul, &modelEnergy);
 
 
+        glUseProgram(textureProgram);
         glBindVertexArray(energy.vao);
 
-        glProgramUniformMatrix4fv(modelProgram, 0, 1, GL_FALSE, vp.data);
-        glProgramUniformMatrix4fv(modelProgram, 1, 1, GL_FALSE, modelEnergy.data);
-        glProgramUniform3f(modelProgram, 3, 0.75f, 0.75f, 0.75f);
+        glProgramUniformMatrix4fv(textureProgram, 0, 1, GL_FALSE, vp.data);
+        glProgramUniformMatrix4fv(textureProgram, 1, 1, GL_FALSE, modelEnergy.data);
+        glProgramUniform3f(textureProgram, 2, camX, camY, camZ);
+        glProgramUniform3f(textureProgram, 3, 0.75f, 0.75f, 0.75f);
 
         glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
 
