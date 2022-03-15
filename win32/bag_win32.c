@@ -692,6 +692,8 @@ int bagE_setHiddenCursor(int value)
         ClientToScreen(bagWIN32.window, (POINT*)&windowRect.right);
 
         bagWIN32.cursorHidden = 1;
+        windowRect.right -= 1;
+        windowRect.bottom -= 1;
         ClipCursor(&windowRect);
         SetCursor(NULL);
     } else if (bagWIN32.cursorHidden && !value) {
