@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+from json import dumps
 
 tree = ET.parse("models/worm.dae")
 root = tree.getroot()
@@ -130,4 +131,83 @@ for controller in controllers:
     print(inverse_bind_matrices)
     print("Weights (len):", len(weights))
     print(weights)
+
+
+bone_frames = []
+
+animation_bones = walk(root, ["library_animations", "animation"])
+for bone in animation_bones:
+    frame_inputs = []
+    frame_outputs = []
+
+    for source in bone:
+        if source.get("id") is None:
+            continue
+
+        if source.get("id").endswith("matrix-input"):
+            frame_inputs += [ float(i) for i in get(source, "float_array").text.split() ]
+        elif source.get("id").endswith("matrix-output"):
+            values = [ float(i) for i in get(source, "float_array").text.split() ]
+            frame_outputs += [ values[i:i + 16] for i in range(0, len(values), 16) ]
+
+    bone_frames.append((frame_inputs, frame_outputs))
+    
+print("Bone frames:")
+print(bone_frames)
+
+
+bone_matrices = {}
+
+armature = walk(root, ["library_visual_scenes", "visual_scene", "node"])
+
+def walk_skeleton(parent):
+    global bone_matrices
+    sid = parent.get("sid")
+    bone_matrices[sid] = [ float(i) for i in get(parent, "matrix").text.split() ]
+    children = []
+
+    for child in parent:
+        if not named(child, "node"):
+            continue
+        children.append(walk_skeleton(child))
+
+    return { sid: children }
+
+hierarchy = walk_skeleton(get(armature, "node"))
+
+print(dumps(hierarchy, indent = 2))
+
+
+# file format:
+
+"""header"""
+# vertex count
+# index count
+# bone count
+
+"""data"""
+# vertices              [(3f), (3f), (2f)]
+# indices               [(i)]
+
+# bone ids, weights     [(4i), (4f)]
+# inverse bind matrices [(4x4f)]
+
+# per bone frame counts [(i)]
+# input time stamps     [(f)]
+# output transforms     [(4f), (4f)]
+
+# child counts          [(i)]
+# bone hierarchy        [ids]
+
+
+
+
+
+
+
+
+
+
+
+
 
