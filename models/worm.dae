@@ -5,8 +5,8 @@
       <author>Blender User</author>
       <authoring_tool>Blender 3.0.1 commit date:2022-01-25, commit time:17:19, hash:dc2d18018171</authoring_tool>
     </contributor>
-    <created>2022-03-15T13:22:20</created>
-    <modified>2022-03-15T13:22:20</modified>
+    <created>2022-03-21T10:58:27</created>
+    <modified>2022-03-21T10:58:27</modified>
     <unit name="meter" meter="1"/>
     <up_axis>Z_UP</up_axis>
   </asset>
@@ -189,25 +189,25 @@
     <animation id="action_container-Armature" name="Armature">
       <animation id="Armature_Wiggle_Bone_pose_matrix" name="Armature">
         <source id="Armature_Wiggle_Bone_pose_matrix-input">
-          <float_array id="Armature_Wiggle_Bone_pose_matrix-input-array" count="13">0.04166662 0.08333331 0.125 0.1666666 0.2083333 0.25 0.2916666 0.3333333 0.375 0.4166666 0.4583333 0.5 0.5416667</float_array>
+          <float_array id="Armature_Wiggle_Bone_pose_matrix-input-array" count="3">0 0.25 0.5</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_pose_matrix-input-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_pose_matrix-input-array" count="3" stride="1">
               <param name="TIME" type="float"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_pose_matrix-output">
-          <float_array id="Armature_Wiggle_Bone_pose_matrix-output-array" count="208">1 0 0 0 0 1 0 -1.182987 0 0 1 0.1666829 0 0 0 1 1 0 0 -8.64348e-4 0 1 0 -1.207306 0 0 1 0.167847 0 0 0 1 1 0 0 -0.003025217 0 1 0 -1.268104 0 0 1 0.1707574 0 0 0 1 1 0 0 -0.005834348 0 1 0 -1.347141 0 0 1 0.1745408 0 0 0 1 1 0 0 -0.008643478 0 1 0 -1.426178 0 0 1 0.1783242 0 0 0 1 1 0 0 -0.01080435 0 1 0 -1.486976 0 0 1 0.1812346 0 0 0 1 1 0 0 -0.0116687 0 1 0 -1.511295 0 0 1 0.1823987 0 0 0 1 1 0 0 -0.01080435 0 1 0 -1.486976 0 0 1 0.1812345 0 0 0 1 1 0 0 -0.008643477 0 1 0 -1.426178 0 0 1 0.1783242 0 0 0 1 1 0 0 -0.005834348 0 1 0 -1.347141 0 0 1 0.1745408 0 0 0 1 1 0 0 -0.003025217 0 1 0 -1.268104 0 0 1 0.1707574 0 0 0 1 1 0 0 -8.64348e-4 0 1 0 -1.207306 0 0 1 0.167847 0 0 0 1 1 0 0 0 0 1 0 -1.182987 0 0 1 0.1666829 0 0 0 1</float_array>
+          <float_array id="Armature_Wiggle_Bone_pose_matrix-output-array" count="48">1 0 0 0 0 1 0 -1.182987 0 0 1 0.1666829 0 0 0 1 1 0 0 -0.0116687 0 1 0 -1.511295 0 0 1 0.1823987 0 0 0 1 1 0 0 0 0 1 0 -1.182987 0 0 1 0.1666829 0 0 0 1</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_pose_matrix-output-array" count="13" stride="16">
+            <accessor source="#Armature_Wiggle_Bone_pose_matrix-output-array" count="3" stride="16">
               <param name="TRANSFORM" type="float4x4"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_pose_matrix-interpolation">
-          <Name_array id="Armature_Wiggle_Bone_pose_matrix-interpolation-array" count="13">LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR</Name_array>
+          <Name_array id="Armature_Wiggle_Bone_pose_matrix-interpolation-array" count="3">LINEAR LINEAR LINEAR</Name_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_pose_matrix-interpolation-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_pose_matrix-interpolation-array" count="3" stride="1">
               <param name="INTERPOLATION" type="name"/>
             </accessor>
           </technique_common>
@@ -221,25 +221,25 @@
       </animation>
       <animation id="Armature_Wiggle_Bone_001_pose_matrix" name="Armature">
         <source id="Armature_Wiggle_Bone_001_pose_matrix-input">
-          <float_array id="Armature_Wiggle_Bone_001_pose_matrix-input-array" count="13">0.04166662 0.08333331 0.125 0.1666666 0.2083333 0.25 0.2916666 0.3333333 0.375 0.4166666 0.4583333 0.5 0.5416667</float_array>
+          <float_array id="Armature_Wiggle_Bone_001_pose_matrix-input-array" count="3">0 0.25 0.5</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_001_pose_matrix-input-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_001_pose_matrix-input-array" count="3" stride="1">
               <param name="TIME" type="float"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_001_pose_matrix-output">
-          <float_array id="Armature_Wiggle_Bone_001_pose_matrix-output-array" count="208">1 0 0 0 0 0.7065548 -0.7076583 0.220405 0 0.7076583 0.7065548 0 0 0 0 1 1 0 0 0 0 0.7444888 -0.667635 0.220405 0 0.667635 0.7444888 0 0 0 0 1 1 0 0 0 0 0.8303111 -0.5573002 0.220405 0 0.5573002 0.8303111 0 0 0 0 1 1 0 0 0 0 0.9184168 -0.3956142 0.220405 0 0.3956142 0.9184168 0 0 0 0 1 1 0 0 0 0 0.9753836 -0.220515 0.220405 0 0.220515 0.9753836 0 0 0 0 1 1 0 0 0 0 0.9966033 -0.08235221 0.220405 0 0.08235221 0.9966033 0 0 0 0 1 1 0 0 0 0 0.9996275 -0.02729108 0.220405 0 0.02729108 0.9996275 0 0 0 0 1 1 0 0 0 0 0.9966033 -0.08235218 0.220405 0 0.08235218 0.9966033 0 0 0 0 1 1 0 0 0 0 0.9753836 -0.220515 0.220405 0 0.220515 0.9753836 0 0 0 0 1 1 0 0 0 0 0.9184168 -0.3956143 0.220405 0 0.3956143 0.9184168 0 0 0 0 1 1 0 0 0 0 0.8303111 -0.5573002 0.220405 0 0.5573002 0.8303111 0 0 0 0 1 1 0 0 0 0 0.7444889 -0.6676348 0.220405 0 0.6676348 0.7444889 0 0 0 0 1 1 0 0 0 0 0.7065548 -0.7076583 0.220405 0 0.7076583 0.7065548 0 0 0 0 1</float_array>
+          <float_array id="Armature_Wiggle_Bone_001_pose_matrix-output-array" count="48">1 0 0 0 0 0.7065548 -0.7076583 0.220405 0 0.7076583 0.7065548 0 0 0 0 1 1 0 0 0 0 0.9996275 -0.02729108 0.220405 0 0.02729108 0.9996275 0 0 0 0 1 1 0 0 0 0 0.7065548 -0.7076583 0.220405 0 0.7076583 0.7065548 0 0 0 0 1</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_001_pose_matrix-output-array" count="13" stride="16">
+            <accessor source="#Armature_Wiggle_Bone_001_pose_matrix-output-array" count="3" stride="16">
               <param name="TRANSFORM" type="float4x4"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_001_pose_matrix-interpolation">
-          <Name_array id="Armature_Wiggle_Bone_001_pose_matrix-interpolation-array" count="13">LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR</Name_array>
+          <Name_array id="Armature_Wiggle_Bone_001_pose_matrix-interpolation-array" count="3">LINEAR LINEAR LINEAR</Name_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_001_pose_matrix-interpolation-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_001_pose_matrix-interpolation-array" count="3" stride="1">
               <param name="INTERPOLATION" type="name"/>
             </accessor>
           </technique_common>
@@ -253,25 +253,25 @@
       </animation>
       <animation id="Armature_Wiggle_Bone_002_pose_matrix" name="Armature">
         <source id="Armature_Wiggle_Bone_002_pose_matrix-input">
-          <float_array id="Armature_Wiggle_Bone_002_pose_matrix-input-array" count="13">0.04166662 0.08333331 0.125 0.1666666 0.2083333 0.25 0.2916666 0.3333333 0.375 0.4166666 0.4583333 0.5 0.5416667</float_array>
+          <float_array id="Armature_Wiggle_Bone_002_pose_matrix-input-array" count="3">0 0.25 0.5</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_002_pose_matrix-input-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_002_pose_matrix-input-array" count="3" stride="1">
               <param name="TIME" type="float"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_002_pose_matrix-output">
-          <float_array id="Armature_Wiggle_Bone_002_pose_matrix-output-array" count="208">1 0 0 0 0 0.9576785 -0.2878399 0.1799349 0 0.2878399 0.9576785 0 0 0 0 1 1 0 0 -5.82077e-11 0 0.9644419 -0.2642953 0.179935 0 0.2642953 0.9644419 5.96046e-8 0 0 0 1 1 0 0 2.32831e-10 0 0.9788448 -0.2046042 0.179935 0 0.2046042 0.9788448 0 0 0 0 1 1 0 0 0 0 0.9920709 -0.1256793 0.179935 0 0.1256793 0.9920709 0 0 0 0 1 1 0 0 0 0 0.9989439 -0.04594946 0.179935 0 0.04594946 0.9989439 0 0 0 0 1 1 0 0 0 0 0.9998806 0.01544756 0.179935 0 -0.01544756 0.9998806 7.45058e-9 0 0 0 1 1 0 0 0 0 0.9992023 0.03993492 0.179935 0 -0.03993492 0.9992023 -3.72529e-9 0 0 0 1 1 0 0 0 0 0.9998806 0.01544755 0.1799351 0 -0.01544755 0.9998806 0 0 0 0 1 1 0 0 0 0 0.9989439 -0.0459495 0.179935 0 0.0459495 0.9989439 0 0 0 0 1 1 0 0 4.65661e-10 0 0.992071 -0.1256793 0.179935 0 0.1256793 0.992071 0 0 0 0 1 1 0 0 2.32831e-10 0 0.9788449 -0.2046043 0.179935 0 0.2046043 0.9788449 0 0 0 0 1 1 0 0 0 0 0.9644417 -0.2642953 0.179935 0 0.2642953 0.9644417 5.96046e-8 0 0 0 1 1 0 0 0 0 0.9576785 -0.2878399 0.1799349 0 0.2878399 0.9576785 0 0 0 0 1</float_array>
+          <float_array id="Armature_Wiggle_Bone_002_pose_matrix-output-array" count="48">1 0 0 0 0 0.9576785 -0.2878399 0.1799349 0 0.2878399 0.9576785 0 0 0 0 1 1 0 0 0 0 0.9992023 0.03993492 0.179935 0 -0.03993492 0.9992023 -3.72529e-9 0 0 0 1 1 0 0 0 0 0.9576785 -0.2878399 0.1799349 0 0.2878399 0.9576785 0 0 0 0 1</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_002_pose_matrix-output-array" count="13" stride="16">
+            <accessor source="#Armature_Wiggle_Bone_002_pose_matrix-output-array" count="3" stride="16">
               <param name="TRANSFORM" type="float4x4"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_002_pose_matrix-interpolation">
-          <Name_array id="Armature_Wiggle_Bone_002_pose_matrix-interpolation-array" count="13">LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR</Name_array>
+          <Name_array id="Armature_Wiggle_Bone_002_pose_matrix-interpolation-array" count="3">LINEAR LINEAR LINEAR</Name_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_002_pose_matrix-interpolation-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_002_pose_matrix-interpolation-array" count="3" stride="1">
               <param name="INTERPOLATION" type="name"/>
             </accessor>
           </technique_common>
@@ -285,25 +285,25 @@
       </animation>
       <animation id="Armature_Wiggle_Bone_003_pose_matrix" name="Armature">
         <source id="Armature_Wiggle_Bone_003_pose_matrix-input">
-          <float_array id="Armature_Wiggle_Bone_003_pose_matrix-input-array" count="13">0.04166662 0.08333331 0.125 0.1666666 0.2083333 0.25 0.2916666 0.3333333 0.375 0.4166666 0.4583333 0.5 0.5416667</float_array>
+          <float_array id="Armature_Wiggle_Bone_003_pose_matrix-input-array" count="3">0 0.25 0.5</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_003_pose_matrix-input-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_003_pose_matrix-input-array" count="3" stride="1">
               <param name="TIME" type="float"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_003_pose_matrix-output">
-          <float_array id="Armature_Wiggle_Bone_003_pose_matrix-output-array" count="208">1 0 0 0 0 0.8718642 0.4897478 0.172515 0 -0.4897478 0.8718642 0 0 0 0 1 1 0 0 -1.16415e-10 0 0.8922484 0.4515446 0.172515 0 -0.4515446 0.8922484 -1.19209e-7 0 0 0 1 1 0 0 0 0 0.9361521 0.3515953 0.172515 0 -0.3515953 0.9361521 0 0 0 0 1 1 0 0 4.65661e-10 0 0.9767417 0.2144199 0.172515 0 -0.2144199 0.9767417 5.96046e-8 0 0 0 1 1 0 0 9.31323e-10 0 0.9973425 0.07285649 0.172515 0 -0.07285649 0.9973425 0 0 0 0 1 1 0 0 0 0 0.9993413 -0.03629203 0.172515 0 0.03629203 0.9993413 -3.72529e-9 0 0 0 1 1 0 0 0 0 0.9968331 -0.07952058 0.1725151 0 0.07952058 0.9968331 -7.45058e-9 0 0 0 1 1 0 0 0 0 0.9993413 -0.03629204 0.172515 0 0.03629204 0.9993413 3.72529e-9 0 0 0 1 1 0 0 9.31323e-10 0 0.9973425 0.07285649 0.1725149 0 -0.07285649 0.9973425 1.49012e-8 0 0 0 1 1 0 0 0 0 0.9767416 0.2144199 0.172515 0 -0.2144199 0.9767416 0 0 0 0 1 1 0 0 -2.32831e-10 0 0.9361521 0.3515953 0.172515 0 -0.3515953 0.9361521 0 0 0 0 1 1 0 0 0 0 0.8922485 0.4515446 0.172515 0 -0.4515446 0.8922485 -5.96046e-8 0 0 0 1 1 0 0 0 0 0.8718642 0.4897478 0.172515 0 -0.4897478 0.8718642 0 0 0 0 1</float_array>
+          <float_array id="Armature_Wiggle_Bone_003_pose_matrix-output-array" count="48">1 0 0 0 0 0.8718642 0.4897478 0.172515 0 -0.4897478 0.8718642 0 0 0 0 1 1 0 0 0 0 0.9968331 -0.07952058 0.1725151 0 0.07952058 0.9968331 -7.45058e-9 0 0 0 1 1 0 0 0 0 0.8718642 0.4897478 0.172515 0 -0.4897478 0.8718642 0 0 0 0 1</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_003_pose_matrix-output-array" count="13" stride="16">
+            <accessor source="#Armature_Wiggle_Bone_003_pose_matrix-output-array" count="3" stride="16">
               <param name="TRANSFORM" type="float4x4"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_003_pose_matrix-interpolation">
-          <Name_array id="Armature_Wiggle_Bone_003_pose_matrix-interpolation-array" count="13">LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR</Name_array>
+          <Name_array id="Armature_Wiggle_Bone_003_pose_matrix-interpolation-array" count="3">LINEAR LINEAR LINEAR</Name_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_003_pose_matrix-interpolation-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_003_pose_matrix-interpolation-array" count="3" stride="1">
               <param name="INTERPOLATION" type="name"/>
             </accessor>
           </technique_common>
@@ -317,25 +317,25 @@
       </animation>
       <animation id="Armature_Wiggle_Bone_004_pose_matrix" name="Armature">
         <source id="Armature_Wiggle_Bone_004_pose_matrix-input">
-          <float_array id="Armature_Wiggle_Bone_004_pose_matrix-input-array" count="13">0.04166662 0.08333331 0.125 0.1666666 0.2083333 0.25 0.2916666 0.3333333 0.375 0.4166666 0.4583333 0.5 0.5416667</float_array>
+          <float_array id="Armature_Wiggle_Bone_004_pose_matrix-input-array" count="3">0 0.25 0.5</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_004_pose_matrix-input-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_004_pose_matrix-input-array" count="3" stride="1">
               <param name="TIME" type="float"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_004_pose_matrix-output">
-          <float_array id="Armature_Wiggle_Bone_004_pose_matrix-output-array" count="208">1 0 0 0 0 0.6322567 0.7747591 0.17437 0 -0.7747591 0.6322567 2.98023e-8 0 0 0 1 1 0 0 0 0 0.6763241 0.7366042 0.1743701 0 -0.7366042 0.6763241 -5.96046e-8 0 0 0 1 1 0 0 0 0 0.7776415 0.628708 0.1743699 0 -0.628708 0.7776415 0 0 0 0 1 1 0 0 0 0 0.8850061 0.4655795 0.1743701 0 -0.4655795 0.8850061 0 0 0 0 1 1 0 0 0 0 0.9586183 0.2846947 0.17437 0 -0.2846947 0.9586183 1.49012e-8 0 0 0 1 1 0 0 0 0 0.9901401 0.1400809 0.1743699 0 -0.1400809 0.9901401 1.49012e-8 0 0 0 1 1 0 0 9.31323e-10 0 0.9966198 0.08215205 0.1743699 0 -0.08215205 0.9966198 1.11759e-8 0 0 0 1 1 0 0 0 0 0.9901401 0.1400809 0.1743699 0 -0.1400809 0.9901401 0 0 0 0 1 1 0 0 9.31323e-10 0 0.9586183 0.2846949 0.17437 0 -0.2846949 0.9586183 -1.49012e-8 0 0 0 1 1 0 0 0 0 0.8850061 0.4655795 0.17437 0 -0.4655795 0.8850061 1.49012e-8 0 0 0 1 1 0 0 -2.32831e-10 0 0.7776414 0.628708 0.1743699 0 -0.628708 0.7776414 0 0 0 0 1 1 0 0 0 0 0.6763241 0.7366041 0.17437 0 -0.7366041 0.6763241 0 0 0 0 1 1 0 0 0 0 0.6322567 0.7747591 0.17437 0 -0.7747591 0.6322567 2.98023e-8 0 0 0 1</float_array>
+          <float_array id="Armature_Wiggle_Bone_004_pose_matrix-output-array" count="48">1 0 0 0 0 0.6322567 0.7747591 0.17437 0 -0.7747591 0.6322567 2.98023e-8 0 0 0 1 1 0 0 9.31323e-10 0 0.9966198 0.08215205 0.1743699 0 -0.08215205 0.9966198 1.11759e-8 0 0 0 1 1 0 0 0 0 0.6322567 0.7747591 0.17437 0 -0.7747591 0.6322567 2.98023e-8 0 0 0 1</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_004_pose_matrix-output-array" count="13" stride="16">
+            <accessor source="#Armature_Wiggle_Bone_004_pose_matrix-output-array" count="3" stride="16">
               <param name="TRANSFORM" type="float4x4"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_004_pose_matrix-interpolation">
-          <Name_array id="Armature_Wiggle_Bone_004_pose_matrix-interpolation-array" count="13">LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR</Name_array>
+          <Name_array id="Armature_Wiggle_Bone_004_pose_matrix-interpolation-array" count="3">LINEAR LINEAR LINEAR</Name_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_004_pose_matrix-interpolation-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_004_pose_matrix-interpolation-array" count="3" stride="1">
               <param name="INTERPOLATION" type="name"/>
             </accessor>
           </technique_common>
@@ -349,25 +349,25 @@
       </animation>
       <animation id="Armature_Wiggle_Bone_005_pose_matrix" name="Armature">
         <source id="Armature_Wiggle_Bone_005_pose_matrix-input">
-          <float_array id="Armature_Wiggle_Bone_005_pose_matrix-input-array" count="13">0.04166662 0.08333331 0.125 0.1666666 0.2083333 0.25 0.2916666 0.3333333 0.375 0.4166666 0.4583333 0.5 0.5416667</float_array>
+          <float_array id="Armature_Wiggle_Bone_005_pose_matrix-input-array" count="3">0 0.25 0.5</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_005_pose_matrix-input-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_005_pose_matrix-input-array" count="3" stride="1">
               <param name="TIME" type="float"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_005_pose_matrix-output">
-          <float_array id="Armature_Wiggle_Bone_005_pose_matrix-output-array" count="208">1 0 0 0 0 0.7674186 0.6411465 0.1725149 0 -0.6411465 0.7674186 2.98023e-8 0 0 0 1 1 0 0 -5.82077e-11 0 0.7997851 0.6002864 0.172515 0 -0.6002864 0.7997851 -2.98023e-8 0 0 0 1 1 0 0 0 0 0.8718483 0.489776 0.1725149 0 -0.489776 0.8718483 -7.45058e-9 0 0 0 1 1 0 0 0 0 0.9433931 0.3316769 0.1725149 0 -0.3316769 0.9433931 -3.72529e-8 0 0 0 1 1 0 0 0 0 0.9865286 0.1635896 0.172515 0 -0.1635896 0.9865286 -3.72529e-9 0 0 0 1 1 0 0 -9.31323e-10 0 0.9994783 0.03229622 0.1725149 0 -0.03229622 0.9994783 1.11759e-8 0 0 0 1 1 0 0 9.31323e-10 0 0.9998034 -0.01982884 0.172515 0 0.01982884 0.9998034 1.86265e-9 0 0 0 1 1 0 0 -9.31323e-10 0 0.9994783 0.03229617 0.1725149 0 -0.03229617 0.9994783 -1.86265e-9 0 0 0 1 1 0 0 9.31323e-10 0 0.9865285 0.1635896 0.172515 0 -0.1635896 0.9865285 -3.72529e-9 0 0 0 1 1 0 0 0 0 0.943393 0.3316769 0.172515 0 -0.3316769 0.943393 2.98023e-8 0 0 0 1 1 0 0 0 0 0.8718482 0.4897761 0.172515 0 -0.4897761 0.8718482 7.45058e-9 0 0 0 1 1 0 0 5.82077e-11 0 0.7997851 0.6002864 0.1725149 0 -0.6002864 0.7997851 -1.49012e-8 0 0 0 1 1 0 0 0 0 0.7674186 0.6411465 0.1725149 0 -0.6411465 0.7674186 2.98023e-8 0 0 0 1</float_array>
+          <float_array id="Armature_Wiggle_Bone_005_pose_matrix-output-array" count="48">1 0 0 0 0 0.7674186 0.6411465 0.1725149 0 -0.6411465 0.7674186 2.98023e-8 0 0 0 1 1 0 0 9.31323e-10 0 0.9998034 -0.01982884 0.172515 0 0.01982884 0.9998034 1.86265e-9 0 0 0 1 1 0 0 0 0 0.7674186 0.6411465 0.1725149 0 -0.6411465 0.7674186 2.98023e-8 0 0 0 1</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_005_pose_matrix-output-array" count="13" stride="16">
+            <accessor source="#Armature_Wiggle_Bone_005_pose_matrix-output-array" count="3" stride="16">
               <param name="TRANSFORM" type="float4x4"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_005_pose_matrix-interpolation">
-          <Name_array id="Armature_Wiggle_Bone_005_pose_matrix-interpolation-array" count="13">LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR</Name_array>
+          <Name_array id="Armature_Wiggle_Bone_005_pose_matrix-interpolation-array" count="3">LINEAR LINEAR LINEAR</Name_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_005_pose_matrix-interpolation-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_005_pose_matrix-interpolation-array" count="3" stride="1">
               <param name="INTERPOLATION" type="name"/>
             </accessor>
           </technique_common>
@@ -381,25 +381,25 @@
       </animation>
       <animation id="Armature_Wiggle_Bone_006_pose_matrix" name="Armature">
         <source id="Armature_Wiggle_Bone_006_pose_matrix-input">
-          <float_array id="Armature_Wiggle_Bone_006_pose_matrix-input-array" count="13">0.04166662 0.08333331 0.125 0.1666666 0.2083333 0.25 0.2916666 0.3333333 0.375 0.4166666 0.4583333 0.5 0.5416667</float_array>
+          <float_array id="Armature_Wiggle_Bone_006_pose_matrix-input-array" count="3">0 0.25 0.5</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_006_pose_matrix-input-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_006_pose_matrix-input-array" count="3" stride="1">
               <param name="TIME" type="float"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_006_pose_matrix-output">
-          <float_array id="Armature_Wiggle_Bone_006_pose_matrix-output-array" count="208">1 0 0 0 0 0.9947923 -0.1019238 0.17437 0 0.1019238 0.9947923 0 0 0 0 1 1 0 0 0 0 0.995222 -0.09763801 0.17437 0 0.09763801 0.995222 2.98023e-8 0 0 0 1 1 0 0 0 0 0.9962157 -0.08691481 0.17437 0 0.08691481 0.9962157 -1.49012e-8 0 0 0 1 1 0 0 -4.65661e-10 0 0.9973351 -0.07295877 0.17437 0 0.07295877 0.9973351 0 0 0 0 1 1 0 0 9.31323e-10 0 0.9982586 -0.05898838 0.1743699 0 0.05898838 0.9982586 -7.45058e-9 0 0 0 1 1 0 0 9.31323e-10 0 0.998836 -0.04823479 0.17437 0 0.04823479 0.998836 1.30385e-8 0 0 0 1 1 0 0 0 0 0.9990345 -0.04393209 0.17437 0 0.04393209 0.9990345 -1.60653e-8 0 0 0 1 1 0 0 9.31323e-10 0 0.998836 -0.04823479 0.17437 0 0.04823479 0.998836 1.30385e-8 0 0 0 1 1 0 0 0 0 0.9982587 -0.05898839 0.17437 0 0.05898839 0.9982587 0 0 0 0 1 1 0 0 0 0 0.9973351 -0.07295877 0.17437 0 0.07295877 0.9973351 1.49012e-8 0 0 0 1 1 0 0 0 0 0.9962158 -0.08691484 0.1743699 0 0.08691484 0.9962158 2.98023e-8 0 0 0 1 1 0 0 0 0 0.995222 -0.09763804 0.1743699 0 0.09763804 0.995222 2.98023e-8 0 0 0 1 1 0 0 0 0 0.9947923 -0.1019238 0.17437 0 0.1019238 0.9947923 0 0 0 0 1</float_array>
+          <float_array id="Armature_Wiggle_Bone_006_pose_matrix-output-array" count="48">1 0 0 0 0 0.9947923 -0.1019238 0.17437 0 0.1019238 0.9947923 0 0 0 0 1 1 0 0 0 0 0.9990345 -0.04393209 0.17437 0 0.04393209 0.9990345 -1.60653e-8 0 0 0 1 1 0 0 0 0 0.9947923 -0.1019238 0.17437 0 0.1019238 0.9947923 0 0 0 0 1</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_006_pose_matrix-output-array" count="13" stride="16">
+            <accessor source="#Armature_Wiggle_Bone_006_pose_matrix-output-array" count="3" stride="16">
               <param name="TRANSFORM" type="float4x4"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_006_pose_matrix-interpolation">
-          <Name_array id="Armature_Wiggle_Bone_006_pose_matrix-interpolation-array" count="13">LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR</Name_array>
+          <Name_array id="Armature_Wiggle_Bone_006_pose_matrix-interpolation-array" count="3">LINEAR LINEAR LINEAR</Name_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_006_pose_matrix-interpolation-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_006_pose_matrix-interpolation-array" count="3" stride="1">
               <param name="INTERPOLATION" type="name"/>
             </accessor>
           </technique_common>
@@ -413,25 +413,25 @@
       </animation>
       <animation id="Armature_Wiggle_Bone_007_pose_matrix" name="Armature">
         <source id="Armature_Wiggle_Bone_007_pose_matrix-input">
-          <float_array id="Armature_Wiggle_Bone_007_pose_matrix-input-array" count="13">0.04166662 0.08333331 0.125 0.1666666 0.2083333 0.25 0.2916666 0.3333333 0.375 0.4166666 0.4583333 0.5 0.5416667</float_array>
+          <float_array id="Armature_Wiggle_Bone_007_pose_matrix-input-array" count="3">0 0.25 0.5</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_007_pose_matrix-input-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_007_pose_matrix-input-array" count="3" stride="1">
               <param name="TIME" type="float"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_007_pose_matrix-output">
-          <float_array id="Armature_Wiggle_Bone_007_pose_matrix-output-array" count="208">1 0 0 0 0 0.731393 -0.6819562 0.1725149 0 0.6819562 0.731393 1.49012e-8 0 0 0 1 1 0 0 5.82077e-11 0 0.7715709 -0.6361436 0.172515 0 0.6361436 0.7715709 0 0 0 0 1 1 0 0 0 0 0.8605879 -0.509302 0.172515 0 0.509302 0.8605879 7.45058e-9 0 0 0 1 1 0 0 0 0 0.9462842 -0.3233362 0.172515 0 0.3233362 0.9462842 -7.45058e-9 0 0 0 1 1 0 0 0 0 0.9923055 -0.123814 0.172515 0 0.123814 0.9923055 1.11759e-8 0 0 0 1 1 0 0 0 0 0.9995201 0.03097854 0.172515 0 -0.03097854 0.9995201 -5.12227e-9 0 0 0 1 1 0 0 0 0 0.9957777 0.09179854 0.172515 0 -0.09179854 0.9957777 -8.3819e-9 0 0 0 1 1 0 0 0 0 0.99952 0.03097856 0.172515 0 -0.03097856 0.99952 -3.25963e-9 0 0 0 1 1 0 0 0 0 0.9923056 -0.1238139 0.172515 0 0.1238139 0.9923056 3.72529e-9 0 0 0 1 1 0 0 4.65661e-10 0 0.9462841 -0.3233362 0.172515 0 0.3233362 0.9462841 -1.49012e-8 0 0 0 1 1 0 0 0 0 0.8605878 -0.5093021 0.172515 0 0.5093021 0.8605878 -1.49012e-8 0 0 0 1 1 0 0 1.16415e-10 0 0.7715709 -0.6361436 0.172515 0 0.6361436 0.7715709 0 0 0 0 1 1 0 0 0 0 0.731393 -0.6819562 0.1725149 0 0.6819562 0.731393 1.49012e-8 0 0 0 1</float_array>
+          <float_array id="Armature_Wiggle_Bone_007_pose_matrix-output-array" count="48">1 0 0 0 0 0.731393 -0.6819562 0.1725149 0 0.6819562 0.731393 1.49012e-8 0 0 0 1 1 0 0 0 0 0.9957777 0.09179854 0.172515 0 -0.09179854 0.9957777 -8.3819e-9 0 0 0 1 1 0 0 0 0 0.731393 -0.6819562 0.1725149 0 0.6819562 0.731393 1.49012e-8 0 0 0 1</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_007_pose_matrix-output-array" count="13" stride="16">
+            <accessor source="#Armature_Wiggle_Bone_007_pose_matrix-output-array" count="3" stride="16">
               <param name="TRANSFORM" type="float4x4"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_007_pose_matrix-interpolation">
-          <Name_array id="Armature_Wiggle_Bone_007_pose_matrix-interpolation-array" count="13">LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR</Name_array>
+          <Name_array id="Armature_Wiggle_Bone_007_pose_matrix-interpolation-array" count="3">LINEAR LINEAR LINEAR</Name_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_007_pose_matrix-interpolation-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_007_pose_matrix-interpolation-array" count="3" stride="1">
               <param name="INTERPOLATION" type="name"/>
             </accessor>
           </technique_common>
@@ -445,25 +445,25 @@
       </animation>
       <animation id="Armature_Wiggle_Bone_008_pose_matrix" name="Armature">
         <source id="Armature_Wiggle_Bone_008_pose_matrix-input">
-          <float_array id="Armature_Wiggle_Bone_008_pose_matrix-input-array" count="13">0.04166662 0.08333331 0.125 0.1666666 0.2083333 0.25 0.2916666 0.3333333 0.375 0.4166666 0.4583333 0.5 0.5416667</float_array>
+          <float_array id="Armature_Wiggle_Bone_008_pose_matrix-input-array" count="3">0 0.25 0.5</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_008_pose_matrix-input-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_008_pose_matrix-input-array" count="3" stride="1">
               <param name="TIME" type="float"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_008_pose_matrix-output">
-          <float_array id="Armature_Wiggle_Bone_008_pose_matrix-output-array" count="208">1 0 0 0 0 0.8636331 -0.5041208 0.1725149 0 0.5041208 0.8636331 -9.31323e-10 0 0 0 1 1 0 0 0 0 0.8818411 -0.4715467 0.172515 0 0.4715467 0.8818411 -7.45058e-9 0 0 0 1 1 0 0 4.65661e-10 0 0.922173 -0.3867781 0.1725149 0 0.3867781 0.922173 1.25729e-8 0 0 0 1 1 0 0 0 0 0.9626148 -0.2708742 0.1725149 0 0.2708742 0.9626148 -6.25732e-9 0 0 0 1 1 0 0 0 0 0.9885508 -0.1508885 0.172515 0 0.1508885 0.9885508 1.27475e-8 0 0 0 1 1 0 0 0 0 0.9983441 -0.05752631 0.1725149 0 0.05752631 0.9983441 -1.6531e-8 0 0 0 1 1 0 0 0 0 0.9997952 -0.02023704 0.1725149 0 0.02023704 0.9997952 1.39698e-8 0 0 0 1 1 0 0 0 0 0.9983441 -0.05752636 0.1725149 0 0.05752636 0.9983441 -1.35042e-8 0 0 0 1 1 0 0 0 0 0.9885508 -0.1508885 0.1725149 0 0.1508885 0.9885508 -1.73459e-8 0 0 0 1 1 0 0 0 0 0.9626148 -0.2708741 0.1725149 0 0.2708741 0.9626148 -1.74623e-9 0 0 0 1 1 0 0 2.32831e-10 0 0.922173 -0.3867779 0.1725149 0 0.3867779 0.922173 4.65661e-10 0 0 0 1 1 0 0 1.16415e-10 0 0.8818411 -0.4715468 0.172515 0 0.4715468 0.8818411 5.58794e-9 0 0 0 1 1 0 0 0 0 0.8636331 -0.5041208 0.1725149 0 0.5041208 0.8636331 -9.31323e-10 0 0 0 1</float_array>
+          <float_array id="Armature_Wiggle_Bone_008_pose_matrix-output-array" count="48">1 0 0 0 0 0.8636331 -0.5041208 0.1725149 0 0.5041208 0.8636331 -9.31323e-10 0 0 0 1 1 0 0 0 0 0.9997952 -0.02023704 0.1725149 0 0.02023704 0.9997952 1.39698e-8 0 0 0 1 1 0 0 0 0 0.8636331 -0.5041208 0.1725149 0 0.5041208 0.8636331 -9.31323e-10 0 0 0 1</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_008_pose_matrix-output-array" count="13" stride="16">
+            <accessor source="#Armature_Wiggle_Bone_008_pose_matrix-output-array" count="3" stride="16">
               <param name="TRANSFORM" type="float4x4"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_008_pose_matrix-interpolation">
-          <Name_array id="Armature_Wiggle_Bone_008_pose_matrix-interpolation-array" count="13">LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR</Name_array>
+          <Name_array id="Armature_Wiggle_Bone_008_pose_matrix-interpolation-array" count="3">LINEAR LINEAR LINEAR</Name_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_008_pose_matrix-interpolation-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_008_pose_matrix-interpolation-array" count="3" stride="1">
               <param name="INTERPOLATION" type="name"/>
             </accessor>
           </technique_common>
@@ -477,25 +477,25 @@
       </animation>
       <animation id="Armature_Wiggle_Bone_009_pose_matrix" name="Armature">
         <source id="Armature_Wiggle_Bone_009_pose_matrix-input">
-          <float_array id="Armature_Wiggle_Bone_009_pose_matrix-input-array" count="13">0.04166662 0.08333331 0.125 0.1666666 0.2083333 0.25 0.2916666 0.3333333 0.375 0.4166666 0.4583333 0.5 0.5416667</float_array>
+          <float_array id="Armature_Wiggle_Bone_009_pose_matrix-input-array" count="3">0 0.25 0.5</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_009_pose_matrix-input-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_009_pose_matrix-input-array" count="3" stride="1">
               <param name="TIME" type="float"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_009_pose_matrix-output">
-          <float_array id="Armature_Wiggle_Bone_009_pose_matrix-output-array" count="208">1 0 0 0 0 0.967443 0.2530889 0.17437 0 -0.2530889 0.967443 -9.31323e-9 0 0 0 1 1 0 0 -1.16415e-10 0 0.9736711 0.2279573 0.17437 0 -0.2279573 0.9736711 -3.72529e-9 0 0 0 1 1 0 0 0 0 0.9864107 0.1642984 0.17437 0 -0.1642984 0.9864107 1.11759e-8 0 0 0 1 1 0 0 0 0 0.9967707 0.08030081 0.17437 0 -0.08030081 0.9967707 -7.45058e-9 0 0 0 1 1 0 0 9.31323e-10 0 0.9999909 -0.004272074 0.17437 0 0.004272074 0.9999909 4.65661e-9 0 0 0 1 1 0 0 -9.31323e-10 0 0.9976064 -0.0691494 0.17437 0 0.0691494 0.9976064 1.02445e-8 0 0 0 1 1 0 0 9.31323e-10 0 0.9954817 -0.09495383 0.17437 0 0.09495383 0.9954817 -7.21775e-9 0 0 0 1 1 0 0 -9.31323e-10 0 0.9976064 -0.06914937 0.17437 0 0.06914937 0.9976064 1.17579e-8 0 0 0 1 1 0 0 0 0 0.9999909 -0.004272036 0.17437 0 0.004272036 0.9999909 -1.11759e-8 0 0 0 1 1 0 0 0 0 0.9967706 0.08030081 0.17437 0 -0.08030081 0.9967706 -5.58794e-9 0 0 0 1 1 0 0 0 0 0.9864107 0.1642984 0.17437 0 -0.1642984 0.9864107 -1.86265e-8 0 0 0 1 1 0 0 0 0 0.9736712 0.2279574 0.17437 0 -0.2279574 0.9736712 2.23517e-8 0 0 0 1 1 0 0 0 0 0.967443 0.2530889 0.17437 0 -0.2530889 0.967443 -9.31323e-9 0 0 0 1</float_array>
+          <float_array id="Armature_Wiggle_Bone_009_pose_matrix-output-array" count="48">1 0 0 0 0 0.967443 0.2530889 0.17437 0 -0.2530889 0.967443 -9.31323e-9 0 0 0 1 1 0 0 9.31323e-10 0 0.9954817 -0.09495383 0.17437 0 0.09495383 0.9954817 -7.21775e-9 0 0 0 1 1 0 0 0 0 0.967443 0.2530889 0.17437 0 -0.2530889 0.967443 -9.31323e-9 0 0 0 1</float_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_009_pose_matrix-output-array" count="13" stride="16">
+            <accessor source="#Armature_Wiggle_Bone_009_pose_matrix-output-array" count="3" stride="16">
               <param name="TRANSFORM" type="float4x4"/>
             </accessor>
           </technique_common>
         </source>
         <source id="Armature_Wiggle_Bone_009_pose_matrix-interpolation">
-          <Name_array id="Armature_Wiggle_Bone_009_pose_matrix-interpolation-array" count="13">LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR LINEAR</Name_array>
+          <Name_array id="Armature_Wiggle_Bone_009_pose_matrix-interpolation-array" count="3">LINEAR LINEAR LINEAR</Name_array>
           <technique_common>
-            <accessor source="#Armature_Wiggle_Bone_009_pose_matrix-interpolation-array" count="13" stride="1">
+            <accessor source="#Armature_Wiggle_Bone_009_pose_matrix-interpolation-array" count="3" stride="1">
               <param name="INTERPOLATION" type="name"/>
             </accessor>
           </technique_common>
