@@ -196,16 +196,17 @@ def get_skeleton_data(root):
     def walk_skeleton(parent):
         sid = parent.get("sid")
         bone_matrices[sid] = [ float(i) for i in get(parent, "matrix").text.split() ]
-        children = []
+        children = {}
 
         for child in parent:
             if not named(child, "node"):
                 continue
-            children.append(walk_skeleton(child))
+            children[child.get("sid")] = walk_skeleton(child)
 
-        return { sid: children }
+        return children
 
-    hierarchy = walk_skeleton(get(armature, "node"))
+    root_bone = get(armature, "node")
+    hierarchy = { root_bone.get("sid"): walk_skeleton(root_bone) }
 
     print(json.dumps(hierarchy, indent = 2))
 
@@ -283,7 +284,7 @@ root = tree.getroot()
 mesh_data = get_mesh_data(root)
 bone_names, ibms, weights = get_controller_data(root)
 bone_frames = get_frame_data(root)
-get_skeleton_data(root)
+skeleton = get_skeleton_data(root)
 
 
 f = open("output.bin", "wb")
@@ -341,8 +342,37 @@ for bone in bone_frames:
         f.write(struct.pack("=ffff", *position))
         f.write(struct.pack("=ffff", *rotation))
 
+# child counts
+child_counts = [-1] * len(bone_names)
+
+def walk_bones_counts(children):
+    global child_counts
+    global bone_names
+
+    for bone_name in children:
+        child_counts[bone_names.index(bone_name)] = len(children[bone_name])
+        walk_bones_counts(children[bone_name])
+
+walk_bones_counts(skeleton)
+f.write(struct.pack("=" + "i" * len(child_counts), *child_counts))
+
+# bone hierarchy (ids)
+
+def walk_bones(children):
+    global f
+    global bone_names
+
+    ids = [ bone_names.index(name) for name in children ]
+    print(ids)
+    f.write(struct.pack("=" + "i" * len(ids), *ids))
+    for name in children:
+        walk_bones(children[name])
+
+walk_bones(next(iter(skeleton.values())))
 
 f.close()
+
+# hierarchy
 
 
 # file format:
@@ -364,7 +394,7 @@ f.close()
 # output transforms     [[(4f), (4f)]]
 
 # child counts          [(i)]
-# bone hierarchy (ids)  [[(u)]]
+# bone hierarchy (ids)  [[(i)]]
 
 
 
