@@ -2,12 +2,12 @@
 #include "bag_keys.h"
 #include "utils.h"
 #include "linalg.h"
+#include "res.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <stdbool.h>
-
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -99,6 +99,39 @@ static int createProgram(const char *vertexPath, const char *fragmentPath)
 }
 
 
+static unsigned loadTexture(const char *path)
+{
+    int width, height, channelCount;
+
+    stbi_set_flip_vertically_on_load(true);
+
+    uint8_t *image = stbi_load(path, &width, &height, &channelCount, STBI_rgb_alpha);
+    if (!image) {
+        fprintf(stderr, "Failed to load image \"%s\"\n", path);
+        exit(1);
+    }
+
+    unsigned texture;
+    glCreateTextures(GL_TEXTURE_2D, 1, &texture);
+    glTextureParameteri(texture, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTextureParameteri(texture, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTextureParameteri(texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTextureParameteri(texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTextureStorage2D(texture, log2(width), GL_RGBA8, width, height);
+    glTextureSubImage2D(texture, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image);
+
+    glGenerateTextureMipmap(texture);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    free(image);
+
+    return texture;
+}
+
+
 static float cubeVertices[] = {
     // front face
     -1.0f, 1.0f, 1.0f,  // 0      3
@@ -132,109 +165,6 @@ static unsigned cubeIndices[] = {
     1, 5, 6,
     6, 2, 1,
 };
-
-
-typedef struct
-{
-    float positions[3];
-    float textures[2];
-    float normals[3];
-} Vertex;
-
-
-typedef struct
-{
-    int vertexCount;
-    int indexCount;
-    Vertex *vertices;
-    unsigned *indices;
-} Model;
-
-
-static Model modelLoad(const char *path)
-{
-    Model model;
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        fprintf(stderr, "Failed to open file \"%s\"!\n", path);
-        fprintf(stderr, "File: %s, Line: %d\n", __FILE__, __LINE__);
-        exit(-1);
-    }
-
-    // TODO FIXME read failure handling
-    fread(&model.vertexCount, sizeof(int), 1, file);
-    fread(&model.indexCount, sizeof(int), 1, file);
-
-    model.vertices = malloc(sizeof(Vertex) * model.vertexCount);
-    if (!model.vertices) {
-        fprintf(stderr, "malloc fail: %s, %d\n", __FILE__, __LINE__);
-        exit(-1);
-    }
-
-    model.indices = malloc(sizeof(unsigned) * model.indexCount);
-    if (!model.indices) {
-        fprintf(stderr, "malloc fail: %s, %d\n", __FILE__, __LINE__);
-        exit(-1);
-    }
-
-    // TODO FIXME read failure handling
-    fread(model.vertices, sizeof(Vertex), model.vertexCount, file);
-    fread(model.indices, sizeof(unsigned), model.indexCount, file);
-
-    fclose(file);
-    return model;
-}
-
-
-typedef struct
-{
-    int ids[4];
-    float weights[4];
-} VertexWeight;
-
-
-typedef struct
-{
-    int boneCount;
-    VertexWeight *vertexWeights;
-    Matrix *ibms;
-    Model model;
-} Animated;
-
-
-static void modelPrint(const Model *model)
-{
-    printf("vertexCount: %d\n", model->vertexCount);
-    printf("indexCount:  %d\n", model->indexCount);
-    for (int i = 0; i < model->vertexCount; ++i) {
-        printf("[%f, %f, %f], [%f, %f], [%f, %f, %f]\n",
-                model->vertices[i].positions[0],
-                model->vertices[i].positions[1],
-                model->vertices[i].positions[2],
-
-                model->vertices[i].textures[0],
-                model->vertices[i].textures[1],
-
-                model->vertices[i].normals[0],
-                model->vertices[i].normals[1],
-                model->vertices[i].normals[2]
-        );
-    }
-    for (int i = 0; i < model->indexCount; i += 3) {
-        printf("[%u, %u, %u]\n",
-                model->indices[i],
-                model->indices[i + 1],
-                model->indices[i + 2]
-        );
-    }
-}
-
-
-static void modelFree(Model model)
-{
-    free(model.vertices);
-    free(model.indices);
-}
 
 
 typedef struct
@@ -284,39 +214,6 @@ static void freeModelObject(ModelObject object)
 }
 
 
-static unsigned loadTexture(const char *path)
-{
-    int width, height, channelCount;
-
-    stbi_set_flip_vertically_on_load(true);
-
-    uint8_t *image = stbi_load(path, &width, &height, &channelCount, STBI_rgb_alpha);
-    if (!image) {
-        fprintf(stderr, "Failed to load image \"%s\"\n", path);
-        exit(1);
-    }
-
-    unsigned texture;
-    glCreateTextures(GL_TEXTURE_2D, 1, &texture);
-    glTextureParameteri(texture, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTextureParameteri(texture, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTextureParameteri(texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-    glTextureParameteri(texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTextureStorage2D(texture, log2(width), GL_RGBA8, width, height);
-    glTextureSubImage2D(texture, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image);
-
-    glGenerateTextureMipmap(texture);
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    free(image);
-
-    return texture;
-}
-
-
 static const float MOUSE_SENSITIVITY = 0.005f;
 
 
@@ -363,6 +260,10 @@ int bagE_main(int argc, char *argv[])
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_MULTISAMPLE);
     // glEnable(GL_MULTISAMPLE);
+
+
+    Animated test = animatedLoad("output.bin");
+    animatedFree(test);
 
 
     int program = createProgram("shaders/proper_vert.glsl", "shaders/proper_frag.glsl");

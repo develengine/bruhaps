@@ -80,31 +80,19 @@ static void parse(const ObjInfo *info, const char *text, FILE *out)
     positions = malloc(
             sizeof(float) * (info->vertexCount * 3 + info->textureCount * 2 + info->normalCount * 3)
     );
-    if (!positions) {
-        fprintf(stderr, "malloc fail: %s, %d\n", __FILE__, __LINE__);
-        exit(-1);
-    }
+    malloc_check(positions);
 
     textures = positions + 3 * info->vertexCount;
     normals  = textures  + 2 * info->textureCount;
 
     Index *indices = malloc(sizeof(Index) * info->indexCount);
-    if (!indices) {
-        fprintf(stderr, "malloc fail: %s, %d\n", __FILE__, __LINE__);
-        exit(-1);
-    }
+    malloc_check(indices);
 
     Vertex *vertices = malloc(sizeof(Vertex) * info->indexCount);
-    if (!vertices) {
-        fprintf(stderr, "malloc fail: %s, %d\n", __FILE__, __LINE__);
-        exit(-1);
-    }
+    malloc_check(vertices);
 
     unsigned *indexData = malloc(sizeof(unsigned) * info->indexCount);
-    if (!indexData) {
-        fprintf(stderr, "malloc fail: %s, %d\n", __FILE__, __LINE__);
-        exit(-1);
-    }
+    malloc_check(indexData);
 
     int posOffset  = 0;
     int texOffset  = 0;
@@ -207,10 +195,10 @@ static void parse(const ObjInfo *info, const char *text, FILE *out)
     }
 
     // TODO FIXME write failure handling
-    fwrite(&vertexCount, sizeof(int), 1, out);
-    fwrite(&indexCount, sizeof(int), 1, out);
-    fwrite(vertices, sizeof(Vertex), vertexCount, out);
-    fwrite(indexData, sizeof(unsigned), indexCount, out);
+    safe_write(&vertexCount, sizeof(int), 1, out);
+    safe_write(&indexCount, sizeof(int), 1, out);
+    safe_write(vertices, sizeof(Vertex), vertexCount, out);
+    safe_write(indexData, sizeof(unsigned), indexCount, out);
 
     printf("v: %d\n", vertexCount);
     printf("i: %d\n", indexCount);
@@ -234,6 +222,7 @@ int main(int argc, char *argv[])
     ObjInfo info = loadInfo(text);
 
     FILE *out = fopen(argv[2], "wb");
+    file_check(out, argv[2]);
 
     parse(&info, text, out);
 

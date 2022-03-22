@@ -1,6 +1,7 @@
 #ifndef MATH_H
 #define MATH_H
 
+#include <stdio.h>
 #include <math.h>
 
 #ifndef M_PI
@@ -165,6 +166,72 @@ static inline void printMatrix(const Matrix *mat)
     }
 }
 
+
+typedef union
+{
+    struct { float r, i, j, k; };
+    struct { float w, x, y, z; };
+    float data[4];
+} Quaternion;
+
+
+static inline Quaternion quaternionNLerp(Quaternion a, Quaternion b, float blend)
+{
+    Quaternion res;
+
+    float dot = a.w * b.w + a.x * b.x + a.y * b.y + a.z * b.z;
+    float blendI = 1.0f - blend;
+
+    if (dot < 0) {
+        res = (Quaternion) {{
+            blendI * a.w + blend * -b.w,
+            blendI * a.x + blend * -b.x,
+            blendI * a.y + blend * -b.y,
+            blendI * a.z + blend * -b.z
+        }};
+    } else {
+        res = (Quaternion) {{
+            blendI * a.w + blend * b.w,
+            blendI * a.x + blend * b.x,
+            blendI * a.y + blend * b.y,
+            blendI * a.z + blend * b.z
+        }};
+    }
+
+    float length = sqrtf(res.w * res.w
+                       + res.x * res.x
+                       + res.y * res.y
+                       + res.z * res.z);
+    res.w /= length;
+    res.x /= length;
+    res.y /= length;
+    res.z /= length;
+
+    return res;
+}
+
+
+static inline Matrix quaternionToMatrix(Quaternion r)
+{
+    float xy = r.x * r.y;
+    float xz = r.x * r.z;
+    float xw = r.x * r.w;
+    float yz = r.y * r.z;
+    float yw = r.y * r.w;
+    float zw = r.z * r.w;
+    float xx = r.x * r.x;
+    float yy = r.y * r.y;
+    float zz = r.z * r.z;
+
+    Matrix res = {{
+        1 - 2 * (yy + zz), 2 * (xy - zw),     2 * (xz + yw),     0,
+        2 * (xy + zw),     1 - 2 * (xx + zz), 2 * (yz - xw),     0,
+        2 * (xz - yw),     2 * (yz + xw),     1 - 2 * (xx + yy), 0,
+        0,                 0,                 0,                 1
+    }};
+
+    return res;
+}
 
 
 #endif

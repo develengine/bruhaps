@@ -301,7 +301,7 @@ for vertex in mesh_data.vertices:
     f.write(struct.pack("=ff", *vertex.texture))
 
 #indices
-f.write(struct.pack("=" + "i" * len(mesh_data.indices), *mesh_data.indices))
+f.write(struct.pack("=" + "I" * len(mesh_data.indices), *mesh_data.indices))
 
 # bone ids, weights
 for vertex in mesh_data.vertices:
@@ -319,7 +319,7 @@ for vertex in mesh_data.vertices:
     length = math.sqrt(sum([i * i for i in weits]))
     weits = [ i / length for i in weits ]
 
-    f.write(struct.pack("=iiii", *ids))
+    f.write(struct.pack("=IIII", *ids))
     f.write(struct.pack("=ffff", *weits))
 
 #inverse bind matrices
@@ -354,7 +354,7 @@ def walk_bones_counts(children):
         walk_bones_counts(children[bone_name])
 
 walk_bones_counts(skeleton)
-f.write(struct.pack("=" + "i" * len(child_counts), *child_counts))
+f.write(struct.pack("=" + "I" * len(child_counts), *child_counts))
 
 # bone hierarchy (ids)
 
@@ -363,8 +363,7 @@ def walk_bones(children):
     global bone_names
 
     ids = [ bone_names.index(name) for name in children ]
-    print(ids)
-    f.write(struct.pack("=" + "i" * len(ids), *ids))
+    f.write(struct.pack("=" + "I" * len(ids), *ids))
     for name in children:
         walk_bones(children[name])
 
