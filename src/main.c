@@ -262,10 +262,6 @@ int bagE_main(int argc, char *argv[])
     // glEnable(GL_MULTISAMPLE);
 
 
-    Animated test = animatedLoad("output.bin");
-    animatedFree(test);
-
-
     int program = createProgram("shaders/proper_vert.glsl", "shaders/proper_frag.glsl");
 
 
@@ -295,6 +291,9 @@ int bagE_main(int argc, char *argv[])
     Model energyModel  = modelLoad("res/energy.model");
     ModelObject energy = createModelObject(energyModel);
 
+    Model boneModel  = modelLoad("res/bone.model");
+    ModelObject bone = createModelObject(boneModel);
+
     int textureProgram = createProgram(
             "shaders/texture_vertex.glsl",
             "shaders/texture_fragment.glsl"
@@ -302,6 +301,9 @@ int bagE_main(int argc, char *argv[])
 
     unsigned texture = loadTexture("res/monser.png");
     
+
+    Animated animated = animatedLoad("output.bin");
+
 
     double t = 0;
 
@@ -404,6 +406,19 @@ int bagE_main(int argc, char *argv[])
         glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
 
 
+        /* model bone */
+        glBindVertexArray(bone.vao);
+
+        Matrix modelBone = matrixTranslation(0.0f, 0.0f, 0.0f);
+
+        glProgramUniformMatrix4fv(modelProgram, 0, 1, GL_FALSE, vp.data);
+        glProgramUniformMatrix4fv(modelProgram, 1, 1, GL_FALSE, modelBone.data);
+        glProgramUniform3f(modelProgram, 2, camX, camY, camZ);
+        glProgramUniform3f(modelProgram, 3, 0.75f, 0.75f, 0.75f);
+
+        glDrawElements(GL_TRIANGLES, boneModel.indexCount, GL_UNSIGNED_INT, 0);
+
+
         /* model energy */
         Matrix modelEnergy = matrixScale(objScale, objScale, objScale);
 
@@ -461,6 +476,11 @@ int bagE_main(int argc, char *argv[])
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
     glDeleteBuffers(1, &ebo);
+
+    animatedFree(animated);
+
+    modelFree(boneModel);
+    freeModelObject(bone);
 
     modelFree(brugModel);
     freeModelObject(brug);

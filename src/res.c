@@ -74,7 +74,7 @@ Animated animatedLoad(const char *path)
 
     safe_read(&animated.model.vertexCount, sizeof(int), 1, file);
     safe_read(&animated.model.indexCount, sizeof(int), 1, file);
-    safe_read(&animated.boneCount, sizeof(int), 1, file);
+    safe_read(&animated.armature.boneCount, sizeof(int), 1, file);
 
     animated.model.vertices = malloc(sizeof(Vertex) * animated.model.vertexCount);
     animated.model.indices = malloc(sizeof(unsigned) * animated.model.indexCount);
@@ -84,38 +84,42 @@ Animated animatedLoad(const char *path)
     safe_read(animated.model.indices, sizeof(unsigned), animated.model.indexCount, file);
 
     animated.vertexWeights = malloc(sizeof(VertexWeight) * animated.model.vertexCount);
-    animated.ibms = malloc(sizeof(Matrix) * animated.boneCount);
+    animated.armature.ibms = malloc(sizeof(Matrix) * animated.armature.boneCount);
     malloc_check(animated.vertexWeights);
-    malloc_check(animated.ibms);
+    malloc_check(animated.armature.ibms);
     safe_read(animated.vertexWeights, sizeof(VertexWeight), animated.model.vertexCount, file);
-    safe_read(animated.ibms, sizeof(Matrix), animated.boneCount, file);
+    safe_read(animated.armature.ibms, sizeof(Matrix), animated.armature.boneCount, file);
 
-    animated.frameCounts = malloc(sizeof(unsigned) * animated.boneCount);
-    malloc_check(animated.frameCounts);
-    safe_read(animated.frameCounts, sizeof(unsigned), animated.boneCount, file);
+    animated.armature.frameCounts = malloc(sizeof(unsigned) * animated.armature.boneCount);
+    malloc_check(animated.armature.frameCounts);
+    safe_read(animated.armature.frameCounts, sizeof(unsigned), animated.armature.boneCount, file);
 
     int frameCount = 0;
-    for (int i = 0; i < animated.boneCount; ++i)
-        frameCount += animated.frameCounts[i];
+    for (int i = 0; i < animated.armature.boneCount; ++i)
+        frameCount += animated.armature.frameCounts[i];
 
-    animated.timeStamps = malloc(sizeof(float) * frameCount);
-    animated.transforms = malloc(sizeof(JointTransform) * frameCount);
-    malloc_check(animated.timeStamps);
-    malloc_check(animated.transforms);
-    safe_read(animated.timeStamps, sizeof(float), frameCount, file);
-    safe_read(animated.transforms, sizeof(JointTransform), frameCount, file);
+    animated.armature.timeStamps = malloc(sizeof(float) * frameCount);
+    animated.armature.transforms = malloc(sizeof(JointTransform) * frameCount);
+    malloc_check(animated.armature.timeStamps);
+    malloc_check(animated.armature.transforms);
+    safe_read(animated.armature.timeStamps, sizeof(float), frameCount, file);
+    safe_read(animated.armature.transforms, sizeof(JointTransform), frameCount, file);
 
-    animated.childCounts = malloc(sizeof(unsigned) * animated.boneCount);
-    malloc_check(animated.childCounts);
-    safe_read(animated.childCounts, sizeof(unsigned), animated.boneCount, file);
+    animated.armature.childCounts = malloc(sizeof(unsigned) * animated.armature.boneCount);
+    animated.armature.offsets = malloc(sizeof(unsigned) * animated.armature.boneCount);
+    malloc_check(animated.armature.childCounts);
+    malloc_check(animated.armature.offsets);
+    safe_read(animated.armature.childCounts, sizeof(unsigned), animated.armature.boneCount, file);
 
     int childrenCount = 0;
-    for (int i = 0; i < animated.boneCount; ++i)
-        childrenCount += animated.childCounts[i];
+    for (int i = 0; i < animated.armature.boneCount; ++i) {
+        animated.armature.offsets[i] = childrenCount;
+        childrenCount += animated.armature.childCounts[i];
+    }
 
-    animated.hierarchy = malloc(sizeof(unsigned) * childrenCount);
-    malloc_check(animated.hierarchy);
-    safe_read(animated.childCounts, sizeof(unsigned), childrenCount, file);
+    animated.armature.hierarchy = malloc(sizeof(unsigned) * childrenCount);
+    malloc_check(animated.armature.hierarchy);
+    safe_read(animated.armature.childCounts, sizeof(unsigned), childrenCount, file);
 
     eof_check(file);
 
@@ -128,12 +132,12 @@ void animatedFree(Animated animated)
 {
     modelFree(animated.model);
     free(animated.vertexWeights);
-    free(animated.ibms);
-    free(animated.frameCounts);
-    free(animated.timeStamps);
-    free(animated.transforms);
-    free(animated.childCounts);
-    free(animated.hierarchy);
+    free(animated.armature.ibms);
+    free(animated.armature.frameCounts);
+    free(animated.armature.timeStamps);
+    free(animated.armature.transforms);
+    free(animated.armature.childCounts);
+    free(animated.armature.hierarchy);
 }
 
 
