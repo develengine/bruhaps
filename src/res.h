@@ -36,26 +36,27 @@ typedef struct
 
 typedef struct
 {
-    Model model;
-    Armature armature;
-    VertexWeight *vertexWeights;
-} Animated;
-
-
-typedef struct
-{
     int boneCount;
 
     Matrix *ibms;
 
     unsigned *frameCounts;
+    unsigned *frameOffsets;
     float *timeStamps;
     JointTransform *transforms;
 
     unsigned *childCounts;
-    unsigned *offsets;
+    unsigned *childOffsets;
     unsigned *hierarchy;
 } Armature;
+
+
+typedef struct
+{
+    Model model;
+    Armature armature;
+    VertexWeight *vertexWeights;
+} Animated;
 
 
 Model modelLoad(const char *path);

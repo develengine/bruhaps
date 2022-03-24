@@ -91,12 +91,16 @@ Animated animatedLoad(const char *path)
     safe_read(animated.armature.ibms, sizeof(Matrix), animated.armature.boneCount, file);
 
     animated.armature.frameCounts = malloc(sizeof(unsigned) * animated.armature.boneCount);
+    animated.armature.frameOffsets = malloc(sizeof(unsigned) * animated.armature.boneCount);
     malloc_check(animated.armature.frameCounts);
+    malloc_check(animated.armature.frameOffsets);
     safe_read(animated.armature.frameCounts, sizeof(unsigned), animated.armature.boneCount, file);
 
     int frameCount = 0;
-    for (int i = 0; i < animated.armature.boneCount; ++i)
+    for (int i = 0; i < animated.armature.boneCount; ++i) {
+        animated.armature.frameOffsets[i] = frameCount;
         frameCount += animated.armature.frameCounts[i];
+    }
 
     animated.armature.timeStamps = malloc(sizeof(float) * frameCount);
     animated.armature.transforms = malloc(sizeof(JointTransform) * frameCount);
@@ -106,20 +110,20 @@ Animated animatedLoad(const char *path)
     safe_read(animated.armature.transforms, sizeof(JointTransform), frameCount, file);
 
     animated.armature.childCounts = malloc(sizeof(unsigned) * animated.armature.boneCount);
-    animated.armature.offsets = malloc(sizeof(unsigned) * animated.armature.boneCount);
+    animated.armature.childOffsets = malloc(sizeof(unsigned) * animated.armature.boneCount);
     malloc_check(animated.armature.childCounts);
-    malloc_check(animated.armature.offsets);
+    malloc_check(animated.armature.childOffsets);
     safe_read(animated.armature.childCounts, sizeof(unsigned), animated.armature.boneCount, file);
 
     int childrenCount = 0;
     for (int i = 0; i < animated.armature.boneCount; ++i) {
-        animated.armature.offsets[i] = childrenCount;
+        animated.armature.childOffsets[i] = childrenCount;
         childrenCount += animated.armature.childCounts[i];
     }
 
     animated.armature.hierarchy = malloc(sizeof(unsigned) * childrenCount);
     malloc_check(animated.armature.hierarchy);
-    safe_read(animated.armature.childCounts, sizeof(unsigned), childrenCount, file);
+    safe_read(animated.armature.hierarchy, sizeof(unsigned), childrenCount, file);
 
     eof_check(file);
 

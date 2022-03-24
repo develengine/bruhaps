@@ -206,6 +206,69 @@ static ModelObject createModelObject(Model model)
 }
 
 
+typedef struct
+{
+    ModelObject model;
+    unsigned weights;
+} AnimatedObject;
+
+
+static AnimatedObject createAnimatedObject(Animated animated)
+{
+    AnimatedObject object;
+
+    glCreateBuffers(1, &object.model.vbo);
+    glNamedBufferStorage(
+            object.model.vbo,
+            animated.model.vertexCount * sizeof(Vertex),
+            animated.model.vertices,
+            0
+    );
+
+    glCreateBuffers(1, &object.weights);
+    glNamedBufferStorage(
+            object.weights,
+            animated.model.vertexCount * sizeof(VertexWeight),
+            animated.vertexWeights,
+            0
+    );
+
+    glCreateBuffers(1, &object.model.ebo);
+    glNamedBufferStorage(
+            object.model.ebo,
+            animated.model.indexCount * sizeof(unsigned),
+            animated.model.indices,
+            0
+    );
+
+    glCreateVertexArrays(1, &object.model.vao);
+    glVertexArrayVertexBuffer(object.model.vao, 0, object.model.vbo, 0, sizeof(Vertex));
+    glVertexArrayVertexBuffer(object.model.vao, 1, object.weights, 0, sizeof(VertexWeight));
+
+    glEnableVertexArrayAttrib(object.model.vao, 0);
+    glEnableVertexArrayAttrib(object.model.vao, 1);
+    glEnableVertexArrayAttrib(object.model.vao, 2);
+    glEnableVertexArrayAttrib(object.model.vao, 3);
+    glEnableVertexArrayAttrib(object.model.vao, 4);
+
+    glVertexArrayAttribFormat(object.model.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribFormat(object.model.vao, 1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3);
+    glVertexArrayAttribFormat(object.model.vao, 2, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 6);
+    glVertexArrayAttribIFormat(object.model.vao, 3, 4, GL_UNSIGNED_INT, 0);
+    glVertexArrayAttribFormat(object.model.vao, 4, 4, GL_FLOAT, GL_FALSE, sizeof(unsigned) * 4);
+
+    glVertexArrayAttribBinding(object.model.vao, 0, 0);
+    glVertexArrayAttribBinding(object.model.vao, 1, 0);
+    glVertexArrayAttribBinding(object.model.vao, 2, 0);
+    glVertexArrayAttribBinding(object.model.vao, 3, 1);
+    glVertexArrayAttribBinding(object.model.vao, 4, 1);
+
+    glVertexArrayElementBuffer(object.model.vao, object.model.ebo);
+
+    return object;
+}
+
+
 static void freeModelObject(ModelObject object)
 {
     glDeleteVertexArrays(1, &object.vao);
@@ -238,6 +301,50 @@ static float motionYaw   = 0.0f;
 static float motionPitch = 0.0f;
 
 static bool spinning = true;
+
+static int boneShow = 1;
+
+
+static void computeArmatureMatrices(
+        Matrix base,
+        Matrix *output,
+        const Armature *armature,
+        unsigned index
+) {
+    // printf("index: %d\n", index);
+
+    unsigned frameOffset = armature->frameOffsets[index] + 1;
+    JointTransform transform = armature->transforms[frameOffset];
+
+    /*
+    printf("transform position: %f, %f, %f\n",
+            transform.position[0],
+            transform.position[1],
+            transform.position[2]);
+    printf("transform rotation: %f, %f, %f, %f\n",
+            transform.rotation.r,
+            transform.rotation.i,
+            transform.rotation.j,
+            transform.rotation.k);
+    */
+
+    Matrix local = matrixTranslation(
+            transform.position[0],
+            transform.position[1],
+            transform.position[2]
+    );
+    Matrix mat = quaternionToMatrix(transform.rotation);
+    local = matrixMultiply(&mat, &local);
+
+    base = matrixMultiply(&base, &local);
+
+    // printf("childOffset: %d\n", armature->childOffsets[index]);
+    const unsigned *children = armature->hierarchy + armature->childOffsets[index];
+    for (int i = 0; i < armature->childCounts[index]; ++i)
+        computeArmatureMatrices(base, output, armature, children[i]);
+
+    output[index] = base;
+}
 
 
 int bagE_main(int argc, char *argv[])
@@ -303,6 +410,8 @@ int bagE_main(int argc, char *argv[])
     
 
     Animated animated = animatedLoad("output.bin");
+    Matrix animationMatrices[64];
+    ModelObject worm = createModelObject(animated.model);
 
 
     double t = 0;
@@ -405,18 +514,32 @@ int bagE_main(int argc, char *argv[])
 
         glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
 
+#if 1
+        /* model worm */
+        Matrix modelWorm = matrixScale(1.0f, 1.0f, 1.0f);
+        mul = matrixTranslation(0.5f, 0.0f, 0.0f);
+        modelWorm = matrixMultiply(&mul, &modelWorm);
+
+        glBindVertexArray(worm.vao);
+
+        glProgramUniformMatrix4fv(modelProgram, 1, 1, GL_FALSE, modelWorm.data);
+        glDrawElements(GL_TRIANGLES, animated.model.indexCount, GL_UNSIGNED_INT, 0);
+#endif
+
 
         /* model bone */
         glBindVertexArray(bone.vao);
 
-        Matrix modelBone = matrixTranslation(0.0f, 0.0f, 0.0f);
+        Matrix modelBone = matrixScale(1.0f, 1.0f, 1.0f);
+        computeArmatureMatrices(modelBone, animationMatrices, &animated.armature, 0);
 
-        glProgramUniformMatrix4fv(modelProgram, 0, 1, GL_FALSE, vp.data);
-        glProgramUniformMatrix4fv(modelProgram, 1, 1, GL_FALSE, modelBone.data);
-        glProgramUniform3f(modelProgram, 2, camX, camY, camZ);
-        glProgramUniform3f(modelProgram, 3, 0.75f, 0.75f, 0.75f);
-
-        glDrawElements(GL_TRIANGLES, boneModel.indexCount, GL_UNSIGNED_INT, 0);
+        for (int i = 0;
+            i < (boneShow < animated.armature.boneCount ? boneShow : animated.armature.boneCount);
+            ++i)
+        {
+            glProgramUniformMatrix4fv(modelProgram, 1, 1, GL_FALSE, animationMatrices[i].data);
+            glDrawElements(GL_TRIANGLES, boneModel.indexCount, GL_UNSIGNED_INT, 0);
+        }
 
 
         /* model energy */
@@ -563,6 +686,15 @@ int bagE_eventHandler(bagE_Event *event)
                 case KEY_R:
                     if (keyDown)
                         spinning = !spinning;
+                    break;
+
+                case KEY_B:
+                    if (keyDown)
+                        ++boneShow;
+                    break;
+                case KEY_N:
+                    if (keyDown)
+                        --boneShow;
                     break;
             }
         } break;
