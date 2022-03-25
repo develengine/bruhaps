@@ -277,6 +277,13 @@ def to_quaternion(mat):
 def to_position(mat):
     return mat[at(3, 0)], mat[at(3, 1)], mat[at(3, 2)], 1.0
 
+def transpose(mat):
+    res = [0] * 16
+    for i in range(4):
+        for j in range(4):
+            res[i * 4 + j] = mat[j * 4 + i]
+    return res
+
 
 tree = ET.parse("models/worm.dae")
 root = tree.getroot()
@@ -305,6 +312,8 @@ f.write(struct.pack("=" + "I" * len(mesh_data.indices), *mesh_data.indices))
 
 # bone ids, weights
 for vertex in mesh_data.vertices:
+    weight_length = math.sqrt(sum(map(lambda x: x * x, weights[vertex.pos_id][1])))
+    print("weight length:", weight_length)
     zipped = list(zip(*weights[vertex.pos_id]))
     zipped.sort(key = lambda x: x[1], reverse = True)
 
@@ -317,6 +326,7 @@ for vertex in mesh_data.vertices:
     weits = [ i for _, i in zipped ]
 
     length = math.sqrt(sum([i * i for i in weits]))
+    # weits = [ (i / length) * weight_length for i in weits ]
     weits = [ i / length for i in weits ]
 
     f.write(struct.pack("=IIII", *ids))
@@ -324,7 +334,8 @@ for vertex in mesh_data.vertices:
 
 #inverse bind matrices
 for ibm in ibms:
-    f.write(struct.pack("=" + "f" * 16, *ibm))
+    print("ibm:", transpose(ibm))
+    f.write(struct.pack("=" + "f" * 16, *transpose(ibm)))
 
 # per bone frame counts
 for bone in bone_frames:

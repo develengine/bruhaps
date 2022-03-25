@@ -206,6 +206,14 @@ static ModelObject createModelObject(Model model)
 }
 
 
+static void freeModelObject(ModelObject object)
+{
+    glDeleteVertexArrays(1, &object.vao);
+    glDeleteBuffers(1, &object.vbo);
+    glDeleteBuffers(1, &object.ebo);
+}
+
+
 typedef struct
 {
     ModelObject model;
@@ -269,14 +277,6 @@ static AnimatedObject createAnimatedObject(Animated animated)
 }
 
 
-static void freeModelObject(ModelObject object)
-{
-    glDeleteVertexArrays(1, &object.vao);
-    glDeleteBuffers(1, &object.vbo);
-    glDeleteBuffers(1, &object.ebo);
-}
-
-
 static const float MOUSE_SENSITIVITY = 0.005f;
 
 
@@ -308,24 +308,30 @@ static int boneShow = 1;
 static void computeArmatureMatrices(
         Matrix base,
         Matrix *output,
+        const JointTransform *transforms,
         const Armature *armature,
         unsigned index
 ) {
-    // printf("index: %d\n", index);
-
-    unsigned frameOffset = armature->frameOffsets[index] + 1;
+    /*
+    unsigned frameOffset = armature->frameOffsets[index] + 0;
     JointTransform transform = armature->transforms[frameOffset];
+    */
+    JointTransform transform = transforms[index];
 
     /*
-    printf("transform position: %f, %f, %f\n",
+    printf("position: %f, %f, %f, %f\n",
             transform.position[0],
             transform.position[1],
-            transform.position[2]);
-    printf("transform rotation: %f, %f, %f, %f\n",
+            transform.position[2],
+            transform.position[3]
+    );
+    printf("rotation: %f, %f, %f, %f\n",
             transform.rotation.r,
             transform.rotation.i,
             transform.rotation.j,
-            transform.rotation.k);
+            transform.rotation.k
+    );
+    printf("\n");
     */
 
     Matrix local = matrixTranslation(
@@ -334,14 +340,17 @@ static void computeArmatureMatrices(
             transform.position[2]
     );
     Matrix mat = quaternionToMatrix(transform.rotation);
-    local = matrixMultiply(&mat, &local);
+
+    local = matrixMultiply(&local, &mat);
 
     base = matrixMultiply(&base, &local);
 
-    // printf("childOffset: %d\n", armature->childOffsets[index]);
     const unsigned *children = armature->hierarchy + armature->childOffsets[index];
     for (int i = 0; i < armature->childCounts[index]; ++i)
-        computeArmatureMatrices(base, output, armature, children[i]);
+        computeArmatureMatrices(base, output, transforms, armature, children[i]);
+
+    base = matrixMultiply(&base, armature->ibms + index);
+    // printMatrix(armature->ibms + index);
 
     output[index] = base;
 }
@@ -411,7 +420,15 @@ int bagE_main(int argc, char *argv[])
 
     Animated animated = animatedLoad("output.bin");
     Matrix animationMatrices[64];
+    JointTransform animationTransforms[64];
+
     ModelObject worm = createModelObject(animated.model);
+    AnimatedObject animatedObject = createAnimatedObject(animated);
+
+    unsigned animationProgram = createProgram(
+            "shaders/animated_vertex.glsl",
+            "shaders/animated_fragment.glsl"
+    );
 
 
     double t = 0;
@@ -425,6 +442,10 @@ int bagE_main(int argc, char *argv[])
 
     glBindTextureUnit(0, texture);
     glActiveTexture(GL_TEXTURE0);
+
+    float animationMid = animated.armature.timeStamps[1];
+    float animationEnd = animated.armature.timeStamps[2];
+    float animationTime = 0.0f;
 
     while (running) {
         bagE_pollEvents();
@@ -514,7 +535,7 @@ int bagE_main(int argc, char *argv[])
 
         glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
 
-#if 1
+#if 0
         /* model worm */
         Matrix modelWorm = matrixScale(1.0f, 1.0f, 1.0f);
         mul = matrixTranslation(0.5f, 0.0f, 0.0f);
@@ -526,7 +547,65 @@ int bagE_main(int argc, char *argv[])
         glDrawElements(GL_TRIANGLES, animated.model.indexCount, GL_UNSIGNED_INT, 0);
 #endif
 
+        glUseProgram(animationProgram);
+        glBindVertexArray(animatedObject.model.vao);
 
+        while (animationTime > animationEnd)
+            animationTime -= animationEnd;
+
+        for (int i = 0; i < animated.armature.boneCount; ++i) {
+            unsigned fo = animated.armature.frameOffsets[i];
+            // JointTransform transform = armature->transforms[frameOffset];
+            JointTransform first, second;
+            float blend;
+
+            if (animationTime < animationMid) {
+                first  = animated.armature.transforms[fo];
+                second = animated.armature.transforms[fo + 1];
+                blend  = animationTime / animationMid;
+            } else {
+                first  = animated.armature.transforms[fo + 1];
+                second = animated.armature.transforms[fo + 2];
+                blend  = (animationTime - animationMid) / (animationEnd - animationMid);
+            }
+
+            float blendI = 1.0f - blend;
+
+            animationTransforms[i].rotation = quaternionNLerp(
+                    first.rotation,
+                    second.rotation, 
+                    blend
+            );
+
+            float *pos = animationTransforms[i].position;
+            pos[0] = blendI * first.position[0] + blend * second.position[0];
+            pos[1] = blendI * first.position[1] + blend * second.position[1];
+            pos[2] = blendI * first.position[2] + blend * second.position[2];
+        }
+
+        Matrix modelBone = matrixScale(1.0f, 1.0f, 1.0f);
+        computeArmatureMatrices(
+                modelBone,
+                animationMatrices,
+                animationTransforms,
+                &animated.armature,
+                0
+        );
+
+        glProgramUniformMatrix4fv(animationProgram, 0, 1, GL_FALSE, vp.data);
+        glProgramUniformMatrix4fv(
+                animationProgram,
+                3,
+                animated.armature.boneCount,
+                GL_FALSE,
+                (float*)animationMatrices
+        );
+        glProgramUniform3f(animationProgram, 1, camX, camY, camZ);
+        glProgramUniform3f(animationProgram, 2, 0.75f, 0.75f, 0.75f);
+
+        glDrawElements(GL_TRIANGLES, animated.model.indexCount, GL_UNSIGNED_INT, 0);
+
+#if 0
         /* model bone */
         glBindVertexArray(bone.vao);
 
@@ -540,6 +619,7 @@ int bagE_main(int argc, char *argv[])
             glProgramUniformMatrix4fv(modelProgram, 1, 1, GL_FALSE, animationMatrices[i].data);
             glDrawElements(GL_TRIANGLES, boneModel.indexCount, GL_UNSIGNED_INT, 0);
         }
+#endif
 
 
         /* model energy */
@@ -594,6 +674,7 @@ int bagE_main(int argc, char *argv[])
         bagE_swapBuffers();
 
         t += 0.1;
+        animationTime += 0.02;
     }
   
     glDeleteVertexArrays(1, &vao);
