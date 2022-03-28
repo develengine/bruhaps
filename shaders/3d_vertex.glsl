@@ -14,6 +14,7 @@ void main() {
     vec4 position = u_modMat * vec4(i_position, 1.0);
     gl_Position = u_vpMat * position;
 
-    o_normals = mat3(transpose(inverse(u_modMat))) * i_normals;
+    // o_normals = mat3(transpose(inverse(u_modMat))) * i_normals;
+    o_normals = (u_modMat * vec4(i_normals, 0.0)).xyz;
     o_position = position.xyz;
 }
