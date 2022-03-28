@@ -1,14 +1,26 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <stdbool.h>
+
+
 #define length(x) (sizeof(x)/sizeof(*x))
+
+#ifdef DEBUG
+    #include <assert.h>
+    #define NOT_IMPLEMENTED 0
+#endif
 
 #ifdef DEBUG
     #define unreachable()                                                           \
         fprintf(stderr, "%s:%d: Unreachable line reached.\n", __FILE__, __LINE__);  \
         exit(666);
 #else
+#ifdef _WIN32
+    #define unreachable()   assume(0);
+#else
     #define unreachable()   __builtin_unreachable();
+#endif
 #endif
 
 #define safe_read(buffer, size, count, stream)                                  \

@@ -211,7 +211,6 @@ static inline Quaternion quaternionNLerp(Quaternion a, Quaternion b, float blend
 }
 
 
-#if 1
 static inline Matrix quaternionToMatrix(Quaternion r)
 {
     float xy = r.x * r.y;
@@ -233,29 +232,15 @@ static inline Matrix quaternionToMatrix(Quaternion r)
 
     return res;
 }
-#else
-static inline Matrix quaternionToMatrix(Quaternion r)
+
+
+static inline void positionLerp(float out[3], float a[3], float b[3], float blend)
 {
-    float xy = r.x * r.y;
-    float xz = r.x * r.z;
-    float xw = r.x * r.w;
-    float yz = r.y * r.z;
-    float yw = r.y * r.w;
-    float zw = r.z * r.w;
-    float xx = r.x * r.x;
-    float yy = r.y * r.y;
-    float zz = r.z * r.z;
-
-    Matrix res = {{
-        1 - 2 * (yy + zz), 2 * (xy + zw),     2 * (xz - yw),     0,
-        2 * (xy - zw),     1 - 2 * (xx + zz), 2 * (yz + xw),     0,
-        2 * (xz + yw),     2 * (yz - xw),     1 - 2 * (xx + yy), 0,
-        0,                 0,                 0,                 1
-    }};
-
-    return res;
+    float blendI = 1.0f - blend;
+    out[0] = blendI * a[0] + blend * b[0];
+    out[1] = blendI * a[1] + blend * b[1];
+    out[2] = blendI * a[2] + blend * b[2];
 }
-#endif
 
 
 #endif
