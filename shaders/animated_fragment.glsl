@@ -2,11 +2,14 @@
 
 layout(location = 0) in vec3 o_normal;
 layout(location = 1) in vec3 o_position;
+layout(location = 2) in vec2 o_texture;
 
 layout(location = 0) out vec4 o_color;
 
 layout(location = 1) uniform vec3 u_cameraPos;
 layout(location = 2) uniform vec3 u_objColor;
+
+layout(binding = 0) uniform sampler2D u_textureSampler;
 
 void main(void)
 {
@@ -24,6 +27,7 @@ void main(void)
     vec3 specular = shine * 0.5 * lightColor;
 
     o_color = vec4(ambientColor + lightColor + specular, 1.0)
-            * vec4(u_objColor, 1.0);
+            * texture(u_textureSampler, o_texture);
+            // * vec4(u_objColor, 1.0);
 }
 

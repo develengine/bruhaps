@@ -376,6 +376,8 @@ int bagE_main(int argc, char *argv[])
             "shaders/animated_fragment.glsl"
     );
 
+    unsigned wormTexture = loadTexture("res/worm.png");
+
 
     double t = 0;
 
@@ -392,7 +394,6 @@ int bagE_main(int argc, char *argv[])
         .time  = 0.0f
     };
 
-    glBindTextureUnit(0, texture);
     glActiveTexture(GL_TEXTURE0);
 
     while (running) {
@@ -487,11 +488,15 @@ int bagE_main(int argc, char *argv[])
         /* animated model */
         glUseProgram(animationProgram);
         glBindVertexArray(animatedObject.model.vao);
+        glBindTextureUnit(0, wormTexture);
 
-        updateAnimation(&animation, 0.02f);
+        updateAnimation(&animation, 0.01666f);
         computePoseTransforms(&animated.armature, animationTransforms, animation.time);
 
-        Matrix modelBone = matrixScale(1.0f, 1.0f, 1.0f);
+        Matrix modelBone = matrixRotationY(objRotation);
+        mul = matrixTranslation(0.0f, 0.0f,-2.0f);
+        modelBone = matrixMultiply(&mul, &modelBone);
+
         computeArmatureMatrices(
                 modelBone,
                 animationMatrices,
@@ -526,6 +531,7 @@ int bagE_main(int argc, char *argv[])
 
         glUseProgram(textureProgram);
         glBindVertexArray(energy.vao);
+        glBindTextureUnit(0, texture);
 
         glProgramUniformMatrix4fv(textureProgram, 0, 1, GL_FALSE, vp.data);
         glProgramUniformMatrix4fv(textureProgram, 1, 1, GL_FALSE, modelEnergy.data);
