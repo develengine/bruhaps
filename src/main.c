@@ -100,17 +100,24 @@ static int createProgram(const char *vertexPath, const char *fragmentPath)
 }
 
 
-static unsigned loadTexture(const char *path)
+static uint8_t *loadImage(const char *path, int *width, int *height, int *channels, bool flip)
 {
-    int width, height, channelCount;
+    stbi_set_flip_vertically_on_load(flip);
 
-    stbi_set_flip_vertically_on_load(true);
-
-    uint8_t *image = stbi_load(path, &width, &height, &channelCount, STBI_rgb_alpha);
+    uint8_t *image = stbi_load(path, width, height, channels, STBI_rgb_alpha);
     if (!image) {
         fprintf(stderr, "Failed to load image \"%s\"\n", path);
         exit(1);
     }
+
+    return image;
+}
+
+
+static unsigned createTexture(const char *path)
+{
+    int width, height, channelCount;
+    uint8_t *image = loadImage(path, &width, &height, &channelCount, true);
 
     unsigned texture;
     glCreateTextures(GL_TEXTURE_2D, 1, &texture);
@@ -119,13 +126,10 @@ static unsigned loadTexture(const char *path)
     glTextureParameteri(texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTextureParameteri(texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    glBindTexture(GL_TEXTURE_2D, texture);
     glTextureStorage2D(texture, log2(width), GL_RGBA8, width, height);
     glTextureSubImage2D(texture, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image);
 
     glGenerateTextureMipmap(texture);
-
-    glBindTexture(GL_TEXTURE_2D, 0);
 
     free(image);
 
@@ -278,6 +282,59 @@ static AnimatedObject createAnimatedObject(Animated animated)
 }
 
 
+static unsigned createCubeTexture(
+        const char *pxPath,
+        const char *nxPath,
+        const char *pyPath,
+        const char *nyPath,
+        const char *pzPath,
+        const char *nzPath
+) {
+    const char *paths[] = { pxPath, nxPath, pyPath, nyPath, pzPath, nzPath };
+
+    int width, height, channels;
+    uint8_t *images[6];
+
+    images[0] = loadImage(paths[0], &width, &height, &channels, false);
+
+    assert(width == height);
+
+    for (int i = 1; i < 6; ++i) {
+        int w, h, c;
+        images[i] = loadImage(paths[i], &w, &h, &c, false);
+
+        assert(w == width);
+        assert(h == height);
+        assert(c == channels);
+    }
+
+    unsigned texture;
+    glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &texture);
+    glTextureStorage2D(texture, log2(width) + 1, GL_RGBA8, width, height);
+
+    glTextureParameteri(texture, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTextureParameteri(texture, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTextureParameteri(texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTextureParameteri(texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    for (int i = 0; i < 6; ++i) {
+        glTextureSubImage3D(
+                texture,
+                0,
+                0, 0, i,
+                width, height, 1,
+                GL_RGBA,
+                GL_UNSIGNED_BYTE,
+                images[i]
+        );
+
+        free(images[i]);
+    }
+
+    return texture;
+}
+
+
 static const float MOUSE_SENSITIVITY = 0.005f;
 
 
@@ -362,7 +419,7 @@ int bagE_main(int argc, char *argv[])
             "shaders/texture_fragment.glsl"
     );
 
-    unsigned texture = loadTexture("res/monser.png");
+    unsigned texture = createTexture("res/monser.png");
     
 
     Animated animated = animatedLoad("output.bin");
@@ -376,7 +433,27 @@ int bagE_main(int argc, char *argv[])
             "shaders/animated_fragment.glsl"
     );
 
-    unsigned wormTexture = loadTexture("res/worm.png");
+    unsigned wormTexture = createTexture("res/worm.png");
+
+
+    unsigned cubeMap = createCubeTexture(
+        "Maskonaive2/posx.png",
+        "Maskonaive2/negx.png",
+
+        "Maskonaive2/posy.png",
+        "Maskonaive2/negy.png",
+
+        "Maskonaive2/posz.png",
+        "Maskonaive2/negz.png"
+    );
+
+    unsigned cubeProgram = createProgram(
+            "shaders/cubemap_vertex.glsl",
+            "shaders/cubemap_fragment.glsl"
+    );
+
+    unsigned dummyVao;
+    glCreateVertexArrays(1, &dummyVao);
 
 
     double t = 0;
@@ -462,6 +539,20 @@ int bagE_main(int argc, char *argv[])
 
         /* vp */
         Matrix vp = matrixMultiply(&proj, &view);
+
+
+        /* cube map */
+        glDisable(GL_DEPTH_TEST);
+
+        glUseProgram(cubeProgram);
+        glBindVertexArray(dummyVao);
+        glBindTextureUnit(0, cubeMap);
+
+        glProgramUniformMatrix4fv(cubeProgram, 0, 1, GL_FALSE, view.data);
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        glEnable(GL_DEPTH_TEST);
 
 
         /* model brug */
@@ -578,6 +669,8 @@ int bagE_main(int argc, char *argv[])
     glDeleteBuffers(1, &vbo);
     glDeleteBuffers(1, &ebo);
 
+    glDeleteVertexArrays(1, &dummyVao);
+
     animatedFree(animated);
 
     modelFree(brugModel);
@@ -587,9 +680,14 @@ int bagE_main(int argc, char *argv[])
     freeModelObject(energy);
 
     glDeleteTextures(1, &texture);
+    glDeleteTextures(1, &wormTexture);
+    glDeleteTextures(1, &cubeMap);
 
     glDeleteProgram(program);
     glDeleteProgram(modelProgram);
+    glDeleteProgram(textureProgram);
+    glDeleteProgram(animationProgram);
+    glDeleteProgram(cubeProgram);
 
     return 0;
 }
