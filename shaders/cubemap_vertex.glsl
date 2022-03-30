@@ -13,9 +13,11 @@ const vec2 positions[6] = {
 layout(location = 0) out vec3 vector;
 
 layout(location = 0) uniform mat4 u_view;
+layout(location = 1) uniform vec3 u_transform;
 
 void main(void)
 {
     gl_Position = vec4(positions[gl_VertexID], 0.0, 1.0);
-    vector = (u_view * vec4(positions[gl_VertexID].x, positions[gl_VertexID].y, 1.0, 0.0)).xyz;
+    vector = (transpose(mat3(u_view)) * -1)
+           * (vec3(-positions[gl_VertexID], 1.0) * u_transform);
 }

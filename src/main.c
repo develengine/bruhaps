@@ -362,6 +362,8 @@ static bool spinning = true;
 
 static int boneShow = 1;
 
+static float fov = 90.0f;
+
 
 int bagE_main(int argc, char *argv[])
 {
@@ -535,7 +537,7 @@ int bagE_main(int argc, char *argv[])
         view = matrixMultiply(&mul, &view);
 
         /* projection */
-        Matrix proj = matrixProjection(90.0f, windowWidth, windowHeight, 0.1f, 100.0f);
+        Matrix proj = matrixProjection(fov, windowWidth, windowHeight, 0.1f, 100.0f);
 
         /* vp */
         Matrix vp = matrixMultiply(&proj, &view);
@@ -549,6 +551,13 @@ int bagE_main(int argc, char *argv[])
         glBindTextureUnit(0, cubeMap);
 
         glProgramUniformMatrix4fv(cubeProgram, 0, 1, GL_FALSE, view.data);
+        glProgramUniform3f(
+                cubeProgram,
+                1,
+                (float)windowWidth / windowHeight,
+                1.0f,
+                sinf(fov * 0.5f)
+        );
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
