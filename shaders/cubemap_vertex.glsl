@@ -18,6 +18,9 @@ layout(location = 1) uniform vec3 u_transform;
 void main(void)
 {
     gl_Position = vec4(positions[gl_VertexID], 0.0, 1.0);
-    vector = (transpose(mat3(u_view)) * -1)
-           * (vec3(-positions[gl_VertexID], 1.0) * u_transform);
+    /*
+    vector = normalize((transpose(mat3(u_view)) * -1)
+           * (vec3(-positions[gl_VertexID], 1.0) * u_transform));
+           */
+    vector = (u_view * vec4(vec3(positions[gl_VertexID], 1.0) * normalize(u_transform), 0.0)).xyz;
 }

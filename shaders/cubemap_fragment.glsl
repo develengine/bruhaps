@@ -8,5 +8,6 @@ layout(binding = 0) uniform samplerCube environment;
 
 void main(void)
 {
-    outColor = texture(environment, vector);
+    outColor = texture(environment, normalize(vector));
+    // outColor = vec4(vector, 1.0);
 }

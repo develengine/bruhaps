@@ -544,20 +544,31 @@ int bagE_main(int argc, char *argv[])
 
 
         /* cube map */
+        Matrix envView = matrixRotationX(camPitch);
+        mul = matrixRotationY(camYaw);
+        envView = matrixMultiply(&mul, &envView);
+
         glDisable(GL_DEPTH_TEST);
 
         glUseProgram(cubeProgram);
         glBindVertexArray(dummyVao);
         glBindTextureUnit(0, cubeMap);
 
-        glProgramUniformMatrix4fv(cubeProgram, 0, 1, GL_FALSE, view.data);
+        float x = (float)windowWidth / windowHeight,
+        // float x = (float)windowHeight / windowWidth,
+              y = 1.0f,
+              z = sinf(fov * 0.5f);
+        float len = sqrtf(x * x + y * y + z * z);
+
+        glProgramUniformMatrix4fv(cubeProgram, 0, 1, GL_FALSE, envView.data);
         glProgramUniform3f(
                 cubeProgram,
                 1,
-                (float)windowWidth / windowHeight,
-                1.0f,
-                sinf(fov * 0.5f)
+                x,
+                y,
+                z
         );
+        printf("x: %f, y: %f, z: %f, len: %f\n", x, y, z, len);
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
