@@ -171,6 +171,21 @@ static unsigned cubeIndices[] = {
     6, 2, 1,
 };
 
+static unsigned boxIndices[] = {
+    2, 1, 0,
+    0, 3, 2,
+    6, 2, 3,
+    3, 7, 6,
+    1, 5, 4,
+    4, 0, 1,
+    5, 6, 7,
+    7, 4, 5,
+    4, 7, 3,
+    3, 0, 4,
+    6, 5, 1,
+    1, 2, 6,
+};
+
 
 typedef struct
 {
@@ -314,7 +329,8 @@ static unsigned createCubeTexture(
 
     glTextureParameteri(texture, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTextureParameteri(texture, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTextureParameteri(texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTextureParameteri(texture, GL_TEXTURE_WRAP_R, GL_REPEAT);
+    glTextureParameteri(texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
     glTextureParameteri(texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     for (int i = 0; i < 6; ++i) {
@@ -330,6 +346,8 @@ static unsigned createCubeTexture(
 
         free(images[i]);
     }
+
+    glGenerateTextureMipmap(texture);
 
     return texture;
 }
@@ -454,8 +472,18 @@ int bagE_main(int argc, char *argv[])
             "shaders/cubemap_fragment.glsl"
     );
 
-    unsigned dummyVao;
-    glCreateVertexArrays(1, &dummyVao);
+    unsigned boxEbo;
+    glCreateBuffers(1, &boxEbo);
+    glNamedBufferStorage(boxEbo, sizeof(boxIndices), boxIndices, 0);
+
+    unsigned boxVao;
+    glCreateVertexArrays(1, &boxVao);
+    glVertexArrayVertexBuffer(boxVao, 0, vbo, 0, sizeof(float) * 3);
+    glEnableVertexArrayAttrib(boxVao, 0);
+    glVertexArrayAttribFormat(boxVao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribBinding(boxVao, 0, 0);
+
+    glVertexArrayElementBuffer(boxVao, boxEbo);
 
 
     double t = 0;
@@ -544,23 +572,27 @@ int bagE_main(int argc, char *argv[])
 
 
         /* cube map */
-        Matrix envView = matrixRotationX(camPitch);
-        mul = matrixRotationY(camYaw);
+        Matrix envView = matrixRotationY(camYaw);
+        mul = matrixRotationX(camPitch);
         envView = matrixMultiply(&mul, &envView);
 
         glDisable(GL_DEPTH_TEST);
 
         glUseProgram(cubeProgram);
-        glBindVertexArray(dummyVao);
+        glBindVertexArray(boxVao);
         glBindTextureUnit(0, cubeMap);
 
+        /*
         float x = (float)windowWidth / windowHeight,
         // float x = (float)windowHeight / windowWidth,
               y = 1.0f,
               z = sinf(fov * 0.5f);
         float len = sqrtf(x * x + y * y + z * z);
+        */
 
-        glProgramUniformMatrix4fv(cubeProgram, 0, 1, GL_FALSE, envView.data);
+        glProgramUniformMatrix4fv(cubeProgram, 0, 1, GL_FALSE, view.data);
+        glProgramUniformMatrix4fv(cubeProgram, 1, 1, GL_FALSE, proj.data);
+        /*
         glProgramUniform3f(
                 cubeProgram,
                 1,
@@ -568,9 +600,10 @@ int bagE_main(int argc, char *argv[])
                 y,
                 z
         );
-        printf("x: %f, y: %f, z: %f, len: %f\n", x, y, z, len);
+        // printf("x: %f, y: %f, z: %f, len: %f\n", x, y, z, len);
+        */
 
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawElements(GL_TRIANGLES, length(boxIndices), GL_UNSIGNED_INT, 0);
 
         glEnable(GL_DEPTH_TEST);
 
@@ -689,7 +722,8 @@ int bagE_main(int argc, char *argv[])
     glDeleteBuffers(1, &vbo);
     glDeleteBuffers(1, &ebo);
 
-    glDeleteVertexArrays(1, &dummyVao);
+    glDeleteVertexArrays(1, &boxVao);
+    glDeleteBuffers(1, &boxEbo);
 
     animatedFree(animated);
 
