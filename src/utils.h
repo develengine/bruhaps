@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #include <stdbool.h>
+#include <string.h>
 
 
 #define length(x) (sizeof(x)/sizeof(*x))
@@ -54,8 +55,37 @@
         exit(666);                                                                      \
     }
 
+/* arguments must be lvalues, except for `item` */
+#define safe_push(buffer, size, capacity, item)                                 \
+    do {                                                                        \
+        if ((size) == (capacity)) {                                             \
+            capacity = (capacity) ? (capacity) * 2 : 1;                         \
+            void *new_ptr = realloc(buffer, sizeof(*(buffer)) * (capacity));    \
+            if (!new_ptr) {                                                     \
+                new_ptr = malloc(sizeof(*(buffer)) * (capacity));               \
+                malloc_check(new_ptr);                                          \
+                memcpy(new_ptr, buffer, sizeof(*(buffer)) * (size));            \
+            }                                                                   \
+            buffer = new_ptr;                                                   \
+        }                                                                       \
+        buffer[size] = item;                                                    \
+        ++(size);                                                               \
+    } while (0)
+
+/* arguments must be lvalues, except for `amount` */
+#define safe_expand(buffer, size, capacity, amount)                             \
+    do {                                                                        \
+        capacity = (capacity) + (amount);                                       \
+        void *new_ptr = realloc(buffer, sizeof(*(buffer)) * (capacity));        \
+        if (!new_ptr) {                                                         \
+            new_ptr = malloc(sizeof(*(buffer)) * (capacity));                   \
+            malloc_check(new_ptr);                                              \
+            memcpy(new_ptr, buffer, sizeof(*(buffer)) * (size));                \
+        }                                                                       \
+        buffer = new_ptr;                                                       \
+    } while (0)
+
 
 char *readFile(const char *name);
-
 
 #endif

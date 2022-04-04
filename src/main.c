@@ -4,6 +4,7 @@
 #include "linalg.h"
 #include "res.h"
 #include "animation.h"
+#include "terrain.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -385,6 +386,28 @@ static float fov = 90.0f;
 
 int bagE_main(int argc, char *argv[])
 {
+    /*****************************/
+
+    int size = 0, cap = 0;
+    int *ints = NULL;
+
+    safe_expand(ints, size, cap, 24);
+
+    safe_push(ints, size, cap, 5);
+    printf("cap: %d, size: %d\n", cap, size);
+    for (int i = 0; i < size; ++i) printf("%d: %d\n", i, ints[i]);
+    safe_push(ints, size, cap, 1);
+    safe_push(ints, size, cap, 2);
+    safe_push(ints, size, cap, 3);
+    printf("cap: %d, size: %d\n", cap, size);
+    for (int i = 0; i < size; ++i) printf("%d: %d\n", i, ints[i]);
+    safe_push(ints, size, cap, 4);
+    printf("cap: %d, size: %d\n", cap, size);
+    for (int i = 0; i < size; ++i) printf("%d: %d\n", i, ints[i]);
+    free(ints);
+
+    /*****************************/
+
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(openglCallback, 0);
 
@@ -485,6 +508,32 @@ int bagE_main(int argc, char *argv[])
 
     glVertexArrayElementBuffer(boxVao, boxEbo);
 
+    /**************************************************/
+
+    Map map = { 0 };
+
+    ChunkHeights chunk;
+    for (int y = 0; y < CHUNK_DIM; ++y) {
+        for (int x = 0; x < CHUNK_DIM; ++x) {
+            chunk.data[y * CHUNK_DIM + x] = 10 * (sin((M_PI / CHUNK_DIM) * x) + sin((M_PI / CHUNK_DIM) * y));
+        }
+    }
+
+    // safe_push(map.chunks, map.chunkCount, map.chunkCapacity, &chunk);
+    map.chunks = &chunk;
+    map.chunkCount = 1;
+
+    ChunkMesh chunkMesh = constructChunkMesh(&map, 0);
+    Model chunkModel = {
+        .vertexCount = chunkMesh.vertexCount,
+        .indexCount  = chunkMesh.indexCount,
+        .vertices    = chunkMesh.vertices,
+        .indices     = chunkMesh.indices
+    };
+
+    ModelObject chunkObject = createModelObject(chunkModel);
+
+    /**************************************************/
 
     double t = 0;
 
@@ -582,26 +631,8 @@ int bagE_main(int argc, char *argv[])
         glBindVertexArray(boxVao);
         glBindTextureUnit(0, cubeMap);
 
-        /*
-        float x = (float)windowWidth / windowHeight,
-        // float x = (float)windowHeight / windowWidth,
-              y = 1.0f,
-              z = sinf(fov * 0.5f);
-        float len = sqrtf(x * x + y * y + z * z);
-        */
-
         glProgramUniformMatrix4fv(cubeProgram, 0, 1, GL_FALSE, view.data);
         glProgramUniformMatrix4fv(cubeProgram, 1, 1, GL_FALSE, proj.data);
-        /*
-        glProgramUniform3f(
-                cubeProgram,
-                1,
-                x,
-                y,
-                z
-        );
-        // printf("x: %f, y: %f, z: %f, len: %f\n", x, y, z, len);
-        */
 
         glDrawElements(GL_TRIANGLES, length(boxIndices), GL_UNSIGNED_INT, 0);
 
@@ -627,6 +658,19 @@ int bagE_main(int argc, char *argv[])
         glProgramUniform3f(modelProgram, 3, 0.75f, 0.75f, 0.75f);
 
         glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
+
+
+        /* model chunk */
+        Matrix modelChunk = matrixScale(1.0f, 1.0f, 1.0f);
+
+        glBindVertexArray(chunkObject.vao);
+
+        glProgramUniformMatrix4fv(modelProgram, 1, 1, GL_FALSE, modelChunk.data);
+        glProgramUniform3f(modelProgram, 3, 0.75f, 0.75f, 0.75f);
+
+        // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glDrawElements(GL_TRIANGLES, chunkModel.indexCount, GL_UNSIGNED_INT, 0);
+        // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 
         /* animated model */
