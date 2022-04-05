@@ -495,6 +495,13 @@ int bagE_main(int argc, char *argv[])
             "shaders/cubemap_fragment.glsl"
     );
 
+    unsigned terrainProgram = createProgram(
+        "shaders/terrain_vertex.glsl",
+        "shaders/terrain_fragment.glsl"
+    );
+
+    unsigned grassTexture = createTexture("res/grass_texture.png");
+
     unsigned boxEbo;
     glCreateBuffers(1, &boxEbo);
     glNamedBufferStorage(boxEbo, sizeof(boxIndices), boxIndices, 0);
@@ -515,11 +522,10 @@ int bagE_main(int argc, char *argv[])
     ChunkHeights chunk;
     for (int y = 0; y < CHUNK_DIM; ++y) {
         for (int x = 0; x < CHUNK_DIM; ++x) {
-            chunk.data[y * CHUNK_DIM + x] = 35 * (sin((M_PI / CHUNK_DIM) * x) * sin((M_PI / CHUNK_DIM) * y));
+            chunk.data[y * CHUNK_DIM + x] = 2.0f * (sin((M_PI / CHUNK_DIM) * x * 4.0f) * sin((M_PI / CHUNK_DIM) * y * 4.0f));
         }
     }
 
-    // safe_push(map.chunks, map.chunkCount, map.chunkCapacity, &chunk);
     map.chunks = &chunk;
     map.chunkCount = 1;
 
@@ -663,10 +669,13 @@ int bagE_main(int argc, char *argv[])
         /* model chunk */
         Matrix modelChunk = matrixScale(1.0f, 1.0f, 1.0f);
 
+        glUseProgram(terrainProgram);
         glBindVertexArray(chunkObject.vao);
+        glBindTextureUnit(0, grassTexture);
 
-        glProgramUniformMatrix4fv(modelProgram, 1, 1, GL_FALSE, modelChunk.data);
-        glProgramUniform3f(modelProgram, 3, 0.75f, 0.75f, 0.75f);
+        glProgramUniformMatrix4fv(terrainProgram, 0, 1, GL_FALSE, vp.data);
+        glProgramUniformMatrix4fv(terrainProgram, 1, 1, GL_FALSE, modelChunk.data);
+        glProgramUniform3f(terrainProgram, 3, 0.5f, 1.0f, 0.5f);
 
         // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         glDrawElements(GL_TRIANGLES, chunkModel.indexCount, GL_UNSIGNED_INT, 0);

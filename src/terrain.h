@@ -12,8 +12,14 @@
 
 typedef struct
 {
-    uint8_t data[CHUNK_DIM * CHUNK_DIM];
+    float data[CHUNK_DIM * CHUNK_DIM];
 } ChunkHeights;
+
+
+typedef struct
+{
+    uint32_t lol;
+} TileTexture;
 
 
 #define MAX_MAP_DIM 64

@@ -11,21 +11,21 @@ ChunkMesh constructChunkMesh(Map *map, int chunk)
     safe_expand(mesh.vertices, mesh.vertexCount, mesh.vertexCapacity, size);
     safe_expand(mesh.indices, mesh.indexCount, mesh.indexCapacity, size * 6);
 
-    uint8_t *heights = map->chunks[chunk].data;
+    float *heights = map->chunks[chunk].data;
 
     /* vertices */
     for (int y = 0; y < CHUNK_DIM; ++y) {
         for (int x = 0; x < CHUNK_DIM; ++x) {
             float nx = 0.0f, ny = 1.0f, nz = 0.0f;
 
-            float height = (heights[y * CHUNK_DIM + x] / 255.0f) * CHUNK_HEIGHT;
+            float height = heights[y * CHUNK_DIM + x];
 
-            /* FIXME shit normals */
+            /* FIXME: shit normals */
             if (x > 0 && x < CHUNK_DIM - 1 && y > 0 && y < CHUNK_DIM - 1) {
-                float up    = (heights[(y - 1) * CHUNK_DIM + x] / 255.0f) * CHUNK_HEIGHT;
-                float down  = (heights[(y + 1) * CHUNK_DIM + x] / 255.0f) * CHUNK_HEIGHT;
-                float left  = (heights[y * CHUNK_DIM + x - 1] / 255.0f) * CHUNK_HEIGHT;
-                float right = (heights[y * CHUNK_DIM + x + 1] / 255.0f) * CHUNK_HEIGHT;
+                float up    = heights[(y - 1) * CHUNK_DIM + x];
+                float down  = heights[(y + 1) * CHUNK_DIM + x];
+                float left  = heights[y * CHUNK_DIM + x - 1];
+                float right = heights[y * CHUNK_DIM + x + 1];
                 nx = ((left - height) - (right - height)) * 0.5f;
                 ny = 1.0f;
                 nz = ((up - height) - (down - height)) * 0.5f;
@@ -41,7 +41,11 @@ ChunkMesh constructChunkMesh(Map *map, int chunk)
                     height,
                     (float)y * CHUNK_TILE_DIM
                 },
-                .normals = { nx, ny, nz }
+                .normals = { nx, ny, nz },
+                .textures = {
+                    x % 2 ? 1.0f : 0.0f,
+                    y % 2 ? 1.0f : 0.0f
+                }
             };
 
             safe_push(mesh.vertices, mesh.vertexCount, mesh.vertexCapacity, vertex);
