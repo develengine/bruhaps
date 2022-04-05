@@ -16,7 +16,7 @@ ChunkMesh constructChunkMesh(Map *map, int chunk)
     /* vertices */
     for (int y = 0; y < CHUNK_DIM; ++y) {
         for (int x = 0; x < CHUNK_DIM; ++x) {
-            float nx = 1.0f, ny = 1.0f, nz = 1.0f;
+            float nx = 0.0f, ny = 1.0f, nz = 0.0f;
 
             float height = (heights[y * CHUNK_DIM + x] / 255.0f) * CHUNK_HEIGHT;
 

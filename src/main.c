@@ -515,7 +515,7 @@ int bagE_main(int argc, char *argv[])
     ChunkHeights chunk;
     for (int y = 0; y < CHUNK_DIM; ++y) {
         for (int x = 0; x < CHUNK_DIM; ++x) {
-            chunk.data[y * CHUNK_DIM + x] = 10 * (sin((M_PI / CHUNK_DIM) * x) + sin((M_PI / CHUNK_DIM) * y));
+            chunk.data[y * CHUNK_DIM + x] = 35 * (sin((M_PI / CHUNK_DIM) * x) * sin((M_PI / CHUNK_DIM) * y));
         }
     }
 
