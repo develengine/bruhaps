@@ -384,6 +384,25 @@ static int boneShow = 1;
 static float fov = 90.0f;
 
 
+static bool selected = false;
+static int selectedX, selectedZ;
+
+static void selectVertex(
+        float camX,
+        float camY,
+        float camZ,
+        float camPitch,
+        float camYaw
+) {
+    float vx = sinf(camYaw), vz = -cosf(camYaw);
+    int x = floorf(camX), z = floorf(camZ);
+
+    selected = true;
+    selectedX = x + (int)(vx * 5.0f);
+    selectedZ = z + (int)(vz * 5.0f);
+}
+
+
 int bagE_main(int argc, char *argv[])
 {
     /*****************************/
@@ -426,6 +445,7 @@ int bagE_main(int argc, char *argv[])
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_MULTISAMPLE);
     // glEnable(GL_MULTISAMPLE);
+    glPointSize(8.0f);
 
 
     int program = createProgram("shaders/proper_vert.glsl", "shaders/proper_frag.glsl");
@@ -501,6 +521,13 @@ int bagE_main(int argc, char *argv[])
     );
 
     unsigned grassTexture = createTexture("res/grass_texture.png");
+
+    unsigned pointProgram = createProgram(
+            "shaders/point_vertex.glsl",
+            "shaders/point_fragment.glsl"
+    );
+    unsigned dummyVao;
+    glCreateVertexArrays(1, &dummyVao);
 
     unsigned boxEbo;
     glCreateBuffers(1, &boxEbo);
@@ -600,6 +627,8 @@ int bagE_main(int argc, char *argv[])
                 camY -= 0.1f;
         }
 
+        selectVertex(camX, camY, camZ, camPitch, camYaw);
+
         objX = 0.0f;
         objY = 0.0f;
         objZ = -10.0f;
@@ -665,7 +694,7 @@ int bagE_main(int argc, char *argv[])
 
         glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
 
-
+        
         /* model chunk */
         Matrix modelChunk = matrixScale(1.0f, 1.0f, 1.0f);
 
@@ -736,6 +765,25 @@ int bagE_main(int argc, char *argv[])
         glProgramUniform3f(textureProgram, 3, 0.75f, 0.75f, 0.75f);
 
         glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
+
+        /* point */
+        if (selected) {
+            glUseProgram(pointProgram);
+            glBindVertexArray(dummyVao);
+
+            glProgramUniformMatrix4fv(pointProgram, 0, 1, GL_FALSE, vp.data);
+            glProgramUniform4f(
+                    pointProgram,
+                    1,
+                    (float)selectedX,
+                    camY - 0.5f,
+                    (float)selectedZ,
+                    1.0f
+            );
+            glProgramUniform4f(pointProgram, 2, 0.5f, 1.0f, 0.75f, 1.0f);
+
+            glDrawArrays(GL_POINTS, 0, 1);
+        }
 
 
         /* model cube */
