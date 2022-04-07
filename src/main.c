@@ -392,7 +392,8 @@ static void selectVertex(
         float camY,
         float camZ,
         float camPitch,
-        float camYaw
+        float camYaw,
+        Map *map
 ) {
     float vx = sinf(camYaw), vz = -cosf(camYaw);
     int x = floorf(camX), z = floorf(camZ);
@@ -627,7 +628,7 @@ int bagE_main(int argc, char *argv[])
                 camY -= 0.1f;
         }
 
-        selectVertex(camX, camY, camZ, camPitch, camYaw);
+        selectVertex(camX, camY, camZ, camPitch, camYaw, &map);
 
         objX = 0.0f;
         objY = 0.0f;
