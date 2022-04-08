@@ -396,11 +396,50 @@ static void selectVertex(
         Map *map
 ) {
     float vx = sinf(camYaw), vz = -cosf(camYaw);
-    int x = floorf(camX), z = floorf(camZ);
+    float x = (camX + CHUNK_TILE_DIM / 2) / CHUNK_TILE_DIM;
+    float z = (camZ + CHUNK_TILE_DIM / 2) / CHUNK_TILE_DIM;
+    float yx = -sinf(camPitch) / cosf(camPitch);
 
-    selected = true;
-    selectedX = x + (int)(vx * 5.0f);
-    selectedZ = z + (int)(vz * 5.0f);
+    selected = false;
+
+    for (int i = 0; i < 10; ++i) {
+        float gx = vx > 0.0f ? ceilf(x + 0.01f) : floorf(x - 0.01f);
+        float gz = vz > 0.0f ? ceilf(z + 0.01f) : floorf(z - 0.01f);
+
+        float rx = (gx - x) / vx;
+        float rz = (gz - z) / vz;
+
+        if (rx < rz) {
+            z = z + rx * vz;
+            x = gx;
+        } else {
+            x = x + rz * vx;
+            z = gz;
+        }
+
+        int xp = floor(x);
+        int zp = floor(z);
+        int cx = xp / CHUNK_DIM;
+        int cz = zp / CHUNK_DIM;
+
+        if (xp >= 0 && cx < MAX_MAP_DIM
+         && zp >= 0 && cz < MAX_MAP_DIM
+         && map->chunkMap[cz * MAX_MAP_DIM + cx] != NO_CHUNK) {
+            int dx = x - camX;
+            int dz = z - camZ;
+            float h = camY + sqrtf(dx * dx + dz * dz) * yx;
+
+            int lx = xp % CHUNK_DIM;
+            int lz = zp % CHUNK_DIM;
+
+            if (h < map->heights[map->chunkMap[cz * MAX_MAP_DIM + cx]].data[lz * CHUNK_DIM + lx]) {
+                selected = true;
+                selectedX = xp;
+                selectedZ = zp;
+                return;
+            }
+        }
+    }
 }
 
 
@@ -446,7 +485,7 @@ int bagE_main(int argc, char *argv[])
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_MULTISAMPLE);
     // glEnable(GL_MULTISAMPLE);
-    glPointSize(8.0f);
+    glPointSize(12.0f);
 
 
     int program = createProgram("shaders/proper_vert.glsl", "shaders/proper_frag.glsl");
@@ -546,15 +585,18 @@ int bagE_main(int argc, char *argv[])
     /**************************************************/
 
     Map map = { 0 };
+    memset(map.chunkMap, NO_CHUNK, sizeof(map.chunkMap));
+    map.chunkMap[0] = 0;
 
     ChunkHeights chunk;
     for (int y = 0; y < CHUNK_DIM; ++y) {
         for (int x = 0; x < CHUNK_DIM; ++x) {
-            chunk.data[y * CHUNK_DIM + x] = 2.0f * (sin((M_PI / CHUNK_DIM) * x * 4.0f) * sin((M_PI / CHUNK_DIM) * y * 4.0f));
+            chunk.data[y * CHUNK_DIM + x] = 
+                2.0f * (sin((M_PI / CHUNK_DIM) * x * 2.0f) * sin((M_PI / CHUNK_DIM) * y * 3.0f));
         }
     }
 
-    map.chunks = &chunk;
+    map.heights = &chunk;
     map.chunkCount = 1;
 
     ChunkMesh chunkMesh = constructChunkMesh(&map, 0);
@@ -769,21 +811,30 @@ int bagE_main(int argc, char *argv[])
 
         /* point */
         if (selected) {
+            glDisable(GL_DEPTH_TEST);
+
             glUseProgram(pointProgram);
             glBindVertexArray(dummyVao);
+
+            int cx = selectedX / CHUNK_DIM;
+            int x = selectedX % CHUNK_DIM;
+            int cz = selectedZ / CHUNK_DIM;
+            int z = selectedZ % CHUNK_DIM;
 
             glProgramUniformMatrix4fv(pointProgram, 0, 1, GL_FALSE, vp.data);
             glProgramUniform4f(
                     pointProgram,
                     1,
                     (float)selectedX,
-                    camY - 0.5f,
+                    map.heights[map.chunkMap[cz * MAX_MAP_DIM + cx]].data[z * CHUNK_DIM + x],
                     (float)selectedZ,
                     1.0f
             );
             glProgramUniform4f(pointProgram, 2, 0.5f, 1.0f, 0.75f, 1.0f);
 
             glDrawArrays(GL_POINTS, 0, 1);
+
+            glEnable(GL_DEPTH_TEST);
         }
 
 

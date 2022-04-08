@@ -11,28 +11,56 @@ ChunkMesh constructChunkMesh(Map *map, int chunk)
     safe_expand(mesh.vertices, mesh.vertexCount, mesh.vertexCapacity, size);
     safe_expand(mesh.indices, mesh.indexCount, mesh.indexCapacity, size * 6);
 
-    float *heights = map->chunks[chunk].data;
+    float *heights = map->heights[chunk].data;
 
-    /* vertices */
     for (int y = 0; y < CHUNK_DIM; ++y) {
         for (int x = 0; x < CHUNK_DIM; ++x) {
             float nx = 0.0f, ny = 1.0f, nz = 0.0f;
 
             float height = heights[y * CHUNK_DIM + x];
 
-            /* FIXME: shit normals */
             if (x > 0 && x < CHUNK_DIM - 1 && y > 0 && y < CHUNK_DIM - 1) {
-                float up    = heights[(y - 1) * CHUNK_DIM + x];
-                float down  = heights[(y + 1) * CHUNK_DIM + x];
-                float left  = heights[y * CHUNK_DIM + x - 1];
-                float right = heights[y * CHUNK_DIM + x + 1];
-                nx = ((left - height) - (right - height)) * 0.5f;
-                ny = 1.0f;
-                nz = ((up - height) - (down - height)) * 0.5f;
-                float invLen = 1.0f / sqrtf(nx * nx + ny * ny + nz * nz);
-                nx *= invLen;
-                ny *= invLen;
-                nz *= invLen;
+                float up    = heights[(y - 1) * CHUNK_DIM + x] - height;
+                float down  = heights[(y + 1) * CHUNK_DIM + x] - height;
+                float left  = heights[y * CHUNK_DIM + x - 1] - height;
+                float right = heights[y * CHUNK_DIM + x + 1] - height;
+
+                float upLeft = heights[(y - 1) * CHUNK_DIM + x - 1] - height;
+                float upRight = heights[(y - 1) * CHUNK_DIM + x + 1] - height;
+                float downLeft = heights[(y + 1) * CHUNK_DIM + x - 1] - height;
+                float downRight = heights[(y + 1) * CHUNK_DIM + x + 1] - height;
+
+                nx = ny = nz = 0.0f;
+
+                float vecs[][3] = {
+                    { 0.0f, up,       -1.0f },
+                    {-1.0f, upLeft,   -1.0f },
+                    {-1.0f, left,      0.0f },
+                    {-1.0f, downLeft,  1.0f },
+                    { 0.0f, down,      1.0f },
+                    { 1.0f, downRight, 1.0f },
+                    { 1.0f, right,     0.0f },
+                    { 1.0f, upRight,  -1.0f },
+                };
+
+                for (int i = 0; i < length(vecs); ++i) {
+                    float norm[3];
+                    float *a = vecs[i];
+                    float *b = vecs[(i + 1) % length(vecs)];
+                    cross(norm, a, b);
+
+                    float invLen = 1.0f / vecLen(norm);
+                    norm[0] *= invLen;
+                    norm[1] *= invLen;
+                    norm[2] *= invLen;
+
+                    float weight = acosf(dot(a, b) / (vecLen(a) * vecLen(b))) / (2 * M_PI);
+
+                    nx += norm[0] * weight;
+                    ny += norm[1] * weight;
+                    nz += norm[2] * weight;
+                }
+
             }
 
             Vertex vertex = {
