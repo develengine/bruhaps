@@ -599,7 +599,7 @@ int bagE_main(int argc, char *argv[])
     map.heights = &chunk;
     map.chunkCount = 1;
 
-    ChunkMesh chunkMesh = constructChunkMesh(&map, 0);
+    ChunkMesh chunkMesh = constructChunkMesh(&map, 0, 0);
     Model chunkModel = {
         .vertexCount = chunkMesh.vertexCount,
         .indexCount  = chunkMesh.indexCount,
