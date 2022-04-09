@@ -5,353 +5,12 @@
 #include "res.h"
 #include "animation.h"
 #include "terrain.h"
+#include "core.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <stdbool.h>
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
-
-void GLAPIENTRY openglCallback(
-        GLenum source,
-        GLenum type,
-        GLuint id,
-        GLenum severity,
-        GLsizei length,
-        const GLchar* message,
-        const void* userParam
-) {
-    int error = type == GL_DEBUG_TYPE_ERROR;
-
-    printf("[%s] type: %d, severity: %d\n%s\n",
-            error ? "\033[1;31mERROR\033[0m" : "\033[1mINFO\033[0m",
-            type, severity, message
-    );
-}
-
-
-static void printContextInfo(void)
-{
-
-    printf("Adaptive vsync: %d\n", bagE_isAdaptiveVsyncAvailable());
-
-    const char *vendorString = (const char*)glGetString(GL_VENDOR);
-    const char *rendererString = (const char*)glGetString(GL_RENDERER);
-    const char *versionString = (const char*)glGetString(GL_VERSION);
-    const char *shadingLanguageVersionString = (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
-    printf("Vendor: %s\nRenderer: %s\nVersion: %s\nShading Language version: %s\n",
-        vendorString, rendererString, versionString, shadingLanguageVersionString);
-}
-
-
-static int loadShader(const char *path, GLenum type)
-{
-    char *source = readFile(path);
-    if (!source)
-        exit(1);
-
-    int shader = glCreateShader(type);
-    glShaderSource(shader, 1, (const char * const*)&source, NULL);
-    glCompileShader(shader);
-
-    int success;
-    char infoLog[512];
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        glGetShaderInfoLog(shader, 512, NULL, infoLog);
-        fprintf(stderr, "[\033[1;31mERROR\033[0m] Failed to compile shader '%s'!\n"
-                        "%s", path, infoLog);
-        exit(1);
-    }
-
-    free(source);
-    return shader;
-}
-
-
-static int createProgram(const char *vertexPath, const char *fragmentPath)
-{
-    int vertexShader = loadShader(vertexPath, GL_VERTEX_SHADER);
-    int fragmentShader = loadShader(fragmentPath, GL_FRAGMENT_SHADER);
-    int program = glCreateProgram();
-
-    glAttachShader(program, vertexShader);
-    glAttachShader(program, fragmentShader);
-    glLinkProgram(program);
-
-    int success;
-    char infoLog[512];
-    glGetProgramiv(program, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(program, 512, NULL, infoLog);
-        fprintf(stderr, "[\033[1;31mERROR\033[0m] Failed to link shader program!\n"
-                        "%s", infoLog);
-        exit(1);
-    }
-
-    glDetachShader(program, vertexShader);
-    glDeleteShader(vertexShader);
-    glDetachShader(program, fragmentShader);
-    glDeleteShader(fragmentShader);
-
-    return program;
-}
-
-
-static uint8_t *loadImage(const char *path, int *width, int *height, int *channels, bool flip)
-{
-    stbi_set_flip_vertically_on_load(flip);
-
-    uint8_t *image = stbi_load(path, width, height, channels, STBI_rgb_alpha);
-    if (!image) {
-        fprintf(stderr, "Failed to load image \"%s\"\n", path);
-        exit(1);
-    }
-
-    return image;
-}
-
-
-static unsigned createTexture(const char *path)
-{
-    int width, height, channelCount;
-    uint8_t *image = loadImage(path, &width, &height, &channelCount, true);
-
-    unsigned texture;
-    glCreateTextures(GL_TEXTURE_2D, 1, &texture);
-    glTextureParameteri(texture, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTextureParameteri(texture, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTextureParameteri(texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-    glTextureParameteri(texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    glTextureStorage2D(texture, log2(width), GL_RGBA8, width, height);
-    glTextureSubImage2D(texture, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image);
-
-    glGenerateTextureMipmap(texture);
-
-    free(image);
-
-    return texture;
-}
-
-
-static float cubeVertices[] = {
-    // front face
-    -1.0f, 1.0f, 1.0f,  // 0      3
-    -1.0f,-1.0f, 1.0f,  // 
-     1.0f,-1.0f, 1.0f,  // 
-     1.0f, 1.0f, 1.0f,  // 1      2
-    // back face
-    -1.0f, 1.0f,-1.0f,  // 4      7
-    -1.0f,-1.0f,-1.0f,  // 
-     1.0f,-1.0f,-1.0f,  // 
-     1.0f, 1.0f,-1.0f,  // 5      6
-};
-
-static unsigned cubeIndices[] = {
-    // front face
-    0, 1, 2,
-    2, 3, 0,
-    // right face
-    3, 2, 6,
-    6, 7, 3,
-    // left face
-    4, 5, 1,
-    1, 0, 4,
-    // back face
-    7, 6, 5,
-    5, 4, 7,
-    // top face
-    3, 7, 4,
-    4, 0, 3,
-    // bottom face
-    1, 5, 6,
-    6, 2, 1,
-};
-
-static unsigned boxIndices[] = {
-    2, 1, 0,
-    0, 3, 2,
-    6, 2, 3,
-    3, 7, 6,
-    1, 5, 4,
-    4, 0, 1,
-    5, 6, 7,
-    7, 4, 5,
-    4, 7, 3,
-    3, 0, 4,
-    6, 5, 1,
-    1, 2, 6,
-};
-
-
-typedef struct
-{
-    unsigned vao;
-    unsigned vbo;
-    unsigned ebo;
-} ModelObject;
-
-
-static ModelObject createModelObject(Model model)
-{
-    ModelObject object;
-
-    glCreateBuffers(1, &object.vbo);
-    glNamedBufferStorage(object.vbo, model.vertexCount * sizeof(Vertex), model.vertices, 0);
-
-    glCreateBuffers(1, &object.ebo);
-    glNamedBufferStorage(object.ebo, model.indexCount * sizeof(unsigned), model.indices, 0);
-
-    glCreateVertexArrays(1, &object.vao);
-    glVertexArrayVertexBuffer(object.vao, 0, object.vbo, 0, sizeof(Vertex));
-
-    glEnableVertexArrayAttrib(object.vao, 0);
-    glEnableVertexArrayAttrib(object.vao, 1);
-    glEnableVertexArrayAttrib(object.vao, 2);
-
-    glVertexArrayAttribFormat(object.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
-    glVertexArrayAttribFormat(object.vao, 1, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 3);
-    glVertexArrayAttribFormat(object.vao, 2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5);
-
-    glVertexArrayAttribBinding(object.vao, 0, 0);
-    glVertexArrayAttribBinding(object.vao, 1, 0);
-    glVertexArrayAttribBinding(object.vao, 2, 0);
-
-    glVertexArrayElementBuffer(object.vao, object.ebo);
-
-    return object;
-}
-
-
-static void freeModelObject(ModelObject object)
-{
-    glDeleteVertexArrays(1, &object.vao);
-    glDeleteBuffers(1, &object.vbo);
-    glDeleteBuffers(1, &object.ebo);
-}
-
-
-typedef struct
-{
-    ModelObject model;
-    unsigned weights;
-} AnimatedObject;
-
-
-static AnimatedObject createAnimatedObject(Animated animated)
-{
-    AnimatedObject object;
-
-    glCreateBuffers(1, &object.model.vbo);
-    glNamedBufferStorage(
-            object.model.vbo,
-            animated.model.vertexCount * sizeof(Vertex),
-            animated.model.vertices,
-            0
-    );
-
-    glCreateBuffers(1, &object.weights);
-    glNamedBufferStorage(
-            object.weights,
-            animated.model.vertexCount * sizeof(VertexWeight),
-            animated.vertexWeights,
-            0
-    );
-
-    glCreateBuffers(1, &object.model.ebo);
-    glNamedBufferStorage(
-            object.model.ebo,
-            animated.model.indexCount * sizeof(unsigned),
-            animated.model.indices,
-            0
-    );
-
-    glCreateVertexArrays(1, &object.model.vao);
-    glVertexArrayVertexBuffer(object.model.vao, 0, object.model.vbo, 0, sizeof(Vertex));
-    glVertexArrayVertexBuffer(object.model.vao, 1, object.weights, 0, sizeof(VertexWeight));
-
-    glEnableVertexArrayAttrib(object.model.vao, 0);
-    glEnableVertexArrayAttrib(object.model.vao, 1);
-    glEnableVertexArrayAttrib(object.model.vao, 2);
-    glEnableVertexArrayAttrib(object.model.vao, 3);
-    glEnableVertexArrayAttrib(object.model.vao, 4);
-
-    glVertexArrayAttribFormat(object.model.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
-    glVertexArrayAttribFormat(object.model.vao, 1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3);
-    glVertexArrayAttribFormat(object.model.vao, 2, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 6);
-    glVertexArrayAttribIFormat(object.model.vao, 3, 4, GL_UNSIGNED_INT, 0);
-    glVertexArrayAttribFormat(object.model.vao, 4, 4, GL_FLOAT, GL_FALSE, sizeof(unsigned) * 4);
-
-    glVertexArrayAttribBinding(object.model.vao, 0, 0);
-    glVertexArrayAttribBinding(object.model.vao, 1, 0);
-    glVertexArrayAttribBinding(object.model.vao, 2, 0);
-    glVertexArrayAttribBinding(object.model.vao, 3, 1);
-    glVertexArrayAttribBinding(object.model.vao, 4, 1);
-
-    glVertexArrayElementBuffer(object.model.vao, object.model.ebo);
-
-    return object;
-}
-
-
-static unsigned createCubeTexture(
-        const char *pxPath,
-        const char *nxPath,
-        const char *pyPath,
-        const char *nyPath,
-        const char *pzPath,
-        const char *nzPath
-) {
-    const char *paths[] = { pxPath, nxPath, pyPath, nyPath, pzPath, nzPath };
-
-    int width, height, channels;
-    uint8_t *images[6];
-
-    images[0] = loadImage(paths[0], &width, &height, &channels, false);
-
-    assert(width == height);
-
-    for (int i = 1; i < 6; ++i) {
-        int w, h, c;
-        images[i] = loadImage(paths[i], &w, &h, &c, false);
-
-        assert(w == width);
-        assert(h == height);
-        assert(c == channels);
-    }
-
-    unsigned texture;
-    glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &texture);
-    glTextureStorage2D(texture, log2(width) + 1, GL_RGBA8, width, height);
-
-    glTextureParameteri(texture, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTextureParameteri(texture, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTextureParameteri(texture, GL_TEXTURE_WRAP_R, GL_REPEAT);
-    glTextureParameteri(texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-    glTextureParameteri(texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    for (int i = 0; i < 6; ++i) {
-        glTextureSubImage3D(
-                texture,
-                0,
-                0, 0, i,
-                width, height, 1,
-                GL_RGBA,
-                GL_UNSIGNED_BYTE,
-                images[i]
-        );
-
-        free(images[i]);
-    }
-
-    glGenerateTextureMipmap(texture);
-
-    return texture;
-}
 
 
 static const float MOUSE_SENSITIVITY = 0.005f;
@@ -396,9 +55,11 @@ static void selectVertex(
         Map *map
 ) {
     float vx = sinf(camYaw), vz = -cosf(camYaw);
-    float x = (camX + CHUNK_TILE_DIM / 2) / CHUNK_TILE_DIM;
-    float z = (camZ + CHUNK_TILE_DIM / 2) / CHUNK_TILE_DIM;
-    float yx = -sinf(camPitch) / cosf(camPitch);
+    float camXS = (camX) / CHUNK_TILE_DIM + 0.5f;
+    float camZS = (camZ) / CHUNK_TILE_DIM + 0.5f;
+    float x = camXS;
+    float z = camZS;
+    float yx = -sinf(camPitch) / (cosf(camPitch));
 
     selected = false;
 
@@ -425,8 +86,8 @@ static void selectVertex(
         if (xp >= 0 && cx < MAX_MAP_DIM
          && zp >= 0 && cz < MAX_MAP_DIM
          && map->chunkMap[cz * MAX_MAP_DIM + cx] != NO_CHUNK) {
-            int dx = x - camX;
-            int dz = z - camZ;
+            int dx = x - camXS;
+            int dz = z - camZS;
             float h = camY + sqrtf(dx * dx + dz * dz) * yx;
 
             int lx = xp % CHUNK_DIM;
@@ -445,28 +106,6 @@ static void selectVertex(
 
 int bagE_main(int argc, char *argv[])
 {
-    /*****************************/
-
-    int size = 0, cap = 0;
-    int *ints = NULL;
-
-    safe_expand(ints, size, cap, 24);
-
-    safe_push(ints, size, cap, 5);
-    printf("cap: %d, size: %d\n", cap, size);
-    for (int i = 0; i < size; ++i) printf("%d: %d\n", i, ints[i]);
-    safe_push(ints, size, cap, 1);
-    safe_push(ints, size, cap, 2);
-    safe_push(ints, size, cap, 3);
-    printf("cap: %d, size: %d\n", cap, size);
-    for (int i = 0; i < size; ++i) printf("%d: %d\n", i, ints[i]);
-    safe_push(ints, size, cap, 4);
-    printf("cap: %d, size: %d\n", cap, size);
-    for (int i = 0; i < size; ++i) printf("%d: %d\n", i, ints[i]);
-    free(ints);
-
-    /*****************************/
-
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(openglCallback, 0);
 
@@ -485,28 +124,13 @@ int bagE_main(int argc, char *argv[])
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_MULTISAMPLE);
     // glEnable(GL_MULTISAMPLE);
-    glPointSize(12.0f);
+    glEnable(GL_PROGRAM_POINT_SIZE);
 
 
     int program = createProgram("shaders/proper_vert.glsl", "shaders/proper_frag.glsl");
 
 
-    unsigned vbo;
-    glCreateBuffers(1, &vbo);
-    glNamedBufferStorage(vbo, sizeof(cubeVertices), cubeVertices, 0);
-
-    unsigned ebo;
-    glCreateBuffers(1, &ebo);
-    glNamedBufferStorage(ebo, sizeof(cubeIndices), cubeIndices, 0);
-
-    unsigned vao;
-    glCreateVertexArrays(1, &vao);
-    glVertexArrayVertexBuffer(vao, 0, vbo, 0, sizeof(float) * 3);
-    glEnableVertexArrayAttrib(vao, 0);
-    glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
-    glVertexArrayAttribBinding(vao, 0, 0);
-
-    glVertexArrayElementBuffer(vao, ebo);
+    ModelObject cubeModel = createCubeModelObject();
 
 
     int modelProgram = createProgram("shaders/3d_vertex.glsl", "shaders/3d_fragment.glsl");
@@ -540,14 +164,14 @@ int bagE_main(int argc, char *argv[])
 
 
     unsigned cubeMap = createCubeTexture(
-        "Maskonaive2/posx.png",
-        "Maskonaive2/negx.png",
+            "Maskonaive2/posx.png",
+            "Maskonaive2/negx.png",
 
-        "Maskonaive2/posy.png",
-        "Maskonaive2/negy.png",
+            "Maskonaive2/posy.png",
+            "Maskonaive2/negy.png",
 
-        "Maskonaive2/posz.png",
-        "Maskonaive2/negz.png"
+            "Maskonaive2/posz.png",
+            "Maskonaive2/negz.png"
     );
 
     unsigned cubeProgram = createProgram(
@@ -556,8 +180,8 @@ int bagE_main(int argc, char *argv[])
     );
 
     unsigned terrainProgram = createProgram(
-        "shaders/terrain_vertex.glsl",
-        "shaders/terrain_fragment.glsl"
+            "shaders/terrain_vertex.glsl",
+            "shaders/terrain_fragment.glsl"
     );
 
     unsigned grassTexture = createTexture("res/grass_texture.png");
@@ -569,18 +193,7 @@ int bagE_main(int argc, char *argv[])
     unsigned dummyVao;
     glCreateVertexArrays(1, &dummyVao);
 
-    unsigned boxEbo;
-    glCreateBuffers(1, &boxEbo);
-    glNamedBufferStorage(boxEbo, sizeof(boxIndices), boxIndices, 0);
-
-    unsigned boxVao;
-    glCreateVertexArrays(1, &boxVao);
-    glVertexArrayVertexBuffer(boxVao, 0, vbo, 0, sizeof(float) * 3);
-    glEnableVertexArrayAttrib(boxVao, 0);
-    glVertexArrayAttribFormat(boxVao, 0, 3, GL_FLOAT, GL_FALSE, 0);
-    glVertexArrayAttribBinding(boxVao, 0, 0);
-
-    glVertexArrayElementBuffer(boxVao, boxEbo);
+    ModelObject boxModel = createBoxModelObject();
 
     /**************************************************/
 
@@ -592,14 +205,16 @@ int bagE_main(int argc, char *argv[])
     for (int y = 0; y < CHUNK_DIM; ++y) {
         for (int x = 0; x < CHUNK_DIM; ++x) {
             chunk.data[y * CHUNK_DIM + x] = 
-                2.0f * (sin((M_PI / CHUNK_DIM) * x * 2.0f) * sin((M_PI / CHUNK_DIM) * y * 3.0f));
+                2.0f * sin((M_PI / CHUNK_DIM) * x * 2.0f) * sin((M_PI / CHUNK_DIM) * y * 3.0f);
         }
     }
+    chunk.data[5 * CHUNK_DIM + 8] = NO_TILE;
 
     map.heights = &chunk;
     map.chunkCount = 1;
 
-    ChunkMesh chunkMesh = constructChunkMesh(&map, 0, 0);
+    ChunkMesh chunkMesh = { 0 };
+    constructChunkMesh(&chunkMesh, &map, 0, 0);
     Model chunkModel = chunkMeshToModel(chunkMesh);
 
     ModelObject chunkObject = createModelObject(chunkModel);
@@ -611,7 +226,10 @@ int bagE_main(int argc, char *argv[])
     float camX = 0.0f, camY = 0.0f, camZ = 0.0f;
     float camPitch = 0.0f, camYaw = 0.0f;
 
-    float objX, objY, objZ;
+    float objX = 0.0f;
+    float objY = 0.0f;
+    float objZ = -10.0f;
+
     float objScale = 1.0f;
     float objRotation = 0.0f;
 
@@ -667,10 +285,6 @@ int bagE_main(int argc, char *argv[])
 
         selectVertex(camX, camY, camZ, camPitch, camYaw, &map);
 
-        objX = 0.0f;
-        objY = 0.0f;
-        objZ = -10.0f;
-
         if (spinning)
             objRotation += 0.025;
 
@@ -701,13 +315,13 @@ int bagE_main(int argc, char *argv[])
         glDisable(GL_DEPTH_TEST);
 
         glUseProgram(cubeProgram);
-        glBindVertexArray(boxVao);
+        glBindVertexArray(boxModel.vao);
         glBindTextureUnit(0, cubeMap);
 
         glProgramUniformMatrix4fv(cubeProgram, 0, 1, GL_FALSE, view.data);
         glProgramUniformMatrix4fv(cubeProgram, 1, 1, GL_FALSE, proj.data);
 
-        glDrawElements(GL_TRIANGLES, length(boxIndices), GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, BOX_INDEX_COUNT, GL_UNSIGNED_INT, 0);
 
         glEnable(GL_DEPTH_TEST);
 
@@ -811,21 +425,17 @@ int bagE_main(int argc, char *argv[])
             glUseProgram(pointProgram);
             glBindVertexArray(dummyVao);
 
-            int cx = selectedX / CHUNK_DIM;
-            int x = selectedX % CHUNK_DIM;
-            int cz = selectedZ / CHUNK_DIM;
-            int z = selectedZ % CHUNK_DIM;
-
             glProgramUniformMatrix4fv(pointProgram, 0, 1, GL_FALSE, vp.data);
             glProgramUniform4f(
                     pointProgram,
                     1,
-                    (float)selectedX,
-                    map.heights[map.chunkMap[cz * MAX_MAP_DIM + cx]].data[z * CHUNK_DIM + x],
-                    (float)selectedZ,
+                    selectedX * CHUNK_TILE_DIM,
+                    atMapHeight(&map, selectedX, selectedZ),
+                    selectedZ * CHUNK_TILE_DIM,
                     1.0f
             );
             glProgramUniform4f(pointProgram, 2, 0.5f, 1.0f, 0.75f, 1.0f);
+            glProgramUniform1f(pointProgram, 3, 18.0f);
 
             glDrawArrays(GL_POINTS, 0, 1);
 
@@ -847,7 +457,7 @@ int bagE_main(int argc, char *argv[])
         mvp = matrixMultiply(&proj, &mvp);
 
 
-        glBindVertexArray(vao);
+        glBindVertexArray(cubeModel.vao);
         glUseProgram(program);
 
         glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, mvp.data);
@@ -858,7 +468,7 @@ int bagE_main(int argc, char *argv[])
                 1.0f
         );
 
-        glDrawElements(GL_TRIANGLES, length(cubeIndices), GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, BOX_INDEX_COUNT, GL_UNSIGNED_INT, 0);
 
 
         bagE_swapBuffers();
@@ -866,13 +476,6 @@ int bagE_main(int argc, char *argv[])
         t += 0.1;
     }
   
-    glDeleteVertexArrays(1, &vao);
-    glDeleteBuffers(1, &vbo);
-    glDeleteBuffers(1, &ebo);
-
-    glDeleteVertexArrays(1, &boxVao);
-    glDeleteBuffers(1, &boxEbo);
-
     animatedFree(animated);
 
     modelFree(brugModel);

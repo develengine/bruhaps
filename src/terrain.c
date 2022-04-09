@@ -3,14 +3,15 @@
 #include "utils.h"
 
 
-ChunkMesh constructChunkMesh(const Map *map, int cx, int cz)
+void constructChunkMesh(ChunkMesh *mesh, const Map *map, int cx, int cz)
 {
-    ChunkMesh mesh = { 0 };
+    mesh->vertexCount = 0;
+    mesh->indexCount = 0;
 
     const int size = CHUNK_DIM * CHUNK_DIM;
     // FIXME: make static size
-    safe_expand(mesh.vertices, mesh.vertexCount, mesh.vertexCapacity, size);
-    safe_expand(mesh.indices, mesh.indexCount, mesh.indexCapacity, size * 6);
+    safe_expand(mesh->vertices, mesh->vertexCount, mesh->vertexCapacity, size);
+    safe_expand(mesh->indices, mesh->indexCount, mesh->indexCapacity, size * 6);
 
     const int normalDim = CHUNK_DIM + 1;
     float normalBuffer[normalDim * normalDim * 3];
@@ -28,14 +29,14 @@ ChunkMesh constructChunkMesh(const Map *map, int cx, int cz)
     };
 
     float vecs[][3] = {
-        { 0.0f, NO_TILE,-1.0f },
-        {-1.0f, NO_TILE,-1.0f },
-        {-1.0f, NO_TILE, 0.0f },
-        {-1.0f, NO_TILE, 1.0f },
-        { 0.0f, NO_TILE, 1.0f },
-        { 1.0f, NO_TILE, 1.0f },
-        { 1.0f, NO_TILE, 0.0f },
-        { 1.0f, NO_TILE,-1.0f },
+        { 0.0f,           NO_TILE,-CHUNK_TILE_DIM },
+        {-CHUNK_TILE_DIM, NO_TILE,-CHUNK_TILE_DIM },
+        {-CHUNK_TILE_DIM, NO_TILE, 0.0f },
+        {-CHUNK_TILE_DIM, NO_TILE, CHUNK_TILE_DIM },
+        { 0.0f,           NO_TILE, CHUNK_TILE_DIM },
+        { CHUNK_TILE_DIM, NO_TILE, CHUNK_TILE_DIM },
+        { CHUNK_TILE_DIM, NO_TILE, 0.0f },
+        { CHUNK_TILE_DIM, NO_TILE,-CHUNK_TILE_DIM },
     };
 
     /* normals */
@@ -121,7 +122,7 @@ discard_tile:
             if (discardTile)
                 continue;
 
-            int indexOffset = mesh.vertexCount;
+            int indexOffset = mesh->vertexCount;
 
             for (int zi = 0; zi < 2; ++zi) {
                 for (int xi = 0; xi < 2; ++xi) {
@@ -140,23 +141,22 @@ discard_tile:
                         }
                     };
 
-                    safe_push(mesh.vertices, mesh.vertexCount, mesh.vertexCapacity, vertex);
+                    safe_push(mesh->vertices, mesh->vertexCount, mesh->vertexCapacity, vertex);
                 }
             }
 
-            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, indexOffset + 0);
-            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, indexOffset + 2);
-            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, indexOffset + 3);
+            safe_push(mesh->indices, mesh->indexCount, mesh->indexCapacity, indexOffset + 0);
+            safe_push(mesh->indices, mesh->indexCount, mesh->indexCapacity, indexOffset + 2);
+            safe_push(mesh->indices, mesh->indexCount, mesh->indexCapacity, indexOffset + 3);
 
-            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, indexOffset + 3);
-            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, indexOffset + 1);
-            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, indexOffset + 0);
+            safe_push(mesh->indices, mesh->indexCount, mesh->indexCapacity, indexOffset + 3);
+            safe_push(mesh->indices, mesh->indexCount, mesh->indexCapacity, indexOffset + 1);
+            safe_push(mesh->indices, mesh->indexCount, mesh->indexCapacity, indexOffset + 0);
 
         }
     }
-
-    return mesh;
 }
+
 
 float atMapHeight(const Map *map, int x, int z)
 {

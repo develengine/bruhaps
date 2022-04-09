@@ -80,6 +80,6 @@ static inline void freeChunkMesh(ChunkMesh mesh)
 
 float atMapHeight(const Map *map, int x, int z);
 
-ChunkMesh constructChunkMesh(const Map *map, int cx, int cz);
+void constructChunkMesh(ChunkMesh *mesh, const Map *map, int cx, int cz);
 
 #endif

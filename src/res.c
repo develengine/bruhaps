@@ -1,9 +1,9 @@
 #include "res.h"
+
 #include "utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
-
 
 Model modelLoad(const char *path)
 {
