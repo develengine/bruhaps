@@ -600,12 +600,7 @@ int bagE_main(int argc, char *argv[])
     map.chunkCount = 1;
 
     ChunkMesh chunkMesh = constructChunkMesh(&map, 0, 0);
-    Model chunkModel = {
-        .vertexCount = chunkMesh.vertexCount,
-        .indexCount  = chunkMesh.indexCount,
-        .vertices    = chunkMesh.vertices,
-        .indices     = chunkMesh.indices
-    };
+    Model chunkModel = chunkMeshToModel(chunkMesh);
 
     ModelObject chunkObject = createModelObject(chunkModel);
 

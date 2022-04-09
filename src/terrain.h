@@ -19,7 +19,7 @@ typedef struct
 typedef struct
 {
     uint8_t id;
-    uint8_t rot;
+    uint8_t trans;
     uint8_t x, y;
 } TileTexture;
 
@@ -27,7 +27,7 @@ typedef struct
 typedef struct
 {
     float x, y, w, h;
-    float wn, hn;
+    int wn, hn;
 } MapTexView;
 
 
@@ -59,15 +59,27 @@ typedef struct
     int indexCount, indexCapacity;
 } ChunkMesh;
 
-inline void freeChunkMesh(ChunkMesh mesh)
+static inline Model chunkMeshToModel(ChunkMesh mesh)
+{
+    Model model = {
+        .vertexCount = mesh.vertexCount,
+        .indexCount  = mesh.indexCount,
+        .vertices    = mesh.vertices,
+        .indices     = mesh.indices
+    };
+
+    return model;
+}
+
+static inline void freeChunkMesh(ChunkMesh mesh)
 {
     free(mesh.vertices);
     free(mesh.indices);
 }
 
 
-float atMapHeight(Map *map, int x, int z);
+float atMapHeight(const Map *map, int x, int z);
 
-ChunkMesh constructChunkMesh(Map *map, int cx, int cz);
+ChunkMesh constructChunkMesh(const Map *map, int cx, int cz);
 
 #endif

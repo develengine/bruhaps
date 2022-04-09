@@ -3,57 +3,59 @@
 #include "utils.h"
 
 
-ChunkMesh constructChunkMesh(Map *map, int cx, int cz)
+ChunkMesh constructChunkMesh(const Map *map, int cx, int cz)
 {
     ChunkMesh mesh = { 0 };
 
     const int size = CHUNK_DIM * CHUNK_DIM;
+    // FIXME: make static size
     safe_expand(mesh.vertices, mesh.vertexCount, mesh.vertexCapacity, size);
     safe_expand(mesh.indices, mesh.indexCount, mesh.indexCapacity, size * 6);
 
-    int chunk = map->chunkMap[cz * MAX_MAP_DIM + cx];
-    float *heights = map->heights[chunk].data;
+    const int normalDim = CHUNK_DIM + 1;
+    float normalBuffer[normalDim * normalDim * 3];
 
-    float normalBuffer[(CHUNK_DIM * CHUNK_DIM + CHUNK_DIM * 2 + 1) * 3];
+    const float posses[][2] = {
+    //    y, x
+        {-1, 0 },
+        {-1,-1 },
+        { 0,-1 },
+        { 1,-1 },
+        { 1, 0 },
+        { 1, 1 },
+        { 0, 1 },
+        {-1, 1 },
+    };
 
-    for (int y = 0; y < CHUNK_DIM; ++y) {
-        for (int x = 0; x < CHUNK_DIM; ++x) {
-            float vecs[][3] = {
-                { 0.0f, 666.f,-1.0f },
-                {-1.0f, 666.f,-1.0f },
-                {-1.0f, 666.f, 0.0f },
-                {-1.0f, 666.f, 1.0f },
-                { 0.0f, 666.f, 1.0f },
-                { 1.0f, 666.f, 1.0f },
-                { 1.0f, 666.f, 0.0f },
-                { 1.0f, 666.f,-1.0f },
-            };
+    float vecs[][3] = {
+        { 0.0f, NO_TILE,-1.0f },
+        {-1.0f, NO_TILE,-1.0f },
+        {-1.0f, NO_TILE, 0.0f },
+        {-1.0f, NO_TILE, 1.0f },
+        { 0.0f, NO_TILE, 1.0f },
+        { 1.0f, NO_TILE, 1.0f },
+        { 1.0f, NO_TILE, 0.0f },
+        { 1.0f, NO_TILE,-1.0f },
+    };
 
-            const float posses[][2] = {
-            //    y, x
-                {-1, 0 },
-                {-1,-1 },
-                { 0,-1 },
-                { 1,-1 },
-                { 1, 0 },
-                { 1, 1 },
-                { 0, 1 },
-                {-1, 1 },
-            };
-
+    /* normals */
+    for (int z = 0; z < normalDim; ++z) {
+        for (int x = 0; x < normalDim; ++x) {
             float nx = 0.0f, ny = 0.0f, nz = 0.0f;
-            float height = heights[y * CHUNK_DIM + x];
+            float height = atMapHeight(map, cx * CHUNK_DIM + x, cz * CHUNK_DIM + z);
 
             if (height == NO_TILE)
                 continue;
 
             for (int i = 0; i < length(vecs); i++) {
                 int xp = x + posses[i][1];
-                int yp = y + posses[i][0];
+                int zp = z + posses[i][0];
 
-                float res = atMapHeight(map, cx * CHUNK_DIM + xp, cz * CHUNK_DIM + yp);
-                if (res == NO_TILE)
+                float res = atMapHeight(map, cx * CHUNK_DIM + xp, cz * CHUNK_DIM + zp);
+                if (res == NO_TILE) {
+                    vecs[i][1] = res;
                     continue;
+                }
 
                 vecs[i][1] = res - height;
             }
@@ -84,52 +86,79 @@ ChunkMesh constructChunkMesh(Map *map, int cx, int cz)
             nx *= invLen;
             ny *= invLen;
             nz *= invLen;
-/*
-            int pos = (y * CHUNK_DIM + x) * 3;
+
+            int pos = (z * normalDim + x) * 3;
             normalBuffer[pos + 0] = nx;
             normalBuffer[pos + 1] = ny;
             normalBuffer[pos + 2] = nz;
         }
     }
 
-    for (int y = 0; y < CHUNK_DIM; ++y) {
+    /* vertices */
+    for (int z = 0; z < CHUNK_DIM; ++z) {
         for (int x = 0; x < CHUNK_DIM; ++x) {
-*/
-            Vertex vertex = {
-                .positions = {
-                    (float)x * CHUNK_TILE_DIM,
-                    height,
-                    (float)y * CHUNK_TILE_DIM
-                },
-                .normals = { nx, ny, nz },
-                .textures = {
-                    x % 2 ? 1.0f : 0.0f,
-                    y % 2 ? 1.0f : 0.0f
+            float *normals[4];
+            float heights[4];
+
+            bool discardTile = true;
+
+            for (int zi = 0; zi < 2; ++zi) {
+                for (int xi = 0; xi < 2; ++xi) {
+                    int xp = x + xi;
+                    int zp = z + zi;
+
+                    float height = atMapHeight(map, cx * CHUNK_DIM + xp, cz * CHUNK_DIM + zp);
+                    if (height == NO_TILE)
+                        goto discard_tile;
+
+                    heights[zi * 2 + xi] = height;
+                    normals[zi * 2 + xi] = normalBuffer + (zp * normalDim + xp) * 3;
                 }
-            };
+            }
 
-            safe_push(mesh.vertices, mesh.vertexCount, mesh.vertexCapacity, vertex);
-        }
-    }
+            discardTile = false;
+discard_tile:
+            if (discardTile)
+                continue;
 
-    for (int y = 0; y < CHUNK_DIM - 1; ++y) {
-        for (int x = 0; x < CHUNK_DIM - 1; ++x) {
-            int yo = y + 1;
-            int xo = x + 1;
-            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, y  * CHUNK_DIM + x);
-            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, yo * CHUNK_DIM + x);
-            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, yo * CHUNK_DIM + xo);
+            int indexOffset = mesh.vertexCount;
 
-            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, y  * CHUNK_DIM + x);
-            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, yo * CHUNK_DIM + xo);
-            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, y  * CHUNK_DIM + xo);
+            for (int zi = 0; zi < 2; ++zi) {
+                for (int xi = 0; xi < 2; ++xi) {
+                    float *n = normals[zi * 2 + xi];
+
+                    Vertex vertex = {
+                        .positions = {
+                            (float)(x + xi) * CHUNK_TILE_DIM,
+                            heights[zi * 2 + xi],
+                            (float)(z + zi) * CHUNK_TILE_DIM
+                        },
+                        .normals = { n[0], n[1], n[2] },
+                        .textures = {
+                            (x + xi) % 2 ? 1.0f : 0.0f,
+                            (z + zi) % 2 ? 1.0f : 0.0f
+                        }
+                    };
+
+                    safe_push(mesh.vertices, mesh.vertexCount, mesh.vertexCapacity, vertex);
+                }
+            }
+
+            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, indexOffset + 0);
+            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, indexOffset + 2);
+            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, indexOffset + 3);
+
+            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, indexOffset + 3);
+            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, indexOffset + 1);
+            safe_push(mesh.indices, mesh.indexCount, mesh.indexCapacity, indexOffset + 0);
+
         }
     }
 
     return mesh;
 }
 
-float atMapHeight(Map *map, int x, int z)
+float atMapHeight(const Map *map, int x, int z)
 {
     if (x < 0 || z < 0)
         return NO_TILE;
