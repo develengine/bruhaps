@@ -51,6 +51,8 @@ static int bagX11_ctxErrorOccurred = 0;
 
 static int bagX11_ctxErrorHandler(Display *dpy, XErrorEvent *ev)
 {
+    (void)dpy; (void)ev;
+
     bagX11_ctxErrorOccurred = 1;
     return 0;
 }
@@ -60,6 +62,8 @@ int bagX11_ximopen(Display *dpy);
 
 void bagX11_ximinstantiate(Display *dpy, XPointer client, XPointer call)
 {
+    (void)client; (void)call;
+
     if (bagX11_ximopen(dpy)) {
 	XUnregisterIMInstantiateCallback(
                 bagX11.display, NULL, NULL, NULL,
@@ -70,6 +74,8 @@ void bagX11_ximinstantiate(Display *dpy, XPointer client, XPointer call)
 
 void bagX11_ximdestroy(XIM xim, XPointer client, XPointer call)
 {
+    (void)xim; (void)client; (void)call;
+
     bagX11.inputMethod = NULL;
     XRegisterIMInstantiateCallback(
             bagX11.display, NULL, NULL, NULL,
@@ -80,12 +86,15 @@ void bagX11_ximdestroy(XIM xim, XPointer client, XPointer call)
 
 int bagX11_xicdestroy(XIC xim, XPointer client, XPointer call)
 {
+    (void)xim; (void)client; (void)call;
     bagX11.inputClient = NULL;
     return 1;
 }
 
 int bagX11_ximopen(Display *dpy)
 {
+    (void)dpy;
+
     XIMCallback imdestroy = { .client_data = NULL, .callback = bagX11_ximdestroy };
     XICCallback icdestroy = { .client_data = NULL, .callback = bagX11_xicdestroy };
 

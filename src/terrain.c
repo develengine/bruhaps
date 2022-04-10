@@ -3,15 +3,17 @@
 #include "utils.h"
 
 
-void constructChunkMesh(ChunkMesh *mesh, const Map *map, int cx, int cz)
-{
+void constructChunkMesh(
+        ChunkMesh *mesh,
+        const Map *map,
+        const AtlasView *atlasViews,
+        int cx,
+        int cz
+) {
     mesh->vertexCount = 0;
     mesh->indexCount = 0;
 
-    const int size = CHUNK_DIM * CHUNK_DIM;
-    // FIXME: make static size
-    safe_expand(mesh->vertices, mesh->vertexCount, mesh->vertexCapacity, size);
-    safe_expand(mesh->indices, mesh->indexCount, mesh->indexCapacity, size * 6);
+    // FIXME: make static buffer sizes
 
     const int normalDim = CHUNK_DIM + 1;
     float normalBuffer[normalDim * normalDim * 3];
@@ -48,7 +50,7 @@ void constructChunkMesh(ChunkMesh *mesh, const Map *map, int cx, int cz)
             if (height == NO_TILE)
                 continue;
 
-            for (int i = 0; i < length(vecs); i++) {
+            for (int i = 0; i < (int)length(vecs); i++) {
                 int xp = x + posses[i][1];
                 int zp = z + posses[i][0];
 
@@ -61,7 +63,7 @@ void constructChunkMesh(ChunkMesh *mesh, const Map *map, int cx, int cz)
                 vecs[i][1] = res - height;
             }
 
-            for (int i = 0; i < length(vecs); ++i) {
+            for (int i = 0; i < (int)length(vecs); ++i) {
                 float norm[3];
                 float *a = vecs[i];
                 float *b = vecs[(i + 1) % length(vecs)];
@@ -122,6 +124,9 @@ discard_tile:
             if (discardTile)
                 continue;
 
+            TileTexture texture = map->textures[cz * MAX_MAP_DIM + cx].data[z * CHUNK_DIM + x];
+            AtlasView atlasView = atlasViews[texture.viewID];
+
             int indexOffset = mesh->vertexCount;
 
             for (int zi = 0; zi < 2; ++zi) {
@@ -136,8 +141,8 @@ discard_tile:
                         },
                         .normals = { n[0], n[1], n[2] },
                         .textures = {
-                            (x + xi) % 2 ? 1.0f : 0.0f,
-                            (z + zi) % 2 ? 1.0f : 0.0f
+                            atlasView.x + (texture.x + xi) * (atlasView.w / atlasView.wn),
+                            atlasView.y + (texture.y + zi) * (atlasView.h / atlasView.hn),
                         }
                     };
 

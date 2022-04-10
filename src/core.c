@@ -18,6 +18,8 @@ void GLAPIENTRY openglCallback(
         const GLchar* message,
         const void* userParam
 ) {
+    (void)source; (void)id; (void)length; (void)userParam;
+
     int error = type == GL_DEBUG_TYPE_ERROR;
 
     printf("[%s] type: %d, severity: %d\n%s\n",

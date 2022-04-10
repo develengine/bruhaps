@@ -39,7 +39,7 @@ void computeArmatureMatrices(
     base = matrixMultiply(&base, &local);
 
     const unsigned *children = armature->hierarchy + armature->childOffsets[index];
-    for (int i = 0; i < armature->childCounts[index]; ++i)
+    for (unsigned i = 0; i < armature->childCounts[index]; ++i)
         computeArmatureMatrices(base, output, transforms, armature, children[i]);
 
     base = matrixMultiply(&base, armature->ibms + index);
@@ -66,7 +66,7 @@ static float getBoneTransforms(
     unsigned firstOff  = offset;
     unsigned secondOff = offset;
 
-    for (int i = 1; i < frameCount; ++i) {
+    for (unsigned i = 1; i < frameCount; ++i) {
         firstOff = secondOff;
         ++secondOff;
 

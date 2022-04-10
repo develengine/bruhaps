@@ -106,6 +106,8 @@ static void selectVertex(
 
 int bagE_main(int argc, char *argv[])
 {
+    (void)argc; (void)argv;
+
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(openglCallback, 0);
 
@@ -184,7 +186,7 @@ int bagE_main(int argc, char *argv[])
             "shaders/terrain_fragment.glsl"
     );
 
-    unsigned grassTexture = createTexture("res/grass_texture.png");
+    unsigned grassTexture = createTexture("res/terrain_atlas.png");
 
     unsigned pointProgram = createProgram(
             "shaders/point_vertex.glsl",
@@ -201,20 +203,34 @@ int bagE_main(int argc, char *argv[])
     memset(map.chunkMap, NO_CHUNK, sizeof(map.chunkMap));
     map.chunkMap[0] = 0;
 
-    ChunkHeights chunk;
+    ChunkHeights chunkHeights;
     for (int y = 0; y < CHUNK_DIM; ++y) {
         for (int x = 0; x < CHUNK_DIM; ++x) {
-            chunk.data[y * CHUNK_DIM + x] = 
+            chunkHeights.data[y * CHUNK_DIM + x] = 
                 2.0f * sin((M_PI / CHUNK_DIM) * x * 2.0f) * sin((M_PI / CHUNK_DIM) * y * 3.0f);
         }
     }
-    chunk.data[5 * CHUNK_DIM + 8] = NO_TILE;
+    map.heights = &chunkHeights;
+    chunkHeights.data[5 * CHUNK_DIM + 8] = NO_TILE;
 
-    map.heights = &chunk;
+    ChunkTextures chunkTextures;
+    for (int y = 0; y < CHUNK_DIM; ++y) {
+        for (int x = 0; x < CHUNK_DIM; ++x) {
+            TileTexture texture = { 0, 0, 0, 0 };
+            chunkTextures.data[y * CHUNK_DIM + x] = texture;
+        }
+    }
+    map.textures = &chunkTextures;
+
+    AtlasView atlasViews[] = {
+        { 0.25f, 0.75f, 0.25f, 0.25f, 1, 1 },  // cobble
+        { 0.0f, 0.75f, 0.25f, 0.25f, 1, 1 },   // grass
+    };
+
     map.chunkCount = 1;
 
     ChunkMesh chunkMesh = { 0 };
-    constructChunkMesh(&chunkMesh, &map, 0, 0);
+    constructChunkMesh(&chunkMesh, &map, atlasViews, 0, 0);
     Model chunkModel = chunkMeshToModel(chunkMesh);
 
     ModelObject chunkObject = createModelObject(chunkModel);
@@ -518,6 +534,7 @@ int bagE_eventHandler(bagE_Event *event)
 
         case bagE_EventKeyDown: 
             keyDown = true;
+            /* fallthrough */
         case bagE_EventKeyUp: {
             bagE_Key *key = &(event->data.key);
             switch (key->key) {

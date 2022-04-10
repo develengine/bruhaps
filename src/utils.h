@@ -25,14 +25,14 @@
 #endif
 
 #define safe_read(buffer, size, count, stream)                                  \
-    if (fread(buffer, size, count, stream) != count) {                          \
+    if (fread(buffer, size, count, stream) != (size_t)count) {                  \
         fprintf(stderr, "%s:%d: fread failure! %s. exiting...\n",               \
                 __FILE__, __LINE__, feof(stream) ? "EOF reached" : "Error");    \
         exit(666);                                                              \
     }
 
 #define safe_write(buffer, size, count, stream)                                         \
-    if (fwrite(buffer, size, count, stream) != count) {                                 \
+    if (fwrite(buffer, size, count, stream) != (size_t)count) {                         \
         fprintf(stderr, "%s:%d: fwrite failure! exiting...\n", __FILE__, __LINE__);     \
         exit(666);                                                                      \
     }

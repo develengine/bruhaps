@@ -18,7 +18,7 @@ typedef struct
 
 typedef struct
 {
-    uint8_t id;
+    uint8_t viewID;
     uint8_t trans;
     uint8_t x, y;
 } TileTexture;
@@ -28,7 +28,7 @@ typedef struct
 {
     float x, y, w, h;
     int wn, hn;
-} MapTexView;
+} AtlasView;
 
 
 typedef struct
@@ -80,6 +80,12 @@ static inline void freeChunkMesh(ChunkMesh mesh)
 
 float atMapHeight(const Map *map, int x, int z);
 
-void constructChunkMesh(ChunkMesh *mesh, const Map *map, int cx, int cz);
+void constructChunkMesh(
+        ChunkMesh *mesh,
+        const Map *map,
+        const AtlasView *atlasViews,
+        int cx,
+        int cz
+);
 
 #endif
