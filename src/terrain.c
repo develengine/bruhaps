@@ -15,8 +15,8 @@ void constructChunkMesh(
 
     // FIXME: make static buffer sizes
 
-    const int normalDim = CHUNK_DIM + 1;
-    float normalBuffer[normalDim * normalDim * 3];
+    // const int normalDim = CHUNK_DIM + 1;
+    float normalBuffer[(CHUNK_DIM + 1) * (CHUNK_DIM + 1) * 3];
 
     const float posses[][2] = {
     //    y, x
@@ -42,8 +42,8 @@ void constructChunkMesh(
     };
 
     /* normals */
-    for (int z = 0; z < normalDim; ++z) {
-        for (int x = 0; x < normalDim; ++x) {
+    for (int z = 0; z < CHUNK_DIM + 1; ++z) {
+        for (int x = 0; x < CHUNK_DIM + 1; ++x) {
             float nx = 0.0f, ny = 0.0f, nz = 0.0f;
             float height = atMapHeight(map, cx * CHUNK_DIM + x, cz * CHUNK_DIM + z);
 
@@ -90,7 +90,7 @@ void constructChunkMesh(
             ny *= invLen;
             nz *= invLen;
 
-            int pos = (z * normalDim + x) * 3;
+            int pos = (z * (CHUNK_DIM + 1) + x) * 3;
             normalBuffer[pos + 0] = nx;
             normalBuffer[pos + 1] = ny;
             normalBuffer[pos + 2] = nz;
@@ -115,7 +115,7 @@ void constructChunkMesh(
                         goto discard_tile;
 
                     heights[zi * 2 + xi] = height;
-                    normals[zi * 2 + xi] = normalBuffer + (zp * normalDim + xp) * 3;
+                    normals[zi * 2 + xi] = normalBuffer + (zp * (CHUNK_DIM + 1) + xp) * 3;
                 }
             }
 

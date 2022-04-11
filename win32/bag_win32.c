@@ -55,6 +55,7 @@ __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 #define WGL_CONTEXT_MAJOR_VERSION_ARB     0x2091
 #define WGL_CONTEXT_MINOR_VERSION_ARB     0x2092
 #define WGL_CONTEXT_FLAGS_ARB             0x2094
+// #define WGL_SAMPLES_ARB                   0x2042
 
 #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
@@ -327,6 +328,7 @@ int WinMain(
             WGL_CONTEXT_MAJOR_VERSION_ARB, bagE_oglContextMajorVersion,
             WGL_CONTEXT_MINOR_VERSION_ARB, bagE_oglContextMinorVersion,
             WGL_CONTEXT_FLAGS_ARB, 0,
+            // WGL_SAMPLES_ARB, 4,
             0
         };
     
