@@ -127,6 +127,8 @@ int bagE_main(int argc, char *argv[])
     Model energyModel  = modelLoad("res/energy.model");
     ModelObject energy = createModelObject(energyModel);
 
+    unsigned brugTexture = createTexture("res/brug.png");
+
     int textureProgram = createProgram(
             "shaders/texture_vertex.glsl",
             "shaders/texture_fragment.glsl"
@@ -342,27 +344,6 @@ int bagE_main(int argc, char *argv[])
         glEnable(GL_DEPTH_TEST);
 
 
-        /* model brug */
-        Matrix modelBrug = matrixScale(objScale, objScale, objScale);
-
-        mul = matrixRotationY(objRotation);
-        modelBrug = matrixMultiply(&mul, &modelBrug);
-
-        mul = matrixTranslation(objX, objY, objZ);
-        modelBrug = matrixMultiply(&mul, &modelBrug);
-
-
-        glUseProgram(modelProgram);
-        glBindVertexArray(brug.vao);
-
-        glProgramUniformMatrix4fv(modelProgram, 0, 1, GL_FALSE, vp.data);
-        glProgramUniformMatrix4fv(modelProgram, 1, 1, GL_FALSE, modelBrug.data);
-        glProgramUniform3f(modelProgram, 2, camX, camY, camZ);
-        glProgramUniform3f(modelProgram, 3, 0.75f, 0.75f, 0.75f);
-
-        glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
-
-        
         /* model chunk */
         Matrix modelChunk = matrixScale(1.0f, 1.0f, 1.0f);
 
@@ -412,6 +393,29 @@ int bagE_main(int argc, char *argv[])
 
         glDrawElements(GL_TRIANGLES, animated.model.indexCount, GL_UNSIGNED_INT, 0);
 
+        /* model brug */
+        Matrix modelBrug = matrixScale(objScale, objScale, objScale);
+
+        mul = matrixRotationY(objRotation);
+        modelBrug = matrixMultiply(&mul, &modelBrug);
+
+        mul = matrixTranslation(objX, objY, objZ);
+        modelBrug = matrixMultiply(&mul, &modelBrug);
+
+
+        // glUseProgram(modelProgram);
+        glUseProgram(textureProgram);
+        glBindVertexArray(brug.vao);
+        glBindTextureUnit(0, brugTexture);
+
+        glProgramUniformMatrix4fv(textureProgram, 0, 1, GL_FALSE, vp.data);
+        glProgramUniformMatrix4fv(textureProgram, 1, 1, GL_FALSE, modelBrug.data);
+        glProgramUniform3f(textureProgram, 2, camX, camY, camZ);
+        glProgramUniform3f(textureProgram, 3, 0.75f, 0.75f, 0.75f);
+
+        glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
+
+        
 
         /* model energy */
         Matrix modelEnergy = matrixScale(objScale, objScale, objScale);
