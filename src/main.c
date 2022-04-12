@@ -94,7 +94,6 @@ int bagE_main(int argc, char *argv[])
     printContextInfo();
 
     bagE_setWindowTitle("BRUHAPS");
-    bagE_getWindowSize(&appState.windowWidth, &appState.windowHeight);
     bagE_setSwapInterval(1);
 
     initState();
@@ -313,6 +312,8 @@ int bagE_main(int argc, char *argv[])
         view = matrixMultiply(&mul, &view);
 
         /* projection */
+        // printf("wh: %d, %d\n", appState.windowWidth, appState.windowHeight);
+
         Matrix proj = matrixProjection(
                 fov,
                 appState.windowWidth,

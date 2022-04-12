@@ -1,5 +1,6 @@
 #include "state.h"
 
+#include "bag_engine.h"
 
 InputState inputState;
 AppState   appState;
@@ -15,6 +16,8 @@ void initState(void)
     appState = (AppState) {
         .running = true
     };
+
+    bagE_getWindowSize(&appState.windowWidth, &appState.windowHeight);
 }
 
 
