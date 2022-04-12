@@ -6,6 +6,8 @@
 #include "animation.h"
 #include "terrain.h"
 #include "core.h"
+#include "levels.h"
+#include "state.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,28 +15,6 @@
 #include <stdbool.h>
 
 
-static const float MOUSE_SENSITIVITY = 0.005f;
-
-
-static int running = 1;
-static int windowWidth, windowHeight;
-static int windowChanged = 0;
-
-static int playerInput = 0;
-static bool fullscreen = false;
-
-static bool leftDown    = false;
-static bool rightDown   = false;
-static bool forthDown   = false;
-static bool backDown    = false;
-static bool ascendDown  = false;
-static bool descendDown = false;
-
-static bool altDown = false;
-static bool fDown   = false;
-
-static float motionYaw   = 0.0f;
-static float motionPitch = 0.0f;
 
 static bool spinning = true;
 
@@ -108,16 +88,16 @@ int bagE_main(int argc, char *argv[])
 {
     (void)argc; (void)argv;
 
-    printf("num: %d\n", '!');
-
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(openglCallback, 0);
 
     printContextInfo();
 
     bagE_setWindowTitle("BRUHAPS");
-    bagE_getWindowSize(&windowWidth, &windowHeight);
+    bagE_getWindowSize(&appState.windowWidth, &appState.windowHeight);
     bagE_setSwapInterval(1);
+
+    initState();
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -130,6 +110,8 @@ int bagE_main(int argc, char *argv[])
     // glEnable(GL_MULTISAMPLE);
     glEnable(GL_PROGRAM_POINT_SIZE);
 
+
+    // initLevels();
 
     int program = createProgram("shaders/proper_vert.glsl", "shaders/proper_frag.glsl");
 
@@ -211,7 +193,6 @@ int bagE_main(int argc, char *argv[])
     );
 
     /**************************************************/
-
     Map map = { 0 };
     memset(map.chunkMap, NO_CHUNK, sizeof(map.chunkMap));
     map.chunkMap[0] = 0;
@@ -270,10 +251,10 @@ int bagE_main(int argc, char *argv[])
 
     glActiveTexture(GL_TEXTURE0);
 
-    while (running) {
+    while (appState.running) {
         bagE_pollEvents();
 
-        if (!running)
+        if (!appState.running)
             break;
 
         glClearColor(
@@ -284,31 +265,31 @@ int bagE_main(int argc, char *argv[])
         );
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        camPitch += motionPitch * MOUSE_SENSITIVITY;
-        camYaw   += motionYaw   * MOUSE_SENSITIVITY;
-        motionPitch = 0.0f;
-        motionYaw   = 0.0f;
+        camPitch += inputState.motionPitch * MOUSE_SENSITIVITY;
+        camYaw   += inputState.motionYaw   * MOUSE_SENSITIVITY;
+        inputState.motionPitch = 0.0f;
+        inputState.motionYaw   = 0.0f;
 
-        if (playerInput) {
-            if (leftDown) {
+        if (inputState.playerInput) {
+            if (inputState.leftDown) {
                 camX -= 0.1f * cosf(camYaw);
                 camZ -= 0.1f * sinf(camYaw);
             }
-            if (rightDown) {
+            if (inputState.rightDown) {
                 camX += 0.1f * cosf(camYaw);
                 camZ += 0.1f * sinf(camYaw);
             }
-            if (forthDown) {
+            if (inputState.forthDown) {
                 camX += 0.1f * sinf(camYaw);
                 camZ -= 0.1f * cosf(camYaw);
             }
-            if (backDown) {
+            if (inputState.backDown) {
                 camX -= 0.1f * sinf(camYaw);
                 camZ += 0.1f * cosf(camYaw);
             }
-            if (ascendDown)
+            if (inputState.ascendDown)
                 camY += 0.1f;
-            if (descendDown)
+            if (inputState.descendDown)
                 camY -= 0.1f;
         }
 
@@ -330,7 +311,13 @@ int bagE_main(int argc, char *argv[])
         view = matrixMultiply(&mul, &view);
 
         /* projection */
-        Matrix proj = matrixProjection(fov, windowWidth, windowHeight, 0.1f, 100.0f);
+        Matrix proj = matrixProjection(
+                fov,
+                appState.windowWidth,
+                appState.windowHeight,
+                0.1f,
+                100.0f
+        );
 
         /* vp */
         Matrix vp = matrixMultiply(&proj, &view);
@@ -474,6 +461,7 @@ int bagE_main(int argc, char *argv[])
 
         glDrawElements(GL_TRIANGLES, BOX_INDEX_COUNT, GL_UNSIGNED_INT, 0);
 
+
         /* point */
         glDisable(GL_DEPTH_TEST);
         glBindVertexArray(dummyVao);
@@ -496,29 +484,31 @@ int bagE_main(int argc, char *argv[])
             glDrawArrays(GL_POINTS, 0, 1);
         }
 
+
         /* gui */
         glUseProgram(rectProgram);
 
-        glProgramUniform2i(rectProgram, 0, windowWidth, windowHeight);
+        glProgramUniform2i(rectProgram, 0, appState.windowWidth, appState.windowHeight);
         glProgramUniform2i(rectProgram, 1, 100, 100);
         glProgramUniform2i(rectProgram, 2, 100, 100);
         glProgramUniform4f(rectProgram, 3, 0.6f, 0.8f, 0.3f, 0.5f);
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
+
         /* text */
         glUseProgram(textProgram);
         glBindTextureUnit(0, baseFont);
 
-        glProgramUniform2i(textProgram, 0, windowWidth, windowHeight);
-        glProgramUniform2i(textProgram, 1, 300, 300);
-        glProgramUniform2i(textProgram, 2, 8 * 8, 16 * 8);
+        glProgramUniform2i(textProgram, 0, appState.windowWidth, appState.windowHeight);
+        glProgramUniform2i(textProgram, 1, 100, 8);
+        glProgramUniform2i(textProgram, 2, 8, 16);
         glProgramUniform4f(textProgram, 3, 1.0f, 1.0f, 1.0f, 1.0f);
 
-        const char *leText = "lol cool k\0\0\0\0\0\0";
-        glProgramUniform4uiv(textProgram, 4, 1, (unsigned *)leText);
+        const char *leText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do\0";
+        glProgramUniform4uiv(textProgram, 4, 4, (unsigned *)leText);
 
-        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 10);
+        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 63);
 
         glEnable(GL_DEPTH_TEST);
 
@@ -546,6 +536,10 @@ int bagE_main(int argc, char *argv[])
     glDeleteProgram(animationProgram);
     glDeleteProgram(cubeProgram);
 
+    exitLevels();
+
+    exitState();
+
     return 0;
 }
 
@@ -557,14 +551,13 @@ int bagE_eventHandler(bagE_Event *event)
     switch (event->type)
     {
         case bagE_EventWindowClose:
-            running = 0;
+            appState.running = false;
             return 1;
 
         case bagE_EventWindowResize: {
             bagE_WindowResize *wr = &(event->data.windowResize);
-            windowWidth = wr->width;
-            windowHeight = wr->height;
-            windowChanged = 1;
+            appState.windowWidth = wr->width;
+            appState.windowHeight = wr->height;
             glViewport(0, 0, wr->width, wr->height);
         } break;
 
@@ -575,43 +568,43 @@ int bagE_eventHandler(bagE_Event *event)
             bagE_Key *key = &(event->data.key);
             switch (key->key) {
                 case KEY_A:
-                    leftDown = keyDown;
+                    inputState.leftDown = keyDown;
                     break;
                 case KEY_D:
-                    rightDown = keyDown;
+                    inputState.rightDown = keyDown;
                     break;
                 case KEY_W:
-                    forthDown = keyDown;
+                    inputState.forthDown = keyDown;
                     break;
                 case KEY_S:
-                    backDown = keyDown;
+                    inputState.backDown = keyDown;
                     break;
                 case KEY_SPACE:
-                    ascendDown = keyDown;
+                    inputState.ascendDown = keyDown;
                     break;
                 case KEY_SHIFT_LEFT:
-                    descendDown = keyDown;
+                    inputState.descendDown = keyDown;
                     break;
                 case KEY_ALT_LEFT:
                     if (keyDown) {
-                        if (!altDown) {
-                            altDown = true;
-                            playerInput = !playerInput;
-                            bagE_setHiddenCursor(playerInput);
+                        if (!inputState.altDown) {
+                            inputState.altDown = true;
+                            inputState.playerInput = !inputState.playerInput;
+                            bagE_setHiddenCursor(inputState.playerInput);
                         }
                     } else {
-                        altDown = false;
+                        inputState.altDown = false;
                     }
                     break;
                 case KEY_F:
                     if (keyDown) {
-                        if(!fDown) {
-                            fDown = true;
-                            fullscreen = !fullscreen;
-                            bagE_setFullscreen(fullscreen);
+                        if(!inputState.fDown) {
+                            inputState.fDown = true;
+                            appState.fullscreen = !appState.fullscreen;
+                            bagE_setFullscreen(appState.fullscreen);
                         }
                     } else {
-                        fDown = false;
+                        inputState.fDown = false;
                     }
                     break;
                 case KEY_R:
@@ -631,10 +624,17 @@ int bagE_eventHandler(bagE_Event *event)
         } break;
 
         case bagE_EventMouseMotion:
-            if (playerInput) {
+            if (inputState.playerInput) {
                 bagE_MouseMotion *mm = &(event->data.mouseMotion);
-                motionYaw   += mm->x;
-                motionPitch += mm->y;
+                inputState.motionYaw   += mm->x;
+                inputState.motionPitch += mm->y;
+            }
+            break;
+
+        case bagE_EventMouseWheel:
+            if (inputState.playerInput) {
+                bagE_MouseWheel *mw = &(event->data.mouseWheel);
+                fov += mw->scrollUp * 1.0f;
             }
             break;
 

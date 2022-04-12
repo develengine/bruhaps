@@ -25,7 +25,7 @@ void main(void)
     vec2 box = vec2(1.0 / 32.0, 1.0 / 7.0);
     uint ch = u_text[gl_InstanceID / 16][(gl_InstanceID % 16) / 4];
     uint n = gl_InstanceID % 4;
-    uint char = ((ch << (24 - 8 * n)) >> 24) - 33;
+    uint chr = ((ch << (24 - 8 * n)) >> 24) - 33;
 
     vec2 coords  = data[gl_VertexID];
     ivec2 offset = u_size * ivec2(gl_InstanceID, 0);
@@ -34,6 +34,6 @@ void main(void)
 
     gl_Position = vec4(pos, 1.0, 1.0);
 
-    vec2 c = vec2(char % 32, char / 32) * box + vec2(coords.x, coords.y) * box;
+    vec2 c = vec2(chr % 32, chr / 32) * box + vec2(coords.x, coords.y) * box;
     o_coords = vec2(c.x, 1.0 - c.y);
 }
