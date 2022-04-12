@@ -10,5 +10,5 @@ layout(binding = 0) uniform sampler2D u_sampler;
 
 void main(void)
 {
-    outColor = u_color;
+    outColor = u_color * texture(u_sampler, o_coords);
 }

@@ -108,6 +108,8 @@ int bagE_main(int argc, char *argv[])
 {
     (void)argc; (void)argv;
 
+    printf("num: %d\n", '!');
+
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(openglCallback, 0);
 
@@ -503,6 +505,20 @@ int bagE_main(int argc, char *argv[])
         glProgramUniform4f(rectProgram, 3, 0.6f, 0.8f, 0.3f, 0.5f);
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        /* text */
+        glUseProgram(textProgram);
+        glBindTextureUnit(0, baseFont);
+
+        glProgramUniform2i(textProgram, 0, windowWidth, windowHeight);
+        glProgramUniform2i(textProgram, 1, 300, 300);
+        glProgramUniform2i(textProgram, 2, 8 * 8, 16 * 8);
+        glProgramUniform4f(textProgram, 3, 1.0f, 1.0f, 1.0f, 1.0f);
+
+        const char *leText = "lol cool k\0\0\0\0\0\0";
+        glProgramUniform4uiv(textProgram, 4, 1, (unsigned *)leText);
+
+        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 10);
 
         glEnable(GL_DEPTH_TEST);
 
