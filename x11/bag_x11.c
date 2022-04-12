@@ -208,6 +208,7 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
+    // TODO: expose sample count to the user
 #ifdef BAGE_PRINT_DEBUG_INFO
     printf("Found %d matching frame buffer configs.\n", fbCount);
 #endif

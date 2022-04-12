@@ -197,6 +197,17 @@ int bagE_main(int argc, char *argv[])
 
     ModelObject boxModel = createBoxModelObject();
 
+    unsigned rectProgram = createProgram(
+            "shaders/rect_vertex.glsl",
+            "shaders/rect_fragment.glsl"
+    );
+
+    unsigned baseFont = createTexture("res/font_base.png");
+    unsigned textProgram = createProgram(
+            "shaders/text_vertex.glsl",
+            "shaders/text_fragment.glsl"
+    );
+
     /**************************************************/
 
     Map map = { 0 };
@@ -434,31 +445,6 @@ int bagE_main(int argc, char *argv[])
 
         glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
 
-        /* point */
-        if (selected) {
-            glDisable(GL_DEPTH_TEST);
-
-            glUseProgram(pointProgram);
-            glBindVertexArray(dummyVao);
-
-            glProgramUniformMatrix4fv(pointProgram, 0, 1, GL_FALSE, vp.data);
-            glProgramUniform4f(
-                    pointProgram,
-                    1,
-                    selectedX * CHUNK_TILE_DIM,
-                    atMapHeight(&map, selectedX, selectedZ),
-                    selectedZ * CHUNK_TILE_DIM,
-                    1.0f
-            );
-            glProgramUniform4f(pointProgram, 2, 0.5f, 1.0f, 0.75f, 1.0f);
-            glProgramUniform1f(pointProgram, 3, 18.0f);
-
-            glDrawArrays(GL_POINTS, 0, 1);
-
-            glEnable(GL_DEPTH_TEST);
-        }
-
-
         /* model cube */
         Matrix modelCube = matrixScale(objScale, objScale, objScale);
 
@@ -485,6 +471,40 @@ int bagE_main(int argc, char *argv[])
         );
 
         glDrawElements(GL_TRIANGLES, BOX_INDEX_COUNT, GL_UNSIGNED_INT, 0);
+
+        /* point */
+        glDisable(GL_DEPTH_TEST);
+        glBindVertexArray(dummyVao);
+
+        if (selected) {
+            glUseProgram(pointProgram);
+
+            glProgramUniformMatrix4fv(pointProgram, 0, 1, GL_FALSE, vp.data);
+            glProgramUniform4f(
+                    pointProgram,
+                    1,
+                    selectedX * CHUNK_TILE_DIM,
+                    atMapHeight(&map, selectedX, selectedZ),
+                    selectedZ * CHUNK_TILE_DIM,
+                    1.0f
+            );
+            glProgramUniform4f(pointProgram, 2, 0.5f, 1.0f, 0.75f, 1.0f);
+            glProgramUniform1f(pointProgram, 3, 18.0f);
+
+            glDrawArrays(GL_POINTS, 0, 1);
+        }
+
+        /* gui */
+        glUseProgram(rectProgram);
+
+        glProgramUniform2i(rectProgram, 0, windowWidth, windowHeight);
+        glProgramUniform2i(rectProgram, 1, 100, 100);
+        glProgramUniform2i(rectProgram, 2, 100, 100);
+        glProgramUniform4f(rectProgram, 3, 0.6f, 0.8f, 0.3f, 0.5f);
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        glEnable(GL_DEPTH_TEST);
 
 
         bagE_swapBuffers();
