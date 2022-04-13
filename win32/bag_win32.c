@@ -647,6 +647,21 @@ void bagE_setWindowTitle(char *value)
 }
 
 
+static void bagE_clipCursor(void)
+{
+        RECT windowRect;
+        GetClientRect(bagWIN32.window, &windowRect);
+        ClientToScreen(bagWIN32.window, (POINT*)&windowRect.left);
+        ClientToScreen(bagWIN32.window, (POINT*)&windowRect.right);
+
+        windowRect.left += 1;
+        windowRect.top += 1;
+        windowRect.right -= 2;
+        windowRect.bottom -= 2;
+        ClipCursor(&windowRect);
+}
+
+
 void bagE_setFullscreen(int value)
 {
     DWORD style = GetWindowLong(bagWIN32.window, GWL_STYLE);
@@ -682,21 +697,17 @@ void bagE_setFullscreen(int value)
                 SWP_NOOWNERZORDER | SWP_FRAMECHANGED
         );
     }
+
+    if (bagWIN32.cursorHidden)
+        bagE_clipCursor();
 }
 
 
 int bagE_setHiddenCursor(int value)
 {
     if (!bagWIN32.cursorHidden && value) {
-        RECT windowRect;
-        GetClientRect(bagWIN32.window, &windowRect);
-        ClientToScreen(bagWIN32.window, (POINT*)&windowRect.left);
-        ClientToScreen(bagWIN32.window, (POINT*)&windowRect.right);
-
         bagWIN32.cursorHidden = 1;
-        windowRect.right -= 1;
-        windowRect.bottom -= 1;
-        ClipCursor(&windowRect);
+        bagE_clipCursor();
         SetCursor(NULL);
     } else if (bagWIN32.cursorHidden && !value) {
         bagWIN32.cursorHidden = 0;
