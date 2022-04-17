@@ -27,5 +27,5 @@ void main() {
     o_position = position.xyz;
     o_textures = i_textures;
 
-    o_cameraPos = vec3(cam.viewMat[3][0], cam.viewMat[3][1], cam.viewMat[3][2]);
+    o_cameraPos = cam.pos;
 }

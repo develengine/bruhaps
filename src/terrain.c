@@ -5,7 +5,7 @@
 
 void constructChunkMesh(
         ChunkMesh *mesh,
-        const Map *map,
+        const Terrain *terrain,
         const AtlasView *atlasViews,
         int cx,
         int cz
@@ -45,7 +45,7 @@ void constructChunkMesh(
     for (int z = 0; z < CHUNK_DIM + 1; ++z) {
         for (int x = 0; x < CHUNK_DIM + 1; ++x) {
             float nx = 0.0f, ny = 0.0f, nz = 0.0f;
-            float height = atMapHeight(map, cx * CHUNK_DIM + x, cz * CHUNK_DIM + z);
+            float height = atTerrainHeight(terrain, cx * CHUNK_DIM + x, cz * CHUNK_DIM + z);
 
             if (height == NO_TILE)
                 continue;
@@ -54,7 +54,7 @@ void constructChunkMesh(
                 int xp = x + posses[i][1];
                 int zp = z + posses[i][0];
 
-                float res = atMapHeight(map, cx * CHUNK_DIM + xp, cz * CHUNK_DIM + zp);
+                float res = atTerrainHeight(terrain, cx * CHUNK_DIM + xp, cz * CHUNK_DIM + zp);
                 if (res == NO_TILE) {
                     vecs[i][1] = res;
                     continue;
@@ -110,7 +110,7 @@ void constructChunkMesh(
                     int xp = x + xi;
                     int zp = z + zi;
 
-                    float height = atMapHeight(map, cx * CHUNK_DIM + xp, cz * CHUNK_DIM + zp);
+                    float height = atTerrainHeight(terrain, cx * CHUNK_DIM + xp, cz * CHUNK_DIM + zp);
                     if (height == NO_TILE)
                         goto discard_tile;
 
@@ -124,7 +124,7 @@ discard_tile:
             if (discardTile)
                 continue;
 
-            TileTexture texture = map->textures[cz * MAX_MAP_DIM + cx].data[z * CHUNK_DIM + x];
+            TileTexture texture = terrain->textures[cz * MAX_MAP_DIM + cx].data[z * CHUNK_DIM + x];
             AtlasView atlasView = atlasViews[texture.viewID];
 
             int indexOffset = mesh->vertexCount;
@@ -163,7 +163,7 @@ discard_tile:
 }
 
 
-float atMapHeight(const Map *map, int x, int z)
+float atTerrainHeight(const Terrain *terrain, int x, int z)
 {
     if (x < 0 || z < 0)
         return NO_TILE;
@@ -176,12 +176,12 @@ float atMapHeight(const Map *map, int x, int z)
     if (cx >= MAX_MAP_DIM || cz >= MAX_MAP_DIM)
         return NO_TILE;
 
-    if (map->chunkMap[cz * MAX_MAP_DIM + cx] == NO_CHUNK)
+    if (terrain->chunkMap[cz * MAX_MAP_DIM + cx] == NO_CHUNK)
         return NO_TILE;
 
     if (xp >= CHUNK_DIM || zp >= CHUNK_DIM)
         return NO_TILE;
 
-    return map->heights[cz * MAX_MAP_DIM + cx].data[zp * CHUNK_DIM + xp];
+    return terrain->heights[cz * MAX_MAP_DIM + cx].data[zp * CHUNK_DIM + xp];
 }
 

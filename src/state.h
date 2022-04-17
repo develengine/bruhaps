@@ -36,6 +36,16 @@ typedef struct
 extern AppState appState;
 
 
+typedef struct
+{
+    float x, y, z;
+    float pitch, yaw;
+    float fov;
+} CamState;
+
+extern CamState camState;
+
+
 void initState(void);
 void exitState(void);
 

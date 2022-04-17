@@ -18,69 +18,6 @@
 
 static bool spinning = true;
 
-static float fov = 90.0f;
-
-
-static bool selected = false;
-static int selectedX, selectedZ;
-
-static void selectVertex(
-        float camX,
-        float camY,
-        float camZ,
-        float camPitch,
-        float camYaw,
-        Map *map
-) {
-    float vx = sinf(camYaw), vz = -cosf(camYaw);
-    float camXS = (camX) / CHUNK_TILE_DIM + 0.5f;
-    float camZS = (camZ) / CHUNK_TILE_DIM + 0.5f;
-    float x = camXS;
-    float z = camZS;
-    float yx = -sinf(camPitch) / (cosf(camPitch));
-
-    selected = false;
-
-    for (int i = 0; i < 10; ++i) {
-        float gx = vx > 0.0f ? ceilf(x + 0.01f) : floorf(x - 0.01f);
-        float gz = vz > 0.0f ? ceilf(z + 0.01f) : floorf(z - 0.01f);
-
-        float rx = (gx - x) / vx;
-        float rz = (gz - z) / vz;
-
-        if (rx < rz) {
-            z = z + rx * vz;
-            x = gx;
-        } else {
-            x = x + rz * vx;
-            z = gz;
-        }
-
-        int xp = floor(x);
-        int zp = floor(z);
-        int cx = xp / CHUNK_DIM;
-        int cz = zp / CHUNK_DIM;
-
-        if (xp >= 0 && cx < MAX_MAP_DIM
-         && zp >= 0 && cz < MAX_MAP_DIM
-         && map->chunkMap[cz * MAX_MAP_DIM + cx] != NO_CHUNK) {
-            int dx = x - camXS;
-            int dz = z - camZS;
-            float h = camY + sqrtf(dx * dx + dz * dz) * yx;
-
-            int lx = xp % CHUNK_DIM;
-            int lz = zp % CHUNK_DIM;
-
-            if (h < map->heights[map->chunkMap[cz * MAX_MAP_DIM + cx]].data[lz * CHUNK_DIM + lx]) {
-                selected = true;
-                selectedX = xp;
-                selectedZ = zp;
-                return;
-            }
-        }
-    }
-}
-
 
 int bagE_main(int argc, char *argv[])
 {
@@ -94,8 +31,6 @@ int bagE_main(int argc, char *argv[])
     bagE_setWindowTitle("BRUHAPS");
     bagE_setSwapInterval(1);
 
-    initState();
-
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glFrontFace(GL_CCW);
@@ -108,7 +43,8 @@ int bagE_main(int argc, char *argv[])
     glEnable(GL_PROGRAM_POINT_SIZE);
 
 
-    // initLevels();
+    initState();
+    initLevels();
 
 
     int modelProgram = createProgram("shaders/3d_vertex.glsl", "shaders/3d_fragment.glsl");
@@ -143,37 +79,15 @@ int bagE_main(int argc, char *argv[])
     unsigned wormTexture = createTexture("res/worm.png");
 
 
-    unsigned cubeMap = createCubeTexture(
-            "Maskonaive2/posx.png",
-            "Maskonaive2/negx.png",
-
-            "Maskonaive2/posy.png",
-            "Maskonaive2/negy.png",
-
-            "Maskonaive2/posz.png",
-            "Maskonaive2/negz.png"
-    );
-
-    unsigned cubeProgram = createProgram(
-            "shaders/cubemap_vertex.glsl",
-            "shaders/cubemap_fragment.glsl"
-    );
-
-    unsigned terrainProgram = createProgram(
-            "shaders/terrain_vertex.glsl",
-            "shaders/terrain_fragment.glsl"
-    );
-
-    unsigned grassTexture = createTexture("res/terrain_atlas.png");
-
+#if 0
     unsigned pointProgram = createProgram(
             "shaders/point_vertex.glsl",
             "shaders/point_fragment.glsl"
     );
+#endif
+
     unsigned dummyVao;
     glCreateVertexArrays(1, &dummyVao);
-
-    ModelObject boxModel = createBoxModelObject();
 
     unsigned rectProgram = createProgram(
             "shaders/rect_vertex.glsl",
@@ -187,6 +101,7 @@ int bagE_main(int argc, char *argv[])
     );
 
     /**************************************************/
+#if 0
     Map map = { 0 };
     memset(map.chunkMap, NO_CHUNK, sizeof(map.chunkMap));
     map.chunkMap[0] = 0;
@@ -223,14 +138,16 @@ int bagE_main(int argc, char *argv[])
 
     ModelObject chunkObject = createModelObject(chunkModel);
 
+#endif
     /**************************************************/
 
-    unsigned camUBO = createBufferObject(sizeof(Matrix) * 3 + sizeof(float) * 4, NULL, GL_DYNAMIC_STORAGE_BIT);
+    unsigned camUBO = createBufferObject(
+        sizeof(Matrix) * 3 + sizeof(float) * 4,
+        NULL,
+        GL_DYNAMIC_STORAGE_BIT
+    );
 
     double t = 0;
-
-    float camX = 0.0f, camY = 0.0f, camZ = 0.0f;
-    float camPitch = 0.0f, camYaw = 0.0f;
 
     float objX = 0.0f;
     float objY = 0.0f;
@@ -262,55 +179,54 @@ int bagE_main(int argc, char *argv[])
         );
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        camPitch += inputState.motionPitch * MOUSE_SENSITIVITY;
-        camYaw   += inputState.motionYaw   * MOUSE_SENSITIVITY;
+        camState.pitch += inputState.motionPitch * MOUSE_SENSITIVITY;
+        camState.yaw   += inputState.motionYaw   * MOUSE_SENSITIVITY;
         inputState.motionPitch = 0.0f;
         inputState.motionYaw   = 0.0f;
 
         if (inputState.playerInput) {
             if (inputState.leftDown) {
-                camX -= 0.1f * cosf(camYaw);
-                camZ -= 0.1f * sinf(camYaw);
+                camState.x -= 0.1f * cosf(camState.yaw);
+                camState.z -= 0.1f * sinf(camState.yaw);
             }
             if (inputState.rightDown) {
-                camX += 0.1f * cosf(camYaw);
-                camZ += 0.1f * sinf(camYaw);
+                camState.x += 0.1f * cosf(camState.yaw);
+                camState.z += 0.1f * sinf(camState.yaw);
             }
             if (inputState.forthDown) {
-                camX += 0.1f * sinf(camYaw);
-                camZ -= 0.1f * cosf(camYaw);
+                camState.x += 0.1f * sinf(camState.yaw);
+                camState.z -= 0.1f * cosf(camState.yaw);
             }
             if (inputState.backDown) {
-                camX -= 0.1f * sinf(camYaw);
-                camZ += 0.1f * cosf(camYaw);
+                camState.x -= 0.1f * sinf(camState.yaw);
+                camState.z += 0.1f * cosf(camState.yaw);
             }
             if (inputState.ascendDown)
-                camY += 0.1f;
+                camState.y += 0.1f;
             if (inputState.descendDown)
-                camY -= 0.1f;
+                camState.y -= 0.1f;
         }
-
-        selectVertex(camX, camY, camZ, camPitch, camYaw, &map);
 
         if (spinning)
             objRotation += 0.025;
+
+        updateLevel(0.01666f);
 
 
         Matrix mul;
 
         /* view */
-        Matrix view = matrixTranslation(-camX,-camY,-camZ);
+        Matrix view = matrixTranslation(-camState.x,-camState.y,-camState.z);
 
-        mul = matrixRotationY(camYaw);
+        mul = matrixRotationY(camState.yaw);
         view = matrixMultiply(&mul, &view);
 
-        mul = matrixRotationX(camPitch);
+        mul = matrixRotationX(camState.pitch);
         view = matrixMultiply(&mul, &view);
 
         /* projection */
-
         Matrix proj = matrixProjection(
-                fov,
+                camState.fov,
                 appState.windowWidth,
                 appState.windowHeight,
                 0.1f,
@@ -325,26 +241,12 @@ int bagE_main(int argc, char *argv[])
             float pos[4];
         } camData = {
             { view, proj, vp },
-            { camX, camY, camZ }
+            { camState.x, camState.y, camState.z }
         };
         glNamedBufferSubData(camUBO, 0, sizeof(camData), &camData);
 
-        /* cube map */
-        Matrix envView = matrixRotationY(camYaw);
-        mul = matrixRotationX(camPitch);
-        envView = matrixMultiply(&mul, &envView);
 
-        glDisable(GL_DEPTH_TEST);
-
-        glUseProgram(cubeProgram);
-        glBindVertexArray(boxModel.vao);
-        glBindTextureUnit(0, cubeMap);
-
-        glDrawElements(GL_TRIANGLES, BOX_INDEX_COUNT, GL_UNSIGNED_INT, 0);
-
-        glEnable(GL_DEPTH_TEST);
-
-
+#if 0
         /* model chunk */
         Matrix modelChunk = matrixScale(1.0f, 1.0f, 1.0f);
 
@@ -355,6 +257,9 @@ int bagE_main(int argc, char *argv[])
         glProgramUniformMatrix4fv(terrainProgram, 0, 1, GL_FALSE, modelChunk.data);
 
         glDrawElements(GL_TRIANGLES, chunkModel.indexCount, GL_UNSIGNED_INT, 0);
+#endif
+
+        renderLevel();
 
 
         /* animated model */
@@ -426,6 +331,7 @@ int bagE_main(int argc, char *argv[])
         glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
 
 
+#if 0
         /* point */
         glDisable(GL_DEPTH_TEST);
         glBindVertexArray(dummyVao);
@@ -447,9 +353,15 @@ int bagE_main(int argc, char *argv[])
 
             glDrawArrays(GL_POINTS, 0, 1);
         }
+#endif
+
+        renderLevelDebugOverlay();
 
 
         /* gui */
+        glDisable(GL_DEPTH_TEST);
+        glBindVertexArray(dummyVao);
+
         glUseProgram(rectProgram);
 
         glProgramUniform2i(rectProgram, 0, appState.windowWidth, appState.windowHeight);
@@ -469,7 +381,7 @@ int bagE_main(int argc, char *argv[])
         glProgramUniform2i(textProgram, 2, 8, 16);
         glProgramUniform4f(textProgram, 3, 1.0f, 1.0f, 1.0f, 1.0f);
 
-        const char *leText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do\0";
+        const char *leText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do";
         glProgramUniform4uiv(textProgram, 4, 4, (unsigned *)leText);
 
         glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 63);
@@ -492,16 +404,12 @@ int bagE_main(int argc, char *argv[])
 
     glDeleteTextures(1, &texture);
     glDeleteTextures(1, &wormTexture);
-    glDeleteTextures(1, &cubeMap);
 
-    // glDeleteProgram(program);
     glDeleteProgram(modelProgram);
     glDeleteProgram(textureProgram);
     glDeleteProgram(animationProgram);
-    glDeleteProgram(cubeProgram);
 
     exitLevels();
-
     exitState();
 
     return 0;
@@ -589,7 +497,7 @@ int bagE_eventHandler(bagE_Event *event)
         case bagE_EventMouseWheel:
             if (inputState.playerInput) {
                 bagE_MouseWheel *mw = &(event->data.mouseWheel);
-                fov += mw->scrollUp * 1.0f;
+                camState.fov -= mw->scrollUp * 1.0f;
             }
             break;
 

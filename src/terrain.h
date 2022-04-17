@@ -37,9 +37,9 @@ typedef struct
 } ChunkTextures;
 
 
-#define MAX_MAP_DIM 64
-#define NO_CHUNK -1
-#define NO_TILE 666.f
+#define MAX_MAP_DIM 32
+#define NO_CHUNK    -1
+#define NO_TILE     666.f
 
 typedef struct
 {
@@ -47,7 +47,7 @@ typedef struct
     ChunkHeights *heights;
     ChunkTextures *textures;
     int chunkCount, chunkCapacity;
-} Map;
+} Terrain;
 
 
 typedef struct
@@ -78,11 +78,11 @@ static inline void freeChunkMesh(ChunkMesh mesh)
 }
 
 
-float atMapHeight(const Map *map, int x, int z);
+float atTerrainHeight(const Terrain *terrain, int x, int z);
 
 void constructChunkMesh(
         ChunkMesh *mesh,
-        const Map *map,
+        const Terrain *terrain,
         const AtlasView *atlasViews,
         int cx,
         int cz
