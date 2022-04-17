@@ -9,9 +9,17 @@ layout(location = 4) in vec4  i_weights;
 layout(location = 0) out vec3 o_normal;
 layout(location = 1) out vec3 o_position;
 layout(location = 2) out vec2 o_texture;
+layout(location = 3) out vec3 o_cameraPos;
 
-layout(location = 0) uniform mat4 u_vpMat;
 layout(location = 3) uniform mat4 u_jointMatrices[64];
+
+layout(std140, binding = 0) uniform Cam
+{
+    mat4 viewMat;
+    mat4 projMat;
+    mat4 vpMat;
+    vec3 pos;
+} cam;
 
 void main(void)
 {
@@ -25,14 +33,9 @@ void main(void)
         normal   += (jointMatrix * vec4(i_normal,   0.0)) * weight;
     }
 
-    gl_Position = u_vpMat * position;
-    o_normal = normal.xyz;
+    gl_Position = cam.vpMat * position;
+    o_normal = normalize(normal.xyz);
     o_position = position.xyz;
     o_texture = i_texture;
-
-    // vec4 position = modMat * vec4(i_position, 1.0);
-    // gl_Position = u_vpMat * position;
-
-    // o_normals = mat3(transpose(inverse(modMat))) * i_normals;
-    // o_position = position.xyz;
+    o_cameraPos = cam.pos;
 }

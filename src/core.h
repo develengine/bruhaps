@@ -46,6 +46,7 @@ uint8_t *loadImage(const char *path, int *width, int *height, int *channels, boo
 unsigned createTexture(const char *path);
 ModelObject createModelObject(Model model);
 AnimatedObject createAnimatedObject(Animated animated);
+unsigned createBufferObject(size_t size, void *data, unsigned flags);
 
 unsigned createCubeTexture(
         const char *pxPath,

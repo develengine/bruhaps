@@ -5,8 +5,8 @@ layout(location = 1) in vec3 o_position;
 
 layout(location = 0) out vec4 o_color;
 
-layout(location = 2) uniform vec3 u_cameraPos;
-layout(location = 3) uniform vec3 u_objColor;
+layout(location = 1) uniform vec3 u_cameraPos;
+layout(location = 2) uniform vec3 u_objColor;
 
 void main() {
     vec3 toLight = vec3(0.6, 0.7, 0.5);

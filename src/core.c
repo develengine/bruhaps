@@ -369,4 +369,11 @@ unsigned createCubeTexture(
 }
 
 
+unsigned createBufferObject(size_t size, void *data, unsigned flags)
+{
+    unsigned buffer;
+    glCreateBuffers(1, &buffer);
+    glNamedBufferStorage(buffer, size, data, flags);
+    return buffer;
+}
 

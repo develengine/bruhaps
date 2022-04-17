@@ -18,8 +18,6 @@
 
 static bool spinning = true;
 
-static int boneShow = 1;
-
 static float fov = 90.0f;
 
 
@@ -111,11 +109,6 @@ int bagE_main(int argc, char *argv[])
 
 
     // initLevels();
-
-    int program = createProgram("shaders/proper_vert.glsl", "shaders/proper_frag.glsl");
-
-
-    ModelObject cubeModel = createCubeModelObject();
 
 
     int modelProgram = createProgram("shaders/3d_vertex.glsl", "shaders/3d_fragment.glsl");
@@ -232,6 +225,8 @@ int bagE_main(int argc, char *argv[])
 
     /**************************************************/
 
+    unsigned camUBO = createBufferObject(sizeof(Matrix) * 3 + sizeof(float) * 4, NULL, GL_DYNAMIC_STORAGE_BIT);
+
     double t = 0;
 
     float camX = 0.0f, camY = 0.0f, camZ = 0.0f;
@@ -251,6 +246,7 @@ int bagE_main(int argc, char *argv[])
     };
 
     glActiveTexture(GL_TEXTURE0);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0, camUBO);
 
     while (appState.running) {
         bagE_pollEvents();
@@ -312,7 +308,6 @@ int bagE_main(int argc, char *argv[])
         view = matrixMultiply(&mul, &view);
 
         /* projection */
-        // printf("wh: %d, %d\n", appState.windowWidth, appState.windowHeight);
 
         Matrix proj = matrixProjection(
                 fov,
@@ -325,6 +320,14 @@ int bagE_main(int argc, char *argv[])
         /* vp */
         Matrix vp = matrixMultiply(&proj, &view);
 
+        struct {
+            Matrix mats[3];
+            float pos[4];
+        } camData = {
+            { view, proj, vp },
+            { camX, camY, camZ }
+        };
+        glNamedBufferSubData(camUBO, 0, sizeof(camData), &camData);
 
         /* cube map */
         Matrix envView = matrixRotationY(camYaw);
@@ -336,9 +339,6 @@ int bagE_main(int argc, char *argv[])
         glUseProgram(cubeProgram);
         glBindVertexArray(boxModel.vao);
         glBindTextureUnit(0, cubeMap);
-
-        glProgramUniformMatrix4fv(cubeProgram, 0, 1, GL_FALSE, view.data);
-        glProgramUniformMatrix4fv(cubeProgram, 1, 1, GL_FALSE, proj.data);
 
         glDrawElements(GL_TRIANGLES, BOX_INDEX_COUNT, GL_UNSIGNED_INT, 0);
 
@@ -352,13 +352,9 @@ int bagE_main(int argc, char *argv[])
         glBindVertexArray(chunkObject.vao);
         glBindTextureUnit(0, grassTexture);
 
-        glProgramUniformMatrix4fv(terrainProgram, 0, 1, GL_FALSE, vp.data);
-        glProgramUniformMatrix4fv(terrainProgram, 1, 1, GL_FALSE, modelChunk.data);
-        glProgramUniform3f(terrainProgram, 3, 0.5f, 1.0f, 0.5f);
+        glProgramUniformMatrix4fv(terrainProgram, 0, 1, GL_FALSE, modelChunk.data);
 
-        // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         glDrawElements(GL_TRIANGLES, chunkModel.indexCount, GL_UNSIGNED_INT, 0);
-        // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 
         /* animated model */
@@ -381,7 +377,6 @@ int bagE_main(int argc, char *argv[])
                 0
         );
 
-        glProgramUniformMatrix4fv(animationProgram, 0, 1, GL_FALSE, vp.data);
         glProgramUniformMatrix4fv(
                 animationProgram,
                 3,
@@ -389,10 +384,9 @@ int bagE_main(int argc, char *argv[])
                 GL_FALSE,
                 (float*)animationMatrices
         );
-        glProgramUniform3f(animationProgram, 1, camX, camY, camZ);
-        glProgramUniform3f(animationProgram, 2, 0.75f, 0.75f, 0.75f);
 
         glDrawElements(GL_TRIANGLES, animated.model.indexCount, GL_UNSIGNED_INT, 0);
+
 
         /* model brug */
         Matrix modelBrug = matrixScale(objScale, objScale, objScale);
@@ -404,18 +398,13 @@ int bagE_main(int argc, char *argv[])
         modelBrug = matrixMultiply(&mul, &modelBrug);
 
 
-        // glUseProgram(modelProgram);
         glUseProgram(textureProgram);
         glBindVertexArray(brug.vao);
         glBindTextureUnit(0, brugTexture);
 
-        glProgramUniformMatrix4fv(textureProgram, 0, 1, GL_FALSE, vp.data);
-        glProgramUniformMatrix4fv(textureProgram, 1, 1, GL_FALSE, modelBrug.data);
-        glProgramUniform3f(textureProgram, 2, camX, camY, camZ);
-        glProgramUniform3f(textureProgram, 3, 0.75f, 0.75f, 0.75f);
+        glProgramUniformMatrix4fv(textureProgram, 0, 1, GL_FALSE, modelBrug.data);
 
         glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
-
         
 
         /* model energy */
@@ -432,39 +421,9 @@ int bagE_main(int argc, char *argv[])
         glBindVertexArray(energy.vao);
         glBindTextureUnit(0, texture);
 
-        glProgramUniformMatrix4fv(textureProgram, 0, 1, GL_FALSE, vp.data);
-        glProgramUniformMatrix4fv(textureProgram, 1, 1, GL_FALSE, modelEnergy.data);
-        glProgramUniform3f(textureProgram, 2, camX, camY, camZ);
-        glProgramUniform3f(textureProgram, 3, 0.75f, 0.75f, 0.75f);
+        glProgramUniformMatrix4fv(textureProgram, 0, 1, GL_FALSE, modelEnergy.data);
 
         glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
-
-        /* model cube */
-        Matrix modelCube = matrixScale(objScale, objScale, objScale);
-
-        mul = matrixRotationY(objRotation);
-        modelCube = matrixMultiply(&mul, &modelCube);
-
-        mul = matrixTranslation(objX + 5.0f, objY, objZ);
-        modelCube = matrixMultiply(&mul, &modelCube);
-
-        /* mvp */
-        Matrix mvp = matrixMultiply(&view, &modelCube);
-        mvp = matrixMultiply(&proj, &mvp);
-
-
-        glBindVertexArray(cubeModel.vao);
-        glUseProgram(program);
-
-        glProgramUniformMatrix4fv(program, 0, 1, GL_FALSE, mvp.data);
-        glProgramUniform4f(program, 1,
-                0.1f,
-                (sin(t) + 1.0) * 0.5,
-                0.5f,
-                1.0f
-        );
-
-        glDrawElements(GL_TRIANGLES, BOX_INDEX_COUNT, GL_UNSIGNED_INT, 0);
 
 
         /* point */
@@ -535,7 +494,7 @@ int bagE_main(int argc, char *argv[])
     glDeleteTextures(1, &wormTexture);
     glDeleteTextures(1, &cubeMap);
 
-    glDeleteProgram(program);
+    // glDeleteProgram(program);
     glDeleteProgram(modelProgram);
     glDeleteProgram(textureProgram);
     glDeleteProgram(animationProgram);
@@ -615,15 +574,6 @@ int bagE_eventHandler(bagE_Event *event)
                 case KEY_R:
                     if (keyDown)
                         spinning = !spinning;
-                    break;
-
-                case KEY_B:
-                    if (keyDown)
-                        ++boneShow;
-                    break;
-                case KEY_N:
-                    if (keyDown)
-                        --boneShow;
                     break;
             }
         } break;

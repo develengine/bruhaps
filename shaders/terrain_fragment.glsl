@@ -6,8 +6,6 @@ layout(location = 2) in vec2 o_texture;
 
 layout(location = 0) out vec4 o_color;
 
-layout(location = 3) uniform vec3 u_objColor;
-
 layout(binding = 0) uniform sampler2D u_textureSampler;
 
 void main()

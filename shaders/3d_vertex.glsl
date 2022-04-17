@@ -7,12 +7,18 @@ layout(location = 2) in vec3 i_normals;
 layout(location = 0) out vec3 o_normals;
 layout(location = 1) out vec3 o_position;
 
-layout(location = 0) uniform mat4 u_vpMat;
-layout(location = 1) uniform mat4 u_modMat;
+layout(location = 0) uniform mat4 u_modMat;
+
+layout(std140, binding = 0) uniform Cam
+{
+    mat4 viewMat;
+    mat4 projMat;
+    mat4 vpMat;
+} cam;
 
 void main() {
     vec4 position = u_modMat * vec4(i_position, 1.0);
-    gl_Position = u_vpMat * position;
+    gl_Position = cam.vpMat * position;
 
     // o_normals = mat3(transpose(inverse(u_modMat))) * i_normals;
     o_normals = (u_modMat * vec4(i_normals, 0.0)).xyz;

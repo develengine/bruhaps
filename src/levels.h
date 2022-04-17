@@ -1,6 +1,10 @@
 #ifndef LEVELS_H
 #define LEVELS_H
 
+typedef enum {
+    LevelBruh
+} LevelID;
+
 void initLevels(void);
 void exitLevels(void);
 
