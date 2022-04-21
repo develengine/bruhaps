@@ -8,6 +8,7 @@
 #include "core.h"
 #include "levels.h"
 #include "state.h"
+#include "audio.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,6 +44,7 @@ int bagE_main(int argc, char *argv[])
     glEnable(GL_PROGRAM_POINT_SIZE);
 
 
+    initAudio();
     initState();
     initLevels();
 
@@ -411,6 +413,7 @@ int bagE_main(int argc, char *argv[])
 
     exitLevels();
     exitState();
+    exitAudio();
 
     return 0;
 }
