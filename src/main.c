@@ -16,6 +16,21 @@
 #include <stdbool.h>
 
 
+static void audioCallback(int16_t *buffer, unsigned size)
+{
+    static float x = 0.0f;
+
+    for (int i = 0; i < size * 2; i += 2) {
+        int16_t sample = sinf(x) * INT16_MAX * 0.25f;
+        buffer[i + 0] = sample;
+        buffer[i + 1] = sample;
+        x += 2000.0f / AUDIO_SAMPLES_PER_SECOND;
+    }
+
+    if (x > AUDIO_SAMPLES_PER_SECOND)
+        x -= (float)AUDIO_SAMPLES_PER_SECOND;
+}
+
 
 static bool spinning = true;
 
@@ -44,7 +59,7 @@ int bagE_main(int argc, char *argv[])
     glEnable(GL_PROGRAM_POINT_SIZE);
 
 
-    initAudio();
+    initAudio(audioCallback);
     initState();
     initLevels();
 
