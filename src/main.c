@@ -16,22 +16,6 @@
 #include <stdbool.h>
 
 
-static void audioCallback(int16_t *buffer, unsigned size)
-{
-    static float x = 0.0f;
-
-    for (int i = 0; i < size * 2; i += 2) {
-        int16_t sample = sinf(x) * INT16_MAX * 0.25f;
-        buffer[i + 0] = sample;
-        buffer[i + 1] = sample;
-        x += 2000.0f / AUDIO_SAMPLES_PER_SECOND;
-    }
-
-    if (x > AUDIO_SAMPLES_PER_SECOND)
-        x -= (float)AUDIO_SAMPLES_PER_SECOND;
-}
-
-
 static bool spinning = true;
 
 
@@ -59,8 +43,7 @@ int bagE_main(int argc, char *argv[])
     glEnable(GL_PROGRAM_POINT_SIZE);
 
 
-    AudioInfo audioInfo = { audioCallback };
-    initAudio(&audioInfo);
+    initAudio();
     initState();
     initLevels();
 
@@ -182,6 +165,10 @@ int bagE_main(int argc, char *argv[])
 
     glActiveTexture(GL_TEXTURE0);
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, camUBO);
+
+    clock_t startTime = clock();
+
+    int fps = 0;
 
     while (appState.running) {
         bagE_pollEvents();
@@ -406,6 +393,11 @@ int bagE_main(int argc, char *argv[])
 
         glEnable(GL_DEPTH_TEST);
 
+
+        clock_t endTime = clock();
+        // printf("elapsed: %lf\n", (double)(endTime - startTime) / CLOCKS_PER_SEC);
+        startTime = endTime;
+        ++fps;
 
         bagE_swapBuffers();
 

@@ -45,6 +45,7 @@ void *startAlsa(void *param)
 {
     AudioInfo *info = (AudioInfo*)param;
     AudioWriteCallback writeCallback = info->writeCallback;
+
     // Open device
 
     const char *deviceName = "default";
@@ -190,17 +191,20 @@ void *startAlsa(void *param)
         }
     }
 
-    // snd_pcm_drain(device);
     snd_pcm_close(device);
     free(writeBuffer);
 
     pthread_exit(0);
 }
 
+/* global so the thread doesn't outlive it */
+static AudioInfo audioInfo;
 
-void initAudio(AudioInfo *info)
+void initAudioEngine(AudioInfo info)
 {
-    int ret = pthread_create(&thread, NULL, startAlsa, info);
+    audioInfo = info;
+
+    int ret = pthread_create(&thread, NULL, startAlsa, &audioInfo);
 
     if (ret) {
         fprintf(stderr, "failed to create a separate audio thread!\n");
@@ -209,7 +213,7 @@ void initAudio(AudioInfo *info)
 }
 
 
-void exitAudio(void)
+void exitAudioEngine(void)
 {
     running = 0;
     pthread_join(thread, NULL);
