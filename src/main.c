@@ -59,7 +59,8 @@ int bagE_main(int argc, char *argv[])
     glEnable(GL_PROGRAM_POINT_SIZE);
 
 
-    initAudio(audioCallback);
+    AudioInfo audioInfo = { audioCallback };
+    initAudio(&audioInfo);
     initState();
     initLevels();
 
