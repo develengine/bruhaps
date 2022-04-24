@@ -48,6 +48,10 @@ int bagE_main(int argc, char *argv[])
     initLevels();
 
 
+    unsigned soundLength;
+    loadWAV("test.wav", &soundLength);
+
+
     int modelProgram = createProgram("shaders/3d_vertex.glsl", "shaders/3d_fragment.glsl");
 
     Model brugModel  = modelLoad("res/brug.model");
@@ -165,10 +169,6 @@ int bagE_main(int argc, char *argv[])
 
     glActiveTexture(GL_TEXTURE0);
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, camUBO);
-
-    clock_t startTime = clock();
-
-    int fps = 0;
 
     while (appState.running) {
         bagE_pollEvents();
@@ -393,11 +393,6 @@ int bagE_main(int argc, char *argv[])
 
         glEnable(GL_DEPTH_TEST);
 
-
-        clock_t endTime = clock();
-        // printf("elapsed: %lf\n", (double)(endTime - startTime) / CLOCKS_PER_SEC);
-        startTime = endTime;
-        ++fps;
 
         bagE_swapBuffers();
 

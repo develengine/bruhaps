@@ -49,7 +49,8 @@ static bool selected = false;
 static int selectedX, selectedZ;
 
 // TODO: REMOVE THIS CRAP
-static void selectVertex(
+// FIXME: make static
+void selectVertex(
         float camX,
         float camY,
         float camZ,
