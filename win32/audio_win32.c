@@ -215,15 +215,18 @@ int WINAPI audioThreadFunction(void *param)
 }
 
 
-void initAudio(AudioWriteCallback wc)
+static AudioWriteCallback writeCallback;
+
+void initAudioEngine(AudioInfo info)
 {
-    audioThread = CreateThread(NULL, 0, audioThreadFunction, wc, 0, &audioThreadID);
+    writeCallback = info.writeCallback;
+    audioThread = CreateThread(NULL, 0, audioThreadFunction, writeCallback, 0, &audioThreadID);
     if (!audioThread)
         log_on_fail(666, "Failed to create audio thread!\n");
 }
 
 
-void exitAudio(void)
+void exitAudioEngine(void)
 {
     audioClient->lpVtbl->Stop(audioClient);
 

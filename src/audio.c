@@ -57,6 +57,8 @@ void initAudio(void)
         .writeCallback = audioCallback,
     };
 
+    emptySounds();
+
     initAudioEngine(info);
 }
 
@@ -82,15 +84,17 @@ int16_t *loadWAV(const char *path, unsigned *length)
     // FIXME: add a file length check
 
     fread(buffer, 1, 4, file);
-    if (strcmp(buffer, "RIFF")) {
+    if (strncmp(buffer, "RIFF", 4)) {
         fprintf(stderr, "Can't parse file \"%s\". Wrong format.\n", path);
+        fprintf(stderr, "here\n");
         exit(666);
     }
 
     fseek(file, 4, SEEK_CUR);
     fread(buffer, 1, 4, file);
-    if (strcmp(buffer, "WAVE")) {
+    if (strncmp(buffer, "WAVE", 4)) {
         fprintf(stderr, "Can't parse file \"%s\". Wrong format.\n", path);
+        fprintf(stderr, "there\n");
         exit(666);
     }
 

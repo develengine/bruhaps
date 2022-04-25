@@ -33,7 +33,7 @@ typedef struct
 } Sound;
 
 // FIXME: may need to be adjusted (adjustable)
-static_assert(sizeof(Sound) == 128);
+static_assert(sizeof(Sound) == 128, "Sound not cacheline aligned");
 
 
 void initAudioEngine(AudioInfo info);
