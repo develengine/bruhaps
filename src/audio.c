@@ -11,11 +11,10 @@
 #define NO_NEXT -1
 
 static int availableHead;
-static int availableTail;
-static int playingHead;
-static int playingTail;
 
 static volatile Sound sounds[MAX_SOUND_COUNT];
+
+static int availableTail;
 
 
 bool playSound(SoundInfo info, volatile SoundInfo **handle)
@@ -44,8 +43,6 @@ void emptySounds(void)
 {
     availableHead = 0;
     availableTail = MAX_SOUND_COUNT - 1;
-    playingHead = NO_NEXT;
-    playingTail = NO_NEXT;
 
     for (int i = 0; i < MAX_SOUND_COUNT; ++i)
         sounds[i].next = i + 1;
