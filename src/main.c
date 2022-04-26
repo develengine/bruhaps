@@ -17,6 +17,8 @@
 
 
 static bool spinning = true;
+static unsigned soundLength;
+static int16_t *soundBuffer;
 
 
 int bagE_main(int argc, char *argv[])
@@ -48,8 +50,8 @@ int bagE_main(int argc, char *argv[])
     initLevels();
 
 
-    unsigned soundLength;
-    loadWAV("test.wav", &soundLength);
+    // soundBuffer = loadWAV("test.wav", &soundLength);
+    soundBuffer = loadWAV("pushin_d.wav", &soundLength);
 
 
     int modelProgram = createProgram("shaders/3d_vertex.glsl", "shaders/3d_fragment.glsl");
@@ -488,6 +490,22 @@ int bagE_eventHandler(bagE_Event *event)
                 case KEY_R:
                     if (keyDown)
                         spinning = !spinning;
+                    break;
+                case KEY_P:
+                    if (!keyDown) {
+                        Sound sound = {
+                            .data = soundBuffer,
+                            .times = 1,
+                            .start = 0,
+                            .end   = soundLength,
+                            .pos   = 0,
+                            .volL  = 1.0f,
+                            .volR  = 1.0f,
+                        };
+
+                        printf("pushin P\n");
+                        playSound(sound);
+                    }
                     break;
             }
         } break;

@@ -17,25 +17,77 @@ static volatile Sound sounds[MAX_SOUND_COUNT];
 static int availableTail;
 
 
-bool playSound(SoundInfo info, volatile SoundInfo **handle)
+bool playSound(Sound sound)
 {
-    
+    int next = sounds[availableHead].next;
+    if (next == NO_NEXT)
+        return false;
+
+    sounds[availableHead] = sound;
+
+    availableHead = next;
+
+    return true;
 }
 
 
 void audioCallback(int16_t *buffer, unsigned size)
 {
-    static float x = 0.0f;
+    size *= 2;
 
-    for (unsigned i = 0; i < size * 2; i += 2) {
-        int16_t sample = sinf(x) * INT16_MAX * 0.25f;
-        buffer[i + 0] = sample;
-        buffer[i + 1] = sample;
-        x += 2000.0f / AUDIO_SAMPLES_PER_SECOND;
+    for (size_t i = 0; i < size; ++i)
+        buffer[i] = 0;
+
+    int stoppedCount = 0;
+
+    for (int soundID = 0; soundID < MAX_SOUND_COUNT; ++soundID) {
+        Sound sound = sounds[soundID];
+
+        if (sound.stopped) {
+            ++stoppedCount;
+            continue;
+        }
+
+        size_t written = 0;
+
+        while (written < size) {
+            size_t left    = sound.end - sound.pos;
+            size_t toWrite = left < size ? left : size;
+
+            for (size_t i = 0; i < toWrite; i += 2) {
+                buffer[i + 0] += (int16_t)(sound.data[sound.pos + i + 0] * sound.volL);
+                buffer[i + 1] += (int16_t)(sound.data[sound.pos + i + 1] * sound.volR);
+            }
+
+            sound.pos += toWrite;
+            written   += toWrite;
+
+            if (left < size) {
+                sound.pos = sound.start;
+
+                if (sound.times == TIMES_INF)
+                    continue;
+
+                --sound.times;
+
+                if (sound.times == 0)
+                    written = size;
+            }
+        }
+
+        if (sound.times == 0) {
+            if (sound.handle)
+                *(sound.handle) = NULL;
+
+            sounds[soundID].stopped = true;
+            sounds[soundID].next = NO_NEXT;
+            sounds[availableTail].next = soundID;
+            availableTail = soundID;
+        } else {
+            sounds[soundID].pos   = sound.pos;
+            sounds[soundID].times = sound.times;
+        }
     }
-
-    if (x > AUDIO_SAMPLES_PER_SECOND)
-        x -= (float)AUDIO_SAMPLES_PER_SECOND;
 }
 
 
@@ -44,8 +96,10 @@ void emptySounds(void)
     availableHead = 0;
     availableTail = MAX_SOUND_COUNT - 1;
 
-    for (int i = 0; i < MAX_SOUND_COUNT; ++i)
+    for (int i = 0; i < MAX_SOUND_COUNT; ++i) {
         sounds[i].next = i + 1;
+        sounds[i].stopped = true;
+    }
 
     sounds[MAX_SOUND_COUNT - 1].next = NO_NEXT;
 }
