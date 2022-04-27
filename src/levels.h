@@ -6,6 +6,8 @@
 
 typedef enum {
     LevelBruh,
+
+    LevelCount
 } LevelID;
 
 

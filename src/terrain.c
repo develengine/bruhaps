@@ -1,24 +1,26 @@
 #include "terrain.h"
 
+#include "bag_engine.h"
 #include "utils.h"
 
+#define CHUNK_VERTEX_COUNT (CHUNK_DIM * CHUNK_DIM * 4)
+#define CHUNK_INDEX_COUNT  (CHUNK_DIM * CHUNK_DIM * 6)
 
-void constructChunkMesh(
-        ChunkMesh *mesh,
+static Vertex   vertexBuffer[CHUNK_VERTEX_COUNT];
+static unsigned indexBuffer[CHUNK_INDEX_COUNT];
+static float    normalBuffer[(CHUNK_DIM + 1) * (CHUNK_DIM + 1) * 3];
+
+void updateChunkObject(
+        ChunkObject chunkObject,
         const Terrain *terrain,
         const AtlasView *atlasViews,
         int cx,
         int cz
 ) {
-    mesh->vertexCount = 0;
-    mesh->indexCount = 0;
+    int vertexCount = 0;
+    int indexCount = 0;
 
-    // FIXME: make static buffer sizes
-
-    // const int normalDim = CHUNK_DIM + 1;
-    float normalBuffer[(CHUNK_DIM + 1) * (CHUNK_DIM + 1) * 3];
-
-    const float posses[][2] = {
+    const int posses[][2] = {
     //    y, x
         {-1, 0 },
         {-1,-1 },
@@ -127,7 +129,7 @@ discard_tile:
             TileTexture texture = terrain->textures[cz * MAX_MAP_DIM + cx].data[z * CHUNK_DIM + x];
             AtlasView atlasView = atlasViews[texture.viewID];
 
-            int indexOffset = mesh->vertexCount;
+            int indexOffset = vertexCount;
 
             for (int zi = 0; zi < 2; ++zi) {
                 for (int xi = 0; xi < 2; ++xi) {
@@ -146,20 +148,23 @@ discard_tile:
                         }
                     };
 
-                    safe_push(mesh->vertices, mesh->vertexCount, mesh->vertexCapacity, vertex);
+                    vertexBuffer[vertexCount++] = vertex;
                 }
             }
 
-            safe_push(mesh->indices, mesh->indexCount, mesh->indexCapacity, indexOffset + 0);
-            safe_push(mesh->indices, mesh->indexCount, mesh->indexCapacity, indexOffset + 2);
-            safe_push(mesh->indices, mesh->indexCount, mesh->indexCapacity, indexOffset + 3);
+            indexBuffer[indexCount++] = indexOffset + 0;
+            indexBuffer[indexCount++] = indexOffset + 2;
+            indexBuffer[indexCount++] = indexOffset + 3;
 
-            safe_push(mesh->indices, mesh->indexCount, mesh->indexCapacity, indexOffset + 3);
-            safe_push(mesh->indices, mesh->indexCount, mesh->indexCapacity, indexOffset + 1);
-            safe_push(mesh->indices, mesh->indexCount, mesh->indexCapacity, indexOffset + 0);
+            indexBuffer[indexCount++] = indexOffset + 3;
+            indexBuffer[indexCount++] = indexOffset + 1;
+            indexBuffer[indexCount++] = indexOffset + 0;
 
         }
     }
+
+    glNamedBufferSubData(chunkObject.vbo, 0, vertexCount * sizeof(Vertex),   vertexBuffer);
+    glNamedBufferSubData(chunkObject.ebo, 0, indexCount  * sizeof(unsigned), indexBuffer);
 }
 
 
@@ -185,3 +190,40 @@ float atTerrainHeight(const Terrain *terrain, int x, int z)
     return terrain->heights[cz * MAX_MAP_DIM + cx].data[zp * CHUNK_DIM + xp];
 }
 
+
+void clearChunks(Terrain *terrain)
+{
+    for (int i = 0; i < MAX_MAP_DIM; ++i)
+        terrain->chunkMap[i] = NO_CHUNK;
+}
+
+
+ChunkObject createChunkObject(void)
+{
+    ChunkObject object;
+
+    glCreateBuffers(1, &object.vbo);
+    glNamedBufferStorage(object.vbo, CHUNK_VERTEX_COUNT * sizeof(Vertex), NULL, 0);
+
+    glCreateBuffers(1, &object.ebo);
+    glNamedBufferStorage(object.ebo, CHUNK_INDEX_COUNT * sizeof(unsigned), NULL, 0);
+
+    glCreateVertexArrays(1, &object.vao);
+    glVertexArrayVertexBuffer(object.vao, 0, object.vbo, 0, sizeof(Vertex));
+
+    glEnableVertexArrayAttrib(object.vao, 0);
+    glEnableVertexArrayAttrib(object.vao, 1);
+    glEnableVertexArrayAttrib(object.vao, 2);
+
+    glVertexArrayAttribFormat(object.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribFormat(object.vao, 1, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 3);
+    glVertexArrayAttribFormat(object.vao, 2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5);
+
+    glVertexArrayAttribBinding(object.vao, 0, 0);
+    glVertexArrayAttribBinding(object.vao, 1, 0);
+    glVertexArrayAttribBinding(object.vao, 2, 0);
+
+    glVertexArrayElementBuffer(object.vao, object.ebo);
+
+    return object;
+}

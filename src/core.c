@@ -216,7 +216,7 @@ unsigned createTexture(const char *path)
     glTextureParameteri(texture, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTextureParameteri(texture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    glTextureStorage2D(texture, log2(width), GL_RGBA8, width, height);
+    glTextureStorage2D(texture, (int)log2(width), GL_RGBA8, width, height);
     glTextureSubImage2D(texture, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image);
 
     glGenerateTextureMipmap(texture);
@@ -341,7 +341,7 @@ unsigned createCubeTexture(
 
     unsigned texture;
     glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &texture);
-    glTextureStorage2D(texture, log2(width) + 1, GL_RGBA8, width, height);
+    glTextureStorage2D(texture, (int)log2(width) + 1, GL_RGBA8, width, height);
 
     glTextureParameteri(texture, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTextureParameteri(texture, GL_TEXTURE_WRAP_T, GL_REPEAT);

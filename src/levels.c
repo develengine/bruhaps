@@ -15,10 +15,22 @@ static ModelObject boxModel;
 #include "levels/bruh.c"
 
 
+static void levelInits(void)
+{
+    for (LevelID id = 0; id < LevelCount; ++id) {
+        switch (id) {
+            case LevelBruh:
+                levelBruhInit();
+                break;
+            case LevelCount:
+                break;
+        }
+    }
+}
+
+
 void initLevels(void)
 {
-    levelBruhInit();
-
     level.skyboxProgram = createProgram(
             "shaders/cubemap_vertex.glsl",
             "shaders/cubemap_fragment.glsl"
@@ -30,6 +42,8 @@ void initLevels(void)
     );
 
     boxModel = createBoxModelObject();
+
+    levelInits();
 
     // FIXME:
     levelBruhLoad();
@@ -82,17 +96,17 @@ void selectVertex(
             z = gz;
         }
 
-        int xp = floor(x);
-        int zp = floor(z);
+        int xp = (int)floorf(x);
+        int zp = (int)floorf(z);
         int cx = xp / CHUNK_DIM;
         int cz = zp / CHUNK_DIM;
 
         if (xp >= 0 && cx < MAX_MAP_DIM
          && zp >= 0 && cz < MAX_MAP_DIM
          && map->chunkMap[cz * MAX_MAP_DIM + cx] != NO_CHUNK) {
-            int dx = x - camXS;
-            int dz = z - camZS;
-            float h = camY + sqrtf(dx * dx + dz * dz) * yx;
+            int dx = (int)(x - camXS);
+            int dz = (int)(z - camZS);
+            float h = camY + sqrtf((float)(dx * dx + dz * dz)) * yx;
 
             int lx = xp % CHUNK_DIM;
             int lz = zp % CHUNK_DIM;

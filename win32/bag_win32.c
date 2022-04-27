@@ -168,6 +168,8 @@ LRESULT CALLBACK bagWIN32_windowProc(
 
 #ifdef BAGE_WINDOWS_CONSOLE
 int main(int argc, char *argv[]) {
+    (void)argc; (void)argv;
+
     bagWIN32.instance = GetModuleHandle(NULL);
     
     DWORD outMode = 0;
@@ -451,7 +453,7 @@ LRESULT CALLBACK bagWIN32_windowProc(
         case WM_SYSKEYUP: {
             event->type = message == WM_KEYDOWN || message == WM_SYSKEYDOWN
                         ? bagE_EventKeyDown : bagE_EventKeyUp;
-            event->data.key.key = wParam;
+            event->data.key.key = (unsigned)wParam;
             event->data.key.repeat = lParam & 0xFF;
         } break;
 
@@ -547,10 +549,10 @@ LRESULT CALLBACK bagWIN32_windowProc(
                 utfVal = (wParam & 0x3FF) | ((bagWIN32.highSurrogate & 0x3FF) << 10);
                 bagWIN32.highSurrogate = 0;
             } else if ((int)wParam >= 0xD800 && (int)wParam <= 0xDBFF) {
-                bagWIN32.highSurrogate = wParam;
+                bagWIN32.highSurrogate = (int)wParam;
                 break;
             } else {
-                utfVal = wParam;
+                utfVal = (int)wParam;
             }
 
             event->type = bagE_EventTextUTF32;

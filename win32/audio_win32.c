@@ -41,6 +41,11 @@ DEFINE_GUID(based_IID_IAudioRenderClient,   0xF294ACFC, 0x3146, 0x4483, 0xA7, 0x
         }                                                                           \
     } while(0)
 
+#define log(msg)                                                                \
+    do {                                                                        \
+        fprintf(stderr, "%s:%d Log (audio): %s\n", __FILE__, __LINE__, msg);    \
+    } while (0)
+
 
 static IMMDeviceEnumerator *enumerator = NULL;
 static IMMDevice *device = NULL;
@@ -56,14 +61,14 @@ static HANDLE task;
 static DWORD taskID;
 
 
-int WINAPI audioThreadFunction(void *param)
+DWORD WINAPI audioThreadFunction(void *param)
 {
-    AudioWriteCallback writeCallback = (AudioWriteCallback)param;
+    AudioWriteCallback writeCallback = ((AudioInfo*)param)->writeCallback;
 
     HRESULT hr;
 
     if (!SetThreadPriority(audioThread, THREAD_PRIORITY_HIGHEST))
-        log_on_fail(666, "Failed to raise thread priority!\n");
+        log("Failed to raise thread priority!\n");
 
     hr = CoInitializeEx(0, COINIT_SPEED_OVER_MEMORY);
     kill_on_fail(hr, "Failed to initialize COM!");
@@ -195,7 +200,7 @@ int WINAPI audioThreadFunction(void *param)
 
     for (;;) {
         if (WaitForSingleObject(callbackEvent, 2000) != WAIT_OBJECT_0)
-            log_on_fail(666, "Possible timeout!\n");
+            log("Possible timeout!\n");
 
         unsigned paddingFrames;
         hr = audioClient->lpVtbl->GetCurrentPadding(audioClient, &paddingFrames);
@@ -210,19 +215,17 @@ int WINAPI audioThreadFunction(void *param)
             log_on_fail(hr, "Failed to release buffer!");
         }
     }
-
-    return 0;
 }
 
 
-static AudioWriteCallback writeCallback;
+static AudioInfo audioInfo;
 
 void initAudioEngine(AudioInfo info)
 {
-    writeCallback = info.writeCallback;
-    audioThread = CreateThread(NULL, 0, audioThreadFunction, writeCallback, 0, &audioThreadID);
+    audioInfo = info;
+    audioThread = CreateThread(NULL, 0, audioThreadFunction, &audioInfo, 0, &audioThreadID);
     if (!audioThread)
-        log_on_fail(666, "Failed to create audio thread!\n");
+        log("Failed to create audio thread!\n");
 }
 
 

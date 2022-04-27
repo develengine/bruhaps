@@ -10,6 +10,11 @@
 #define CHUNK_TILE_DIM 1.0f
 #define CHUNK_HEIGHT 32.0f
 
+#define MAX_MAP_DIM 32
+#define NO_CHUNK    -1
+#define NO_TILE     666.f
+
+
 typedef struct
 {
     float data[CHUNK_DIM * CHUNK_DIM];
@@ -37,10 +42,6 @@ typedef struct
 } ChunkTextures;
 
 
-#define MAX_MAP_DIM 32
-#define NO_CHUNK    -1
-#define NO_TILE     666.f
-
 typedef struct
 {
     int chunkMap[MAX_MAP_DIM * MAX_MAP_DIM];
@@ -58,6 +59,20 @@ typedef struct
     unsigned *indices;
     int indexCount, indexCapacity;
 } ChunkMesh;
+
+
+typedef struct
+{
+    unsigned vao;
+    unsigned vbo;
+    unsigned ebo;
+    unsigned vertexCount;
+    unsigned indexCount;
+} ChunkObject;
+
+
+ChunkObject createChunkObject(void);
+
 
 static inline Model chunkMeshToModel(ChunkMesh mesh)
 {
@@ -77,6 +92,7 @@ static inline void freeChunkMesh(ChunkMesh mesh)
     free(mesh.indices);
 }
 
+void clearChunks(Terrain *terrain);
 
 float atTerrainHeight(const Terrain *terrain, int x, int z);
 

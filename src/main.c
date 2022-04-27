@@ -50,8 +50,8 @@ int bagE_main(int argc, char *argv[])
     initLevels();
 
 
-    // soundBuffer = loadWAV("test.wav", &soundLength);
-    soundBuffer = loadWAV("pushin_d.wav", &soundLength);
+    soundBuffer = loadWAV("test.wav", &soundLength);
+    // soundBuffer = loadWAV("pushin_d.wav", &soundLength);
 
 
     int modelProgram = createProgram("shaders/3d_vertex.glsl", "shaders/3d_fragment.glsl");
@@ -215,7 +215,7 @@ int bagE_main(int argc, char *argv[])
         }
 
         if (spinning)
-            objRotation += 0.025;
+            objRotation += 0.025f;
 
         updateLevel(0.01666f);
 
@@ -234,8 +234,8 @@ int bagE_main(int argc, char *argv[])
         /* projection */
         Matrix proj = matrixProjection(
                 camState.fov,
-                appState.windowWidth,
-                appState.windowHeight,
+                (float)appState.windowWidth,
+                (float)appState.windowHeight,
                 0.1f,
                 100.0f
         );

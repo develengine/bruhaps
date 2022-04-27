@@ -21,6 +21,8 @@ void levelBruhLoad(void)
             "Maskonaive2/posz.png",
             "Maskonaive2/negz.png"
     );
+
+    clearChunks(&level.terrain);
 }
 
 
