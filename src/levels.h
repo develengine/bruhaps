@@ -13,13 +13,18 @@ typedef enum {
 
 typedef struct
 {
-    Terrain terrain;
-    
     unsigned terrainProgram;
     unsigned terrainAtlas;
     
     unsigned skyboxProgram;
     unsigned skyboxCubemap;
+
+    const AtlasView *atlasViews;
+
+    Terrain terrain;
+
+    unsigned chunkUpdates[MAX_MAP_DIM * MAX_MAP_DIM];
+    int chunkUpdateCount;
 } Level;
 
 extern Level level;

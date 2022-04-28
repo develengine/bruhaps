@@ -107,52 +107,12 @@ int bagE_main(int argc, char *argv[])
             "shaders/text_fragment.glsl"
     );
 
-    /**************************************************/
-#if 0
-    Map map = { 0 };
-    memset(map.chunkMap, NO_CHUNK, sizeof(map.chunkMap));
-    map.chunkMap[0] = 0;
-
-    ChunkHeights chunkHeights;
-    for (int y = 0; y < CHUNK_DIM; ++y) {
-        for (int x = 0; x < CHUNK_DIM; ++x) {
-            chunkHeights.data[y * CHUNK_DIM + x] = 
-                2.0f * sin((M_PI / CHUNK_DIM) * x * 2.0f) * sin((M_PI / CHUNK_DIM) * y * 3.0f);
-        }
-    }
-    map.heights = &chunkHeights;
-    chunkHeights.data[5 * CHUNK_DIM + 8] = NO_TILE;
-
-    ChunkTextures chunkTextures;
-    for (int y = 0; y < CHUNK_DIM; ++y) {
-        for (int x = 0; x < CHUNK_DIM; ++x) {
-            TileTexture texture = { 0, 0, 0, 0 };
-            chunkTextures.data[y * CHUNK_DIM + x] = texture;
-        }
-    }
-    map.textures = &chunkTextures;
-
-    AtlasView atlasViews[] = {
-        { 0.25f, 0.75f, 0.25f, 0.25f, 1, 1 },  // cobble
-        { 0.0f, 0.75f, 0.25f, 0.25f, 1, 1 },   // grass
-    };
-
-    map.chunkCount = 1;
-
-    ChunkMesh chunkMesh = { 0 };
-    constructChunkMesh(&chunkMesh, &map, atlasViews, 0, 0);
-    Model chunkModel = chunkMeshToModel(chunkMesh);
-
-    ModelObject chunkObject = createModelObject(chunkModel);
-
-#endif
-    /**************************************************/
-
     unsigned camUBO = createBufferObject(
         sizeof(Matrix) * 3 + sizeof(float) * 4,
         NULL,
         GL_DYNAMIC_STORAGE_BIT
     );
+
 
     double t = 0;
 
@@ -253,18 +213,6 @@ int bagE_main(int argc, char *argv[])
         glNamedBufferSubData(camUBO, 0, sizeof(camData), &camData);
 
 
-#if 0
-        /* model chunk */
-        Matrix modelChunk = matrixScale(1.0f, 1.0f, 1.0f);
-
-        glUseProgram(terrainProgram);
-        glBindVertexArray(chunkObject.vao);
-        glBindTextureUnit(0, grassTexture);
-
-        glProgramUniformMatrix4fv(terrainProgram, 0, 1, GL_FALSE, modelChunk.data);
-
-        glDrawElements(GL_TRIANGLES, chunkModel.indexCount, GL_UNSIGNED_INT, 0);
-#endif
 
         renderLevel();
 

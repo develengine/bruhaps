@@ -1,3 +1,3 @@
 #! /bin/sh
 
-cc -std=c11 -pedantic -Wall -Wextra -Wno-deprecated-declarations -D_POSIX_C_SOURCE=200809L -o program linux/bag_x11.c linux/audio_alsa.c src/main.c src/utils.c src/res.c src/animation.c src/terrain.c src/core.c src/state.c src/levels.c src/audio.c glad/src/gl.c -Isrc -Iglad/include -DDEBUG -lGL -lX11 -lXi -ldl -lasound -lm -lpthread
+cc -std=c11 -pedantic -Wall -Wextra -Wno-deprecated-declarations -D_POSIX_C_SOURCE=200809L -g -o program linux/bag_x11.c linux/audio_alsa.c src/main.c src/utils.c src/res.c src/animation.c src/terrain.c src/core.c src/state.c src/levels.c src/audio.c glad/src/gl.c -Isrc -Iglad/include -DDEBUG -lGL -lX11 -lXi -ldl -lasound -lm -lpthread

@@ -19,11 +19,19 @@ static void levelInits(void)
 {
     for (LevelID id = 0; id < LevelCount; ++id) {
         switch (id) {
-            case LevelBruh:
-                levelBruhInit();
-                break;
-            case LevelCount:
-                break;
+            case LevelBruh:  levelBruhInit(); break;
+            case LevelCount: break;
+        }
+    }
+}
+
+
+static void levelExits(void)
+{
+    for (LevelID id = 0; id < LevelCount; ++id) {
+        switch (id) {
+            case LevelBruh:  levelBruhExit(); break;
+            case LevelCount: break;
         }
     }
 }
@@ -54,6 +62,8 @@ void exitLevels(void)
 {
     // FIXME:
     levelBruhUnload();
+
+    levelExits();
 
     freeModelObject(boxModel);
 }
@@ -111,7 +121,7 @@ void selectVertex(
             int lx = xp % CHUNK_DIM;
             int lz = zp % CHUNK_DIM;
 
-            if (h < map->heights[map->chunkMap[cz * MAX_MAP_DIM + cx]].data[lz * CHUNK_DIM + lx]) {
+            if (h < map->heights[map->chunkMap[cz * MAX_MAP_DIM + cx]]->data[lz * CHUNK_DIM + lx]) {
                 selected = true;
                 selectedX = xp;
                 selectedZ = zp;
@@ -125,18 +135,31 @@ void selectVertex(
 void updateLevel(float dt)
 {
     (void)dt;
-    /*
     selectVertex(
             camState.x, camState.y, camState.z,
             camState.pitch, camState.yaw,
             &level.terrain
     );
-    */
+
+    for (int i = 0; i < level.chunkUpdateCount; ++i) {
+        int chunkPos = level.chunkUpdates[i];
+        int chunkID  = level.terrain.chunkMap[chunkPos];
+        updateChunkObject(
+                level.terrain.objects + chunkID,
+                &level.terrain,
+                level.atlasViews,
+                chunkPos % MAX_MAP_DIM,
+                chunkPos / MAX_MAP_DIM
+        );
+    }
+
+    level.chunkUpdateCount = 0;
 }
 
 
 void renderLevel(void)
 {
+    /* render skybox */
     glDisable(GL_DEPTH_TEST);
 
     glUseProgram(level.skyboxProgram);
@@ -146,6 +169,26 @@ void renderLevel(void)
     glDrawElements(GL_TRIANGLES, BOX_INDEX_COUNT, GL_UNSIGNED_INT, 0);
 
     glEnable(GL_DEPTH_TEST);
+
+    /* render terrain */
+    glUseProgram(level.terrainProgram);
+    glBindTextureUnit(0, level.terrainAtlas);
+
+    for (int y = 0; y < MAX_MAP_DIM; ++y) {
+        for (int x = 0; x < MAX_MAP_DIM; ++x) {
+            int chunkPos = y * MAX_MAP_DIM + x;
+            int chunkID;
+            if ((chunkID = level.terrain.chunkMap[chunkPos]) != NO_CHUNK) {
+                Matrix modelChunk = matrixTranslation(0.0f, 0.0f, 0.0f);
+
+                glProgramUniformMatrix4fv(level.terrainProgram, 0, 1, GL_FALSE, modelChunk.data);
+
+                ChunkObject object = level.terrain.objects[chunkID];
+                glBindVertexArray(object.vao);
+                glDrawElements(GL_TRIANGLES, object.indexCount, GL_UNSIGNED_INT, 0);
+            }
+        }
+    }
 }
 
 

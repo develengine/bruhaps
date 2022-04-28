@@ -3,6 +3,8 @@
 
 #include "res.h"
 
+#include "bag_engine.h"
+
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -44,11 +46,43 @@ typedef struct
 
 typedef struct
 {
+    unsigned vao;
+    unsigned vbo;
+    unsigned ebo;
+    unsigned vertexCount;
+    unsigned indexCount;
+} ChunkObject;
+
+ChunkObject createChunkObject(void);
+
+
+typedef struct
+{
     int chunkMap[MAX_MAP_DIM * MAX_MAP_DIM];
-    ChunkHeights *heights;
-    ChunkTextures *textures;
-    int chunkCount, chunkCapacity;
+    ChunkHeights *heights[MAX_MAP_DIM * MAX_MAP_DIM];
+    ChunkTextures *textures[MAX_MAP_DIM * MAX_MAP_DIM];
+    ChunkObject objects[MAX_MAP_DIM * MAX_MAP_DIM];
+    int chunkCount;
 } Terrain;
+
+static inline void terrainFreeChunkData(Terrain *terrain)
+{
+    for (int i = 0; i < terrain->chunkCount; ++i) {
+        free(terrain->heights[i]);
+        free(terrain->textures[i]);
+    }
+}
+
+static inline void terrainFreeChunkObjects(Terrain *terrain)
+{
+    for (int i = 0; i < terrain->chunkCount; ++i) {
+        ChunkObject object = terrain->objects[i];
+
+        glDeleteVertexArrays(1, &object.vao);
+        glDeleteBuffers(1, &object.vbo);
+        glDeleteBuffers(1, &object.ebo);
+    }
+}
 
 
 typedef struct
@@ -61,17 +95,6 @@ typedef struct
 } ChunkMesh;
 
 
-typedef struct
-{
-    unsigned vao;
-    unsigned vbo;
-    unsigned ebo;
-    unsigned vertexCount;
-    unsigned indexCount;
-} ChunkObject;
-
-
-ChunkObject createChunkObject(void);
 
 
 static inline Model chunkMeshToModel(ChunkMesh mesh)
@@ -92,16 +115,18 @@ static inline void freeChunkMesh(ChunkMesh mesh)
     free(mesh.indices);
 }
 
-void clearChunks(Terrain *terrain);
+void terrainClearChunkMap(Terrain *terrain);
 
 float atTerrainHeight(const Terrain *terrain, int x, int z);
 
-void constructChunkMesh(
-        ChunkMesh *mesh,
+
+void updateChunkObject(
+        ChunkObject *chunkObject,
         const Terrain *terrain,
         const AtlasView *atlasViews,
         int cx,
         int cz
 );
+
 
 #endif

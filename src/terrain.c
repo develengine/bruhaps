@@ -11,7 +11,7 @@ static unsigned indexBuffer[CHUNK_INDEX_COUNT];
 static float    normalBuffer[(CHUNK_DIM + 1) * (CHUNK_DIM + 1) * 3];
 
 void updateChunkObject(
-        ChunkObject chunkObject,
+        ChunkObject *chunkObject,
         const Terrain *terrain,
         const AtlasView *atlasViews,
         int cx,
@@ -126,7 +126,7 @@ discard_tile:
             if (discardTile)
                 continue;
 
-            TileTexture texture = terrain->textures[cz * MAX_MAP_DIM + cx].data[z * CHUNK_DIM + x];
+            TileTexture texture = terrain->textures[cz * MAX_MAP_DIM + cx]->data[z * CHUNK_DIM + x];
             AtlasView atlasView = atlasViews[texture.viewID];
 
             int indexOffset = vertexCount;
@@ -163,8 +163,10 @@ discard_tile:
         }
     }
 
-    glNamedBufferSubData(chunkObject.vbo, 0, vertexCount * sizeof(Vertex),   vertexBuffer);
-    glNamedBufferSubData(chunkObject.ebo, 0, indexCount  * sizeof(unsigned), indexBuffer);
+    glNamedBufferSubData(chunkObject->vbo, 0, vertexCount * sizeof(Vertex),   vertexBuffer);
+    glNamedBufferSubData(chunkObject->ebo, 0, indexCount  * sizeof(unsigned), indexBuffer);
+    chunkObject->vertexCount = vertexCount;
+    chunkObject->indexCount  = indexCount ;
 }
 
 
@@ -187,13 +189,13 @@ float atTerrainHeight(const Terrain *terrain, int x, int z)
     if (xp >= CHUNK_DIM || zp >= CHUNK_DIM)
         return NO_TILE;
 
-    return terrain->heights[cz * MAX_MAP_DIM + cx].data[zp * CHUNK_DIM + xp];
+    return terrain->heights[cz * MAX_MAP_DIM + cx]->data[zp * CHUNK_DIM + xp];
 }
 
 
-void clearChunks(Terrain *terrain)
+void terrainClearChunkMap(Terrain *terrain)
 {
-    for (int i = 0; i < MAX_MAP_DIM; ++i)
+    for (int i = 0; i < MAX_MAP_DIM * MAX_MAP_DIM; ++i)
         terrain->chunkMap[i] = NO_CHUNK;
 }
 
@@ -203,10 +205,20 @@ ChunkObject createChunkObject(void)
     ChunkObject object;
 
     glCreateBuffers(1, &object.vbo);
-    glNamedBufferStorage(object.vbo, CHUNK_VERTEX_COUNT * sizeof(Vertex), NULL, 0);
+    glNamedBufferStorage(
+            object.vbo,
+            CHUNK_VERTEX_COUNT * sizeof(Vertex),
+            NULL,
+            GL_DYNAMIC_STORAGE_BIT
+    );
 
     glCreateBuffers(1, &object.ebo);
-    glNamedBufferStorage(object.ebo, CHUNK_INDEX_COUNT * sizeof(unsigned), NULL, 0);
+    glNamedBufferStorage(
+            object.ebo,
+            CHUNK_INDEX_COUNT * sizeof(unsigned),
+            NULL,
+            GL_DYNAMIC_STORAGE_BIT
+    );
 
     glCreateVertexArrays(1, &object.vao);
     glVertexArrayVertexBuffer(object.vao, 0, object.vbo, 0, sizeof(Vertex));
