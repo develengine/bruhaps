@@ -1,10 +1,10 @@
 #version 460 core
 
-layout(location = 0) out vec4 o_color;
+layout(location = 0) in vec4 i_color;
 
-layout(location = 2) uniform vec4 u_color;
+layout(location = 0) out vec4 o_color;
 
 void main(void)
 {
-    o_color = u_color;
+    o_color = i_color;
 }

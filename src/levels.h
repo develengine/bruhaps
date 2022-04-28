@@ -37,4 +37,6 @@ void updateLevel(float dt);
 void renderLevel(void);
 void renderLevelDebugOverlay(void);
 
+void requestChunkUpdate(unsigned chunkPos);
+
 #endif

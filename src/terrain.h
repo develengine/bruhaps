@@ -8,9 +8,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define CHUNK_DIM 16
+#define CHUNK_DIM      16
 #define CHUNK_TILE_DIM 1.0f
-#define CHUNK_HEIGHT 32.0f
+#define CHUNK_HEIGHT   32.0f
 
 #define MAX_MAP_DIM 32
 #define NO_CHUNK    -1

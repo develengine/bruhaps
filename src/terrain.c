@@ -126,7 +126,9 @@ discard_tile:
             if (discardTile)
                 continue;
 
-            TileTexture texture = terrain->textures[cz * MAX_MAP_DIM + cx]->data[z * CHUNK_DIM + x];
+            int chunkID = terrain->chunkMap[cz * MAX_MAP_DIM + cx];
+
+            TileTexture texture = terrain->textures[chunkID]->data[z * CHUNK_DIM + x];
             AtlasView atlasView = atlasViews[texture.viewID];
 
             int indexOffset = vertexCount;
@@ -183,13 +185,15 @@ float atTerrainHeight(const Terrain *terrain, int x, int z)
     if (cx >= MAX_MAP_DIM || cz >= MAX_MAP_DIM)
         return NO_TILE;
 
-    if (terrain->chunkMap[cz * MAX_MAP_DIM + cx] == NO_CHUNK)
+    int chunkID;
+
+    if ((chunkID = terrain->chunkMap[cz * MAX_MAP_DIM + cx]) == NO_CHUNK)
         return NO_TILE;
 
     if (xp >= CHUNK_DIM || zp >= CHUNK_DIM)
         return NO_TILE;
 
-    return terrain->heights[cz * MAX_MAP_DIM + cx]->data[zp * CHUNK_DIM + xp];
+    return terrain->heights[chunkID]->data[zp * CHUNK_DIM + xp];
 }
 
 

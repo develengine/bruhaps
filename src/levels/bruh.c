@@ -22,9 +22,10 @@ void levelBruhLoad(void)
             "Maskonaive2/negz.png"
     );
 
-    terrainClearChunkMap(&level.terrain);
-
     level.atlasViews = atlasViews;
+
+
+    terrainClearChunkMap(&level.terrain);
 
 
     ChunkHeights *chunkHeights = malloc(sizeof(ChunkHeights));
@@ -50,14 +51,16 @@ void levelBruhLoad(void)
         }
     }
 
-    level.terrain.chunkMap[0] = 0;
+    int chunkX = 1, chunkZ = 1;
+    int chunkPos = chunkZ * MAX_MAP_DIM + chunkX;
+
+    level.terrain.chunkMap[chunkPos] = 0;
     level.terrain.textures[0] = chunkTextures;
     level.terrain.heights[0]  = chunkHeights;
     level.terrain.objects[0]  = createChunkObject();
     level.terrain.chunkCount  = 1;
 
-    level.chunkUpdates[0]  = 0;
-    level.chunkUpdateCount = 1;
+    requestChunkUpdate(chunkPos);
 }
 
 

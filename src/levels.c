@@ -11,6 +11,11 @@ Level level;
 
 static ModelObject boxModel;
 
+static unsigned pointProgram;
+
+static bool selected = false;
+static int selectedX, selectedZ;
+
 
 #include "levels/bruh.c"
 
@@ -49,6 +54,11 @@ void initLevels(void)
             "shaders/terrain_fragment.glsl"
     );
 
+    pointProgram = createProgram(
+            "shaders/point_vertex.glsl",
+            "shaders/point_fragment.glsl"
+    );
+
     boxModel = createBoxModelObject();
 
     levelInits();
@@ -68,9 +78,6 @@ void exitLevels(void)
     freeModelObject(boxModel);
 }
 
-
-static bool selected = false;
-static int selectedX, selectedZ;
 
 // TODO: REMOVE THIS CRAP
 // FIXME: make static
@@ -132,6 +139,17 @@ void selectVertex(
 }
 
 
+void requestChunkUpdate(unsigned chunkPos)
+{
+    for (int i = 0; i < level.chunkUpdateCount; ++i) {
+        if (level.chunkUpdates[i] == chunkPos)
+            return;
+    }
+
+    level.chunkUpdates[level.chunkUpdateCount++] = chunkPos;
+}
+
+
 void updateLevel(float dt)
 {
     (void)dt;
@@ -141,6 +159,7 @@ void updateLevel(float dt)
             &level.terrain
     );
 
+    /* update chunks */
     for (int i = 0; i < level.chunkUpdateCount; ++i) {
         int chunkPos = level.chunkUpdates[i];
         int chunkID  = level.terrain.chunkMap[chunkPos];
@@ -174,12 +193,14 @@ void renderLevel(void)
     glUseProgram(level.terrainProgram);
     glBindTextureUnit(0, level.terrainAtlas);
 
-    for (int y = 0; y < MAX_MAP_DIM; ++y) {
+    for (int z = 0; z < MAX_MAP_DIM; ++z) {
         for (int x = 0; x < MAX_MAP_DIM; ++x) {
-            int chunkPos = y * MAX_MAP_DIM + x;
+            int chunkPos = z * MAX_MAP_DIM + x;
             int chunkID;
             if ((chunkID = level.terrain.chunkMap[chunkPos]) != NO_CHUNK) {
-                Matrix modelChunk = matrixTranslation(0.0f, 0.0f, 0.0f);
+                float xp = (float)x * CHUNK_TILE_DIM * CHUNK_DIM;
+                float zp = (float)z * CHUNK_TILE_DIM * CHUNK_DIM;
+                Matrix modelChunk = matrixTranslation(xp, 0.0f, zp);
 
                 glProgramUniformMatrix4fv(level.terrainProgram, 0, 1, GL_FALSE, modelChunk.data);
 
@@ -194,4 +215,24 @@ void renderLevel(void)
 
 void renderLevelDebugOverlay(void)
 {
+    /* point */
+    if (selected) {
+        glUseProgram(pointProgram);
+
+        float colors[] = {
+            0.5f, 1.0f, 0.75f, 1.0f,
+        };
+
+        float points[] = {
+            selectedX * CHUNK_TILE_DIM,
+            atTerrainHeight(&level.terrain, selectedX, selectedZ),
+            selectedZ * CHUNK_TILE_DIM,
+            18.0f,
+        };
+
+        glProgramUniform4fv(pointProgram, 1, 1, colors);
+        glProgramUniform4fv(pointProgram, 33, 1, points);
+
+        glDrawArraysInstanced(GL_POINTS, 0, 1, 1);
+    }
 }

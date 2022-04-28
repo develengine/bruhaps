@@ -86,13 +86,6 @@ int bagE_main(int argc, char *argv[])
     unsigned wormTexture = createTexture("res/worm.png");
 
 
-#if 0
-    unsigned pointProgram = createProgram(
-            "shaders/point_vertex.glsl",
-            "shaders/point_fragment.glsl"
-    );
-#endif
-
     unsigned dummyVao;
     glCreateVertexArrays(1, &dummyVao);
 
@@ -286,29 +279,10 @@ int bagE_main(int argc, char *argv[])
         glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
 
 
-#if 0
-        /* point */
+        /* overlay */
         glDisable(GL_DEPTH_TEST);
         glBindVertexArray(dummyVao);
 
-        if (selected) {
-            glUseProgram(pointProgram);
-
-            glProgramUniformMatrix4fv(pointProgram, 0, 1, GL_FALSE, vp.data);
-            glProgramUniform4f(
-                    pointProgram,
-                    1,
-                    selectedX * CHUNK_TILE_DIM,
-                    atMapHeight(&map, selectedX, selectedZ),
-                    selectedZ * CHUNK_TILE_DIM,
-                    1.0f
-            );
-            glProgramUniform4f(pointProgram, 2, 0.5f, 1.0f, 0.75f, 1.0f);
-            glProgramUniform1f(pointProgram, 3, 18.0f);
-
-            glDrawArrays(GL_POINTS, 0, 1);
-        }
-#endif
 
         renderLevelDebugOverlay();
 
