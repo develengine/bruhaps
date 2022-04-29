@@ -119,6 +119,7 @@ void terrainClearChunkMap(Terrain *terrain);
 
 float atTerrainHeight(const Terrain *terrain, int x, int z);
 
+void setTerrainHeight(Terrain *terrain, int x, int z, float height);
 
 void updateChunkObject(
         ChunkObject *chunkObject,

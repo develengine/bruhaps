@@ -15,7 +15,7 @@ static unsigned pointProgram;
 
 static bool selected = false;
 static int selectedX, selectedZ;
-
+static int brushWidth = 2;
 
 #include "levels/bruh.c"
 
@@ -80,8 +80,7 @@ void exitLevels(void)
 
 
 // TODO: REMOVE THIS CRAP
-// FIXME: make static
-void selectVertex(
+static void selectVertex(
         float camX,
         float camY,
         float camZ,
@@ -118,9 +117,11 @@ void selectVertex(
         int cx = xp / CHUNK_DIM;
         int cz = zp / CHUNK_DIM;
 
+        int chunkID = map->chunkMap[cz * MAX_MAP_DIM + cx];
+
         if (xp >= 0 && cx < MAX_MAP_DIM
          && zp >= 0 && cz < MAX_MAP_DIM
-         && map->chunkMap[cz * MAX_MAP_DIM + cx] != NO_CHUNK) {
+         && chunkID != NO_CHUNK) {
             int dx = (int)(x - camXS);
             int dz = (int)(z - camZS);
             float h = camY + sqrtf((float)(dx * dx + dz * dz)) * yx;
@@ -128,7 +129,9 @@ void selectVertex(
             int lx = xp % CHUNK_DIM;
             int lz = zp % CHUNK_DIM;
 
-            if (h < map->heights[map->chunkMap[cz * MAX_MAP_DIM + cx]]->data[lz * CHUNK_DIM + lx]) {
+            float height = map->heights[chunkID]->data[lz * CHUNK_DIM + lx];
+
+            if (height != NO_TILE && h < height) {
                 selected = true;
                 selectedX = xp;
                 selectedZ = zp;
@@ -163,6 +166,7 @@ void updateLevel(float dt)
     for (int i = 0; i < level.chunkUpdateCount; ++i) {
         int chunkPos = level.chunkUpdates[i];
         int chunkID  = level.terrain.chunkMap[chunkPos];
+        printf("updating chunk: pos: %d, id: %d\n", chunkPos, chunkID);
         updateChunkObject(
                 level.terrain.objects + chunkID,
                 &level.terrain,
@@ -213,26 +217,89 @@ void renderLevel(void)
 }
 
 
+static void extendHeights(void)
+{
+    float midHeight = atTerrainHeight(&level.terrain, selectedX, selectedZ);
+
+    for (int z = -brushWidth; z <= brushWidth; ++z) {
+        for (int x = -brushWidth; x <= brushWidth; ++x) {
+            int xp = selectedX + x;
+            int zp = selectedZ + z;
+
+            float height = atTerrainHeight(&level.terrain, xp, zp);
+
+            // FIXME: check for MAX_MAP_DIM
+            if (height == NO_TILE && xp >= 0 && zp >= 0) {
+                setTerrainHeight(&level.terrain, xp, zp, midHeight);
+
+                int cx = xp / CHUNK_DIM;
+                int rx = xp % CHUNK_DIM;
+                int cz = zp / CHUNK_DIM;
+                int rz = zp % CHUNK_DIM;
+
+                // TODO: FIXME: add updates for chunks on the CHUNK_DIM - 1 boundary
+                if (rz == 0 && zp != 0)
+                    requestChunkUpdate((cz - 1) * MAX_MAP_DIM + cx);
+                if (rx == 0 && xp != 0)
+                    requestChunkUpdate(cz * MAX_MAP_DIM + (cx - 1));
+                if (rz == 0 && zp != 0 && rx == 0 && xp != 0)
+                    requestChunkUpdate((cz - 1) * MAX_MAP_DIM + (cx - 1));
+
+                requestChunkUpdate(cz * MAX_MAP_DIM + cx);
+            }
+        }
+    }
+}
+
+
+void levelsProcessButton(bagE_MouseButton *mb)
+{
+    if (mb->button == bagE_ButtonLeft) {
+        extendHeights();
+    }
+}
+
+
 void renderLevelDebugOverlay(void)
 {
     /* point */
     if (selected) {
         glUseProgram(pointProgram);
 
-        float colors[] = {
-            0.5f, 1.0f, 0.75f, 1.0f,
-        };
+        int pointCount = 0;
 
-        float points[] = {
-            selectedX * CHUNK_TILE_DIM,
-            atTerrainHeight(&level.terrain, selectedX, selectedZ),
-            selectedZ * CHUNK_TILE_DIM,
-            18.0f,
-        };
+        Vector colors[32];
+        Vector points[32];
 
-        glProgramUniform4fv(pointProgram, 1, 1, colors);
-        glProgramUniform4fv(pointProgram, 33, 1, points);
+        float midHeight = atTerrainHeight(&level.terrain, selectedX, selectedZ);
 
-        glDrawArraysInstanced(GL_POINTS, 0, 1, 1);
+        for (int z = -brushWidth; z <= brushWidth; ++z) {
+            for (int x = -brushWidth; x <= brushWidth; ++x) {
+                float height = atTerrainHeight(&level.terrain, selectedX + x, selectedZ + z);
+
+                if (height == NO_TILE) {
+                    height = midHeight;
+                    colors[pointCount] = (Vector) { 1.0f, 0.75f, 0.75f, 1.0f };
+                } else if (x == 0 && z == 0) {
+                    colors[pointCount] = (Vector) { 1.0f, 0.5f, 0.75f, 1.0f };
+                } else {
+                    colors[pointCount] = (Vector) { 0.5f, 1.0f, 0.75f, 1.0f };
+                }
+
+                points[pointCount] = (Vector) {
+                    (selectedX + x) * CHUNK_TILE_DIM,
+                    height,
+                    (selectedZ + z) * CHUNK_TILE_DIM,
+                    (x == 0 && z == 0 ? 18.0f : 12.0f)
+                };
+
+                ++pointCount;
+            }
+        }
+
+        glProgramUniform4fv(pointProgram, 1,  pointCount, colors->data);
+        glProgramUniform4fv(pointProgram, 33, pointCount, points->data);
+
+        glDrawArraysInstanced(GL_POINTS, 0, 1, pointCount);
     }
 }

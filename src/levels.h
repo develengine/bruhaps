@@ -3,6 +3,8 @@
 
 #include "terrain.h"
 
+#include "bag_engine.h"
+
 
 typedef enum {
     LevelBruh,
@@ -38,5 +40,7 @@ void renderLevel(void);
 void renderLevelDebugOverlay(void);
 
 void requestChunkUpdate(unsigned chunkPos);
+
+void levelsProcessButton(bagE_MouseButton *mb);
 
 #endif

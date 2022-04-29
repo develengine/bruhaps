@@ -656,10 +656,20 @@ static void bagE_clipCursor(void)
         ClientToScreen(bagWIN32.window, (POINT*)&windowRect.left);
         ClientToScreen(bagWIN32.window, (POINT*)&windowRect.right);
 
+// FIXME: this should be dealt with properly instead of whatever this is
+#if 0
         windowRect.left += 1;
         windowRect.top += 1;
         windowRect.right -= 2;
         windowRect.bottom -= 2;
+#else
+        int width  = (windowRect.right  - windowRect.left) / 2;
+        int height = (windowRect.bottom - windowRect.top)  / 2;
+        windowRect.left   += width;
+        windowRect.top    += height;
+        windowRect.right  = windowRect.left;
+        windowRect.bottom = windowRect.top;
+#endif
         ClipCursor(&windowRect);
 }
 

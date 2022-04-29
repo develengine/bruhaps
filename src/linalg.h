@@ -175,6 +175,13 @@ typedef union
 } Quaternion;
 
 
+typedef union
+{
+    struct { float w, x, y, z; };
+    float data[4];
+} Vector;
+
+
 static inline Quaternion quaternionNLerp(Quaternion a, Quaternion b, float blend)
 {
     Quaternion res;

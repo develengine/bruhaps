@@ -440,6 +440,13 @@ int bagE_eventHandler(bagE_Event *event)
             }
             break;
 
+        case bagE_EventMouseButtonDown:
+            if (inputState.playerInput) {
+                bagE_MouseButton *mb = &(event->data.mouseButton);
+                levelsProcessButton(mb);
+            }
+            break;
+
         case bagE_EventMouseWheel:
             if (inputState.playerInput) {
                 bagE_MouseWheel *mw = &(event->data.mouseWheel);

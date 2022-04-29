@@ -34,7 +34,7 @@ void levelBruhLoad(void)
     for (int y = 0; y < CHUNK_DIM; ++y) {
         for (int x = 0; x < CHUNK_DIM; ++x) {
             chunkHeights->data[y * CHUNK_DIM + x] = 
-                2.0f * sin((M_PI / CHUNK_DIM) * x * 2.0f) * sin((M_PI / CHUNK_DIM) * y * 3.0f);
+                2.0f * sinf((float)(M_PI / CHUNK_DIM) * x * 2.0f) * sinf((float)(M_PI / CHUNK_DIM) * y * 3.0f);
         }
     }
 
