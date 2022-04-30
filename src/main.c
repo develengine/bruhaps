@@ -450,7 +450,8 @@ int bagE_eventHandler(bagE_Event *event)
         case bagE_EventMouseWheel:
             if (inputState.playerInput) {
                 bagE_MouseWheel *mw = &(event->data.mouseWheel);
-                camState.fov -= mw->scrollUp * 1.0f;
+                // camState.fov -= mw->scrollUp * 1.0f;
+                levelsProcessWheel(mw);
             }
             break;
 

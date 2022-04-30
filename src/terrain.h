@@ -23,6 +23,14 @@ typedef struct
 } ChunkHeights;
 
 
+typedef enum {
+    RotationFront,
+    RotationLeft,
+    RotationRight,
+    RotationBack,
+} TextureTransform;
+
+
 typedef struct
 {
     uint8_t viewID;

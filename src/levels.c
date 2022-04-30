@@ -13,9 +13,23 @@ static ModelObject boxModel;
 
 static unsigned pointProgram;
 
+
+typedef enum {
+    TerrainPlacing,
+    TerrainHeightPainting,
+    TerrainTexturing,
+} EditorMode;
+
+static EditorMode editorMode = TerrainPlacing;
+
+
 static bool selected = false;
 static int selectedX, selectedZ;
 static int brushWidth = 2;
+
+static uint8_t selectedViewID;
+static uint8_t selectedViewTrans;
+
 
 #include "levels/bruh.c"
 
@@ -165,8 +179,11 @@ void updateLevel(float dt)
     /* update chunks */
     for (int i = 0; i < level.chunkUpdateCount; ++i) {
         int chunkPos = level.chunkUpdates[i];
+
+        assert(chunkPos >= 0);
+
         int chunkID  = level.terrain.chunkMap[chunkPos];
-        printf("updating chunk: pos: %d, id: %d\n", chunkPos, chunkID);
+
         updateChunkObject(
                 level.terrain.objects + chunkID,
                 &level.terrain,
@@ -217,6 +234,25 @@ void renderLevel(void)
 }
 
 
+static void updateNearbyChunks(int x, int z)
+{
+    int cx = x / CHUNK_DIM;
+    int rx = x % CHUNK_DIM;
+    int cz = z / CHUNK_DIM;
+    int rz = z % CHUNK_DIM;
+
+    // FIXME: check for MAX_MAP_DIM
+    for (int zo = -1; zo <= 1; ++zo) {
+        for (int xo = -1; xo <= 1; ++xo) {
+            if ((xo == 0 || (((rx + (xo > 0))) % CHUNK_DIM == 0 && x != 0))
+             && (zo == 0 || (((rz + (zo > 0))) % CHUNK_DIM == 0 && z != 0))) {
+                requestChunkUpdate((cz + zo) * MAX_MAP_DIM + (cx + xo));
+            }
+        }
+    }
+}
+
+
 static void extendHeights(void)
 {
     float midHeight = atTerrainHeight(&level.terrain, selectedX, selectedZ);
@@ -231,21 +267,24 @@ static void extendHeights(void)
             // FIXME: check for MAX_MAP_DIM
             if (height == NO_TILE && xp >= 0 && zp >= 0) {
                 setTerrainHeight(&level.terrain, xp, zp, midHeight);
+                updateNearbyChunks(xp, zp);
+            }
+        }
+    }
+}
 
-                int cx = xp / CHUNK_DIM;
-                int rx = xp % CHUNK_DIM;
-                int cz = zp / CHUNK_DIM;
-                int rz = zp % CHUNK_DIM;
 
-                // TODO: FIXME: add updates for chunks on the CHUNK_DIM - 1 boundary
-                if (rz == 0 && zp != 0)
-                    requestChunkUpdate((cz - 1) * MAX_MAP_DIM + cx);
-                if (rx == 0 && xp != 0)
-                    requestChunkUpdate(cz * MAX_MAP_DIM + (cx - 1));
-                if (rz == 0 && zp != 0 && rx == 0 && xp != 0)
-                    requestChunkUpdate((cz - 1) * MAX_MAP_DIM + (cx - 1));
+static void removeTiles(void)
+{
+    for (int z = -brushWidth; z <= brushWidth; ++z) {
+        for (int x = -brushWidth; x <= brushWidth; ++x) {
+            int xp = selectedX + x;
+            int zp = selectedZ + z;
 
-                requestChunkUpdate(cz * MAX_MAP_DIM + cx);
+            // FIXME: check for MAX_MAP_DIM
+            if (xp >= 0 && zp >= 0) {
+                setTerrainHeight(&level.terrain, xp, zp, NO_TILE);
+                updateNearbyChunks(xp, zp);
             }
         }
     }
@@ -254,8 +293,38 @@ static void extendHeights(void)
 
 void levelsProcessButton(bagE_MouseButton *mb)
 {
-    if (mb->button == bagE_ButtonLeft) {
-        extendHeights();
+    switch (editorMode) {
+        case TerrainPlacing:
+            if (mb->button == bagE_ButtonLeft) {
+                extendHeights();
+            } else if (mb->button == bagE_ButtonRight) {
+                removeTiles();
+            }
+            break;
+        case TerrainHeightPainting:
+            break;
+        case TerrainTexturing:
+            break;
+    }
+}
+
+
+void levelsProcessWheel(bagE_MouseWheel *mw)
+{
+    switch (editorMode) {
+        case TerrainPlacing:
+            /* fallthrough */
+        case TerrainHeightPainting:
+            brushWidth += mw->scrollUp;
+
+            if (brushWidth < 0)
+                brushWidth = 0;
+
+            if (brushWidth > 2)
+                brushWidth = 2;
+            break;
+        case TerrainTexturing:
+            break;
     }
 }
 
@@ -273,17 +342,28 @@ void renderLevelDebugOverlay(void)
 
         float midHeight = atTerrainHeight(&level.terrain, selectedX, selectedZ);
 
-        for (int z = -brushWidth; z <= brushWidth; ++z) {
-            for (int x = -brushWidth; x <= brushWidth; ++x) {
+        int fromZ, toZ, fromX, toX;
+
+        if (editorMode == TerrainTexturing) {
+            AtlasView view = level.atlasViews[selectedViewID];
+        } else {
+            fromZ = -brushWidth;
+            toZ   =  brushWidth;
+            fromX = -brushWidth;
+            toX   =  brushWidth;
+        }
+
+        for (int z = fromZ; z <= toZ; ++z) {
+            for (int x = fromX; x <= toX; ++x) {
                 float height = atTerrainHeight(&level.terrain, selectedX + x, selectedZ + z);
 
                 if (height == NO_TILE) {
                     height = midHeight;
-                    colors[pointCount] = (Vector) { 1.0f, 0.75f, 0.75f, 1.0f };
+                    colors[pointCount] = (Vector) { 0.5f, 1.0f,  0.75f, 1.0f };
                 } else if (x == 0 && z == 0) {
-                    colors[pointCount] = (Vector) { 1.0f, 0.5f, 0.75f, 1.0f };
+                    colors[pointCount] = (Vector) { 1.0f, 0.5f,  0.75f, 1.0f };
                 } else {
-                    colors[pointCount] = (Vector) { 0.5f, 1.0f, 0.75f, 1.0f };
+                    colors[pointCount] = (Vector) { 1.0f, 0.75f, 0.75f, 1.0f };
                 }
 
                 points[pointCount] = (Vector) {
@@ -301,5 +381,6 @@ void renderLevelDebugOverlay(void)
         glProgramUniform4fv(pointProgram, 33, pointCount, points->data);
 
         glDrawArraysInstanced(GL_POINTS, 0, 1, pointCount);
+
     }
 }

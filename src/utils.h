@@ -7,12 +7,12 @@
 
 #define length(x) (sizeof(x)/sizeof(*x))
 
-#ifdef DEBUG
+#ifdef _DEBUG
     #include <assert.h>
     #define NOT_IMPLEMENTED 0
 #endif
 
-#ifdef DEBUG
+#ifdef _DEBUG
     #define unreachable()                                                           \
         fprintf(stderr, "%s:%d: Unreachable line reached.\n", __FILE__, __LINE__);  \
         exit(666);

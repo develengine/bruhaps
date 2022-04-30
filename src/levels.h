@@ -42,5 +42,6 @@ void renderLevelDebugOverlay(void);
 void requestChunkUpdate(unsigned chunkPos);
 
 void levelsProcessButton(bagE_MouseButton *mb);
+void levelsProcessWheel(bagE_MouseWheel *mw);
 
 #endif

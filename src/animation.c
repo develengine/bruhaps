@@ -81,7 +81,7 @@ static float getBoneTransforms(
 }
 
 
-// TODO cache per bone positions
+// TODO: cache per bone positions
 void computePoseTransforms(const Armature *armature, JointTransform *transforms, float time)
 {
     for (int i = 0; i < armature->boneCount; ++i) {
