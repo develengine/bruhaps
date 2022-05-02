@@ -363,10 +363,11 @@ void renderLevelDebugOverlay(void)
             AtlasView view = level.atlasViews[selectedViewID];
             int width  = view.wn;
             int height = view.hn;
-            fromX = -(width / 2);
-            toX   = width / 2 + width % 2;
+
+            fromX = -(width  / 2);
+            toX   =   width  / 2 + width  % 2;
             fromZ = -(height / 2);
-            toZ   = height / 2 + height % 2;
+            toZ   =   height / 2 + height % 2;
         } else {
             fromZ = -brushWidth;
             toZ   =  brushWidth;
