@@ -20,15 +20,15 @@ typedef enum {
     TerrainTexturing,
 } EditorMode;
 
-static EditorMode editorMode = TerrainPlacing;
+static EditorMode editorMode = TerrainTexturing;
 
 
 static bool selected = false;
 static int selectedX, selectedZ;
 static int brushWidth = 2;
 
-static uint8_t selectedViewID;
-static uint8_t selectedViewTrans;
+static uint8_t selectedViewID = 1;
+static uint8_t selectedViewTrans = 0;
 
 
 #include "levels/bruh.c"
@@ -93,7 +93,7 @@ void exitLevels(void)
 }
 
 
-// TODO: REMOVE THIS CRAP
+// TODO: REPLACE THIS CRAP
 static void selectVertex(
         float camX,
         float camY,
@@ -112,6 +112,11 @@ static void selectVertex(
     selected = false;
 
     for (int i = 0; i < 10; ++i) {
+        /* NOTE: in case we are exactly aligned with an axis,
+         * we skip to avoid divide by 0 */
+        if (vx == 0.0f || vz == 0.0f)
+            break;
+
         float gx = vx > 0.0f ? ceilf(x + 0.01f) : floorf(x - 0.01f);
         float gz = vz > 0.0f ? ceilf(z + 0.01f) : floorf(z - 0.01f);
 
@@ -183,6 +188,9 @@ void updateLevel(float dt)
         assert(chunkPos >= 0);
 
         int chunkID  = level.terrain.chunkMap[chunkPos];
+
+        if (chunkID == NO_CHUNK)
+            continue;
 
         updateChunkObject(
                 level.terrain.objects + chunkID,
@@ -304,6 +312,13 @@ void levelsProcessButton(bagE_MouseButton *mb)
         case TerrainHeightPainting:
             break;
         case TerrainTexturing:
+            if (mb->button == bagE_ButtonLeft) {
+                TileTexture tileTex = {
+                    .viewID = selectedViewID,
+                };
+                setTerrainTexture(&level.terrain, selectedX, selectedZ, tileTex);
+                updateNearbyChunks(selectedX, selectedZ);
+            }
             break;
     }
 }
@@ -346,6 +361,12 @@ void renderLevelDebugOverlay(void)
 
         if (editorMode == TerrainTexturing) {
             AtlasView view = level.atlasViews[selectedViewID];
+            int width  = view.wn;
+            int height = view.hn;
+            fromX = -(width / 2);
+            toX   = width / 2 + width % 2;
+            fromZ = -(height / 2);
+            toZ   = height / 2 + height % 2;
         } else {
             fromZ = -brushWidth;
             toZ   =  brushWidth;
@@ -359,19 +380,19 @@ void renderLevelDebugOverlay(void)
 
                 if (height == NO_TILE) {
                     height = midHeight;
-                    colors[pointCount] = (Vector) { 0.5f, 1.0f,  0.75f, 1.0f };
+                    colors[pointCount] = (Vector) { { 0.5f, 1.0f,  0.75f, 1.0f } };
                 } else if (x == 0 && z == 0) {
-                    colors[pointCount] = (Vector) { 1.0f, 0.5f,  0.75f, 1.0f };
+                    colors[pointCount] = (Vector) { { 1.0f, 0.5f,  0.75f, 1.0f } };
                 } else {
-                    colors[pointCount] = (Vector) { 1.0f, 0.75f, 0.75f, 1.0f };
+                    colors[pointCount] = (Vector) { { 1.0f, 0.75f, 0.75f, 1.0f } };
                 }
 
-                points[pointCount] = (Vector) {
+                points[pointCount] = (Vector) { {
                     (selectedX + x) * CHUNK_TILE_DIM,
                     height,
                     (selectedZ + z) * CHUNK_TILE_DIM,
                     (x == 0 && z == 0 ? 18.0f : 12.0f)
-                };
+                } };
 
                 ++pointCount;
             }

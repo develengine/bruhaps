@@ -194,10 +194,12 @@ float atTerrainHeight(const Terrain *terrain, int x, int z)
 }
 
 
-void setTerrainHeight(Terrain *terrain, int x, int z, float height)
+static TerrainLocation maybeCreateChunk(Terrain *terrain, int x, int z)
 {
+    TerrainLocation location = { .chunkID = NO_CHUNK };
+
     if (x < 0 || z < 0)
-        return;
+        return location;
 
     int cx = x / CHUNK_DIM;
     int xp = x % CHUNK_DIM;
@@ -205,7 +207,7 @@ void setTerrainHeight(Terrain *terrain, int x, int z, float height)
     int zp = z % CHUNK_DIM;
 
     if (cx >= MAX_MAP_DIM || cz >= MAX_MAP_DIM)
-        return;
+        return location;
 
     int chunkPos = cz * MAX_MAP_DIM + cx;
     int chunkID;
@@ -231,7 +233,31 @@ void setTerrainHeight(Terrain *terrain, int x, int z, float height)
         terrain->objects [chunkID] = createChunkObject();
     }
 
-    terrain->heights[chunkID]->data[zp * CHUNK_DIM + xp] = height;
+    location.chunkID = chunkID;
+    location.xp = xp;
+    location.zp = zp;
+
+    return location;
+}
+
+
+void setTerrainHeight(Terrain *terrain, int x, int z, float height)
+{
+    TerrainLocation loc = maybeCreateChunk(terrain, x, z);
+    if (loc.chunkID == NO_CHUNK)
+        return;
+
+    terrain->heights[loc.chunkID]->data[loc.zp * CHUNK_DIM + loc.xp] = height;
+}
+
+
+void setTerrainTexture(Terrain *terrain, int x, int z, TileTexture tileTexture)
+{
+    TerrainLocation loc = maybeCreateChunk(terrain, x, z);
+    if (loc.chunkID == NO_CHUNK)
+        return;
+
+    terrain->textures[loc.chunkID]->data[loc.zp * CHUNK_DIM + loc.xp] = tileTexture;
 }
 
 

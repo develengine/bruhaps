@@ -22,7 +22,10 @@ void GLAPIENTRY openglCallback(
 
     int error = type == GL_DEBUG_TYPE_ERROR;
 
-    printf("[%s] type: %d, severity: %d\n%s\n",
+    if (!error)
+        return;
+
+    fprintf(stderr, "[%s] type: %d, severity: %d\n%s\n",
             error ? "\033[1;31mERROR\033[0m" : "\033[1mINFO\033[0m",
             type, severity, message
     );

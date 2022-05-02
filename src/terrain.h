@@ -54,6 +54,14 @@ typedef struct
 
 typedef struct
 {
+    int chunkID;
+    int xp, zp;
+} TerrainLocation;
+
+
+// FIXME: stop this madness and use unified memory block (buffer) for chunks
+typedef struct
+{
     unsigned vao;
     unsigned vbo;
     unsigned ebo;
@@ -128,6 +136,7 @@ void terrainClearChunkMap(Terrain *terrain);
 float atTerrainHeight(const Terrain *terrain, int x, int z);
 
 void setTerrainHeight(Terrain *terrain, int x, int z, float height);
+void setTerrainTexture(Terrain *terrain, int x, int z, TileTexture tileTexture);
 
 void updateChunkObject(
         ChunkObject *chunkObject,
