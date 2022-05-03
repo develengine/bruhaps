@@ -297,7 +297,13 @@ static void scaleHeights(float scale)
 
             // FIXME: check for MAX_MAP_DIM
             if (height != NO_TILE && xp >= 0 && zp >= 0) {
-                float newHeight = height + selectedRelHeight * scale;
+                float invDist = 1.0f;
+                if (brushWidth > 0) {
+                    invDist = 1.0f - (sqrtf((float)(x * x + z * z))
+                                    / sqrtf((float)(brushWidth * brushWidth * 2)));
+                }
+
+                float newHeight = height + selectedRelHeight * scale * invDist;
                 setTerrainHeight(&level.terrain, xp, zp, newHeight);
                 updateNearbyChunks(xp, zp);
             }
