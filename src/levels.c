@@ -16,11 +16,12 @@ static unsigned pointProgram;
 
 typedef enum {
     TerrainPlacing,
-    TerrainHeightPainting,
     TerrainTexturing,
+    TerrainHeightPaintingAbs,
+    TerrainHeightPaintingRel,
 } EditorMode;
 
-static EditorMode editorMode = TerrainTexturing;
+static EditorMode editorMode = TerrainHeightPaintingRel;
 
 
 static bool selected = false;
@@ -29,6 +30,9 @@ static int brushWidth = 2;
 
 static uint8_t selectedViewID = 1;
 static uint8_t selectedViewTrans = 0;
+
+static float selectedRelHeight = 0.1f;
+static float selectedAbsHeight = 3.0f;
 
 
 #include "levels/bruh.c"
@@ -282,6 +286,26 @@ static void extendHeights(void)
 }
 
 
+static void scaleHeights(float scale)
+{
+    for (int z = -brushWidth; z <= brushWidth; ++z) {
+        for (int x = -brushWidth; x <= brushWidth; ++x) {
+            int xp = selectedX + x;
+            int zp = selectedZ + z;
+
+            float height = atTerrainHeight(&level.terrain, xp, zp);
+
+            // FIXME: check for MAX_MAP_DIM
+            if (height != NO_TILE && xp >= 0 && zp >= 0) {
+                float newHeight = height + selectedRelHeight * scale;
+                setTerrainHeight(&level.terrain, xp, zp, newHeight);
+                updateNearbyChunks(xp, zp);
+            }
+        }
+    }
+}
+
+
 static void removeTiles(void)
 {
     for (int z = -brushWidth; z <= brushWidth; ++z) {
@@ -309,7 +333,14 @@ void levelsProcessButton(bagE_MouseButton *mb)
                 removeTiles();
             }
             break;
-        case TerrainHeightPainting:
+        case TerrainHeightPaintingAbs:
+            /* fallthrough */
+        case TerrainHeightPaintingRel:
+            if (mb->button == bagE_ButtonLeft) {
+                scaleHeights(1.0f);
+            } else if (mb->button == bagE_ButtonRight) {
+                scaleHeights(-1.0f);
+            }
             break;
         case TerrainTexturing:
             if (mb->button == bagE_ButtonLeft) {
@@ -329,7 +360,9 @@ void levelsProcessWheel(bagE_MouseWheel *mw)
     switch (editorMode) {
         case TerrainPlacing:
             /* fallthrough */
-        case TerrainHeightPainting:
+        case TerrainHeightPaintingAbs:
+            /* fallthrough */
+        case TerrainHeightPaintingRel:
             brushWidth += mw->scrollUp;
 
             if (brushWidth < 0)

@@ -15,7 +15,7 @@ void main()
     float brightness = max(dot(o_normals, toLight), 0.0) * 0.9;
     vec3 lightColor = vec3(1.0, 1.0, 1.0) * brightness;
 
-    float ambientPower = 0.4;
+    float ambientPower = 1.0;
     vec3 ambientColor = vec3(0.1, 0.2, 0.3) * ambientPower;
 
     o_color = vec4(ambientColor + lightColor, 1.0)
