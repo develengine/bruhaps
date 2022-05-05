@@ -35,6 +35,13 @@ static float selectedRelHeight = 0.1f;
 static float selectedAbsHeight = 3.0f;
 
 
+// TODO remove me
+static Model gatlingModel;
+static ModelObject gatling;
+static int metalProgram;
+static float timePassed = 0.0f;
+
+
 #include "levels/bruh.c"
 
 
@@ -82,6 +89,15 @@ void initLevels(void)
     levelInits();
 
     // FIXME:
+    gatlingModel  = modelLoad("res/gatling_barrel.model");
+    gatling = createModelObject(gatlingModel);
+
+    metalProgram = createProgram(
+            "shaders/metal_vertex.glsl",
+            "shaders/metal_fragment.glsl"
+    );
+
+
     levelBruhLoad();
 }
 
@@ -94,6 +110,53 @@ void exitLevels(void)
     levelExits();
 
     freeModelObject(boxModel);
+}
+
+
+static float getHeight(float x, float z)
+{
+    int xp = (int)x;
+    int zp = (int)z;
+
+    float rx = x - (float)xp;
+    float rz = z - (float)zp;
+
+    float height00 = atTerrainHeight(&level.terrain, xp,     zp);
+    float height01 = atTerrainHeight(&level.terrain, xp,     zp + 1);
+    float height10 = atTerrainHeight(&level.terrain, xp + 1, zp);
+    float height11 = atTerrainHeight(&level.terrain, xp + 1, zp + 1);
+
+    return rz          * (rx * height11 + (1.0f - rx) * height01)
+         + (1.0f - rz) * (rx * height10 + (1.0f - rx) * height00);
+}
+
+
+void processPlayerInput(float vx, float vz, float dt)
+{
+    (void)vx, (void)vz;
+
+    float oldX = playerState.x;
+    float oldY = playerState.y;
+    float oldZ = playerState.z;
+
+    playerState.x += vx;
+    playerState.z += vz;
+
+    playerState.y  += playerState.ay * dt;
+    playerState.ay -= 9.8 * dt;
+
+    float height = getHeight(playerState.x, playerState.z);
+
+    // TODO: remove (player height)
+    height += 2.0f;
+
+    if (playerState.y < height) {
+        playerState.y = height;
+        playerState.ay = 0.0f;
+        playerState.onGround = true;
+    } else {
+        playerState.onGround = false;
+    }
 }
 
 
@@ -178,7 +241,8 @@ void requestChunkUpdate(unsigned chunkPos)
 
 void updateLevel(float dt)
 {
-    (void)dt;
+    timePassed += dt;
+
     selectVertex(
             camState.x, camState.y, camState.z,
             camState.pitch, camState.yaw,
@@ -243,6 +307,26 @@ void renderLevel(void)
             }
         }
     }
+
+    /* model gatling */
+    Matrix modelGatling = matrixScale(1.0f, 1.0f, 1.0f);
+
+    Matrix mul = matrixRotationZ(timePassed * 2.0f);
+    modelGatling = matrixMultiply(&mul, &modelGatling);
+
+    mul = matrixRotationY(0.0f);
+    modelGatling = matrixMultiply(&mul, &modelGatling);
+
+    mul = matrixTranslation(-10.0f, 0.0f, 0.0f);
+    modelGatling = matrixMultiply(&mul, &modelGatling);
+
+
+    glUseProgram(metalProgram);
+    glBindVertexArray(gatling.vao);
+
+    glProgramUniformMatrix4fv(metalProgram, 0, 1, GL_FALSE, modelGatling.data);
+
+    glDrawElements(GL_TRIANGLES, gatlingModel.indexCount, GL_UNSIGNED_INT, 0);
 }
 
 

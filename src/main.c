@@ -43,6 +43,7 @@ int bagE_main(int argc, char *argv[])
     glDisable(GL_MULTISAMPLE);
     // glEnable(GL_MULTISAMPLE);
     glEnable(GL_PROGRAM_POINT_SIZE);
+    // glEnable(GL_FRAMEBUFFER_SRGB);
 
 
     initAudio();
@@ -100,8 +101,15 @@ int bagE_main(int argc, char *argv[])
             "shaders/text_fragment.glsl"
     );
 
+
     unsigned camUBO = createBufferObject(
         sizeof(Matrix) * 3 + sizeof(float) * 4,
+        NULL,
+        GL_DYNAMIC_STORAGE_BIT
+    );
+
+    unsigned envUBO = createBufferObject(
+        sizeof(float) * 4 * 4,
         NULL,
         GL_DYNAMIC_STORAGE_BIT
     );
@@ -124,6 +132,7 @@ int bagE_main(int argc, char *argv[])
 
     glActiveTexture(GL_TEXTURE0);
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, camUBO);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 1, envUBO);
 
     while (appState.running) {
         bagE_pollEvents();
@@ -145,26 +154,40 @@ int bagE_main(int argc, char *argv[])
         inputState.motionYaw   = 0.0f;
 
         if (inputState.playerInput) {
+            float vx = 0.0f, vz = 0.0f;
+
             if (inputState.leftDown) {
-                camState.x -= 0.1f * cosf(camState.yaw);
-                camState.z -= 0.1f * sinf(camState.yaw);
+                vx -= 0.1f * cosf(camState.yaw);
+                vz -= 0.1f * sinf(camState.yaw);
             }
             if (inputState.rightDown) {
-                camState.x += 0.1f * cosf(camState.yaw);
-                camState.z += 0.1f * sinf(camState.yaw);
+                vx += 0.1f * cosf(camState.yaw);
+                vz += 0.1f * sinf(camState.yaw);
             }
             if (inputState.forthDown) {
-                camState.x += 0.1f * sinf(camState.yaw);
-                camState.z -= 0.1f * cosf(camState.yaw);
+                vx += 0.1f * sinf(camState.yaw);
+                vz -= 0.1f * cosf(camState.yaw);
             }
             if (inputState.backDown) {
-                camState.x -= 0.1f * sinf(camState.yaw);
-                camState.z += 0.1f * cosf(camState.yaw);
+                vx -= 0.1f * sinf(camState.yaw);
+                vz += 0.1f * cosf(camState.yaw);
             }
-            if (inputState.ascendDown)
-                camState.y += 0.1f;
-            if (inputState.descendDown)
-                camState.y -= 0.1f;
+
+            if (playerState.gaming) {
+                processPlayerInput(vx, vz, 0.01666f);
+
+                camState.x = playerState.x;
+                camState.y = playerState.y;
+                camState.z = playerState.z;
+            } else {
+                if (inputState.ascendDown)
+                    camState.y += 0.1f;
+                if (inputState.descendDown)
+                    camState.y -= 0.1f;
+
+                camState.x += vx;
+                camState.z += vz;
+            }
         }
 
         if (spinning)
@@ -205,6 +228,17 @@ int bagE_main(int argc, char *argv[])
         };
         glNamedBufferSubData(camUBO, 0, sizeof(camData), &camData);
 
+
+        struct {
+            float ambient[4];
+            float toLight[4];
+            float sunColor[4];
+        } envData = {
+            { 0.1f, 0.2f, 0.3f, 1.0f },
+            { 0.6f, 0.7f, 0.5f },
+            { 1.0f, 1.0f, 1.0f },
+        };
+        glNamedBufferSubData(envUBO, 0, sizeof(envData), &envData);
 
 
         renderLevel();

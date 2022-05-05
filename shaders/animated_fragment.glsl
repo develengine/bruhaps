@@ -9,18 +9,22 @@ layout(location = 0) out vec4 o_color;
 
 layout(binding = 0) uniform sampler2D u_textureSampler;
 
+layout(std140, binding = 1) uniform Env
+{
+    vec4 ambient;
+    vec3 toLight;
+    vec3 sunColor;
+} env;
+
 void main(void)
 {
-    vec3 toLight = vec3(0.6, 0.7, 0.5);
+    float brightness = max(dot(o_normal, env.toLight), 0.0) * 0.9;
+    vec3 lightColor = env.sunColor * brightness;
 
-    float brightness = max(dot(o_normal, toLight), 0.0) * 0.9;
-    vec3 lightColor = vec3(1.0, 1.0, 1.0) * brightness;
-
-    float ambientPower = 1.0;
-    vec3 ambientColor = vec3(0.1, 0.2, 0.3) * ambientPower;
+    vec3 ambientColor = env.ambient.xyz * env.ambient.w;
 
     vec3 toCamera = normalize(o_cameraPos - o_position);
-    vec3 reflection = normalize(reflect(-toLight, o_normal));
+    vec3 reflection = normalize(reflect(-env.toLight, o_normal));
     float shine = pow(max(dot(toCamera, reflection), 0.0), 32);
     vec3 specular = shine * 0.5 * lightColor;
 

@@ -35,6 +35,8 @@ extern Level level;
 void initLevels(void);
 void exitLevels(void);
 
+void processPlayerInput(float vx, float vz, float dt);
+
 void updateLevel(float dt);
 void renderLevel(void);
 void renderLevelDebugOverlay(void);

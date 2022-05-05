@@ -46,6 +46,17 @@ typedef struct
 extern CamState camState;
 
 
+typedef struct
+{
+    bool gaming;
+    bool onGround;
+    float x, y, z;
+    float ay;
+} PlayerState;
+
+extern PlayerState playerState;
+
+
 void initState(void);
 void exitState(void);
 

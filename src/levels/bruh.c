@@ -38,8 +38,6 @@ void levelBruhLoad(void)
         }
     }
 
-    chunkHeights->data[5 * CHUNK_DIM + 8] = NO_TILE;
-
 
     ChunkTextures *chunkTextures = malloc(sizeof(ChunkTextures));
     malloc_check(chunkTextures);
@@ -61,6 +59,10 @@ void levelBruhLoad(void)
     level.terrain.chunkCount  = 1;
 
     requestChunkUpdate(chunkPos);
+
+    playerState.x = 24.0f;
+    playerState.y = 5.0f;
+    playerState.z = 24.0f;
 }
 
 
