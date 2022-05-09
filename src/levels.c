@@ -14,7 +14,8 @@ static ModelObject boxModel;
 static unsigned pointProgram;
 
 
-typedef enum {
+typedef enum
+{
     TerrainPlacing,
     TerrainTexturing,
     TerrainHeightPaintingAbs,
@@ -67,6 +68,26 @@ static void levelExits(void)
 }
 
 
+static void levelLoad(LevelID id)
+{
+    switch (id) {
+        case LevelBruh:  levelBruhLoad(); break;
+        case LevelCount: break;
+    }
+}
+
+
+static void levelUnload(LevelID id)
+{
+    switch (id) {
+        case LevelBruh:  levelBruhUnload(); break;
+        case LevelCount: break;
+    }
+
+    level.filePath = NULL;
+}
+
+
 void initLevels(void)
 {
     level.skyboxProgram = createProgram(
@@ -97,15 +118,17 @@ void initLevels(void)
             "shaders/metal_fragment.glsl"
     );
 
+    level.filePath = NULL;
 
-    levelBruhLoad();
+
+    levelLoad(LevelBruh);
 }
 
 
 void exitLevels(void)
 {
     // FIXME:
-    levelBruhUnload();
+    levelUnload(LevelBruh);
 
     levelExits();
 
@@ -131,31 +154,58 @@ static float getHeight(float x, float z)
 }
 
 
-void processPlayerInput(float vx, float vz, float dt)
+// FIXME: a magic function
+void processPlayerInput(float vx, float vz, bool jump, float dt)
 {
     (void)vx, (void)vz;
 
-    float oldX = playerState.x;
+    float groundTolerance = 0.1f;
+    float playerHeight = 2.0f;
+
     float oldY = playerState.y;
-    float oldZ = playerState.z;
+
+    float newX = playerState.x + vx;
+    float newZ = playerState.z + vz;
+    float newY = getHeight(newX, newZ);
+
+    float distH = sqrtf(vx * vx + vz * vz);
+    float distV = (newY + playerHeight) - oldY;
+
+    if (distV > 0.0f) {
+        float distDiff = distH - distV;
+        if (distDiff <= -distH) {
+            vx = 0.0f;
+            vz = 0.0f;
+        } else if (distDiff < 0.0f) {
+            float r = 1.0f + distDiff / distH;
+            vx *= r;
+            vz *= r;
+        }
+    }
 
     playerState.x += vx;
     playerState.z += vz;
 
-    playerState.y  += playerState.ay * dt;
-    playerState.ay -= 9.8 * dt;
-
     float height = getHeight(playerState.x, playerState.z);
 
-    // TODO: remove (player height)
-    height += 2.0f;
+    playerState.y  += playerState.vy * dt;
+    playerState.vy -= 15.0f * dt;
 
-    if (playerState.y < height) {
+    // TODO: remove (player height)
+    height += playerHeight;
+    // TODO: remove
+
+    if (playerState.y < height + groundTolerance) {
         playerState.y = height;
-        playerState.ay = 0.0f;
+        playerState.vy = 0.0f;
         playerState.onGround = true;
     } else {
         playerState.onGround = false;
+    }
+
+    if (jump && playerState.onGround) {
+        playerState.vy += 5.0f;
+        playerState.y += groundTolerance;
     }
 }
 
@@ -236,6 +286,15 @@ void requestChunkUpdate(unsigned chunkPos)
     }
 
     level.chunkUpdates[level.chunkUpdateCount++] = chunkPos;
+}
+
+
+void invalidateAllChunks(void)
+{
+    for (int i = 0; i < MAX_MAP_DIM * MAX_MAP_DIM; ++i) {
+        if (level.terrain.chunkMap[i] != NO_CHUNK)
+            requestChunkUpdate(i);
+    }
 }
 
 
@@ -464,6 +523,21 @@ void levelsProcessWheel(bagE_MouseWheel *mw)
         case TerrainTexturing:
             break;
     }
+}
+
+
+void levelsSaveCurrent(void)
+{
+    assert(level.filePath != NULL);
+
+    FILE *file = fopen(level.filePath, "wb");
+    file_check(file, level.filePath);
+
+    terrainSave(&level.terrain, file);
+
+    fclose(file);
+
+    printf("saved \"%s\".\n", level.filePath);
 }
 
 

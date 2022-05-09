@@ -24,9 +24,10 @@ void levelBruhLoad(void)
 
     level.atlasViews = atlasViews;
 
+    const char *lvlPath = "test.lvl";
 
+#if 0
     terrainClearChunkMap(&level.terrain);
-
 
     ChunkHeights *chunkHeights = malloc(sizeof(ChunkHeights));
     malloc_check(chunkHeights);
@@ -60,9 +61,28 @@ void levelBruhLoad(void)
 
     requestChunkUpdate(chunkPos);
 
-    playerState.x = 24.0f;
+
+    FILE *file = fopen(lvlPath, "wb");
+    file_check(file, lvlPath);
+
+    terrainSave(&level.terrain, file);
+
+    fclose(file);
+#else
+    FILE *file = fopen(lvlPath, "rb");
+    file_check(file, lvlPath);
+
+    terrainLoad(&level.terrain, file);
+    invalidateAllChunks();
+    
+    fclose(file);
+#endif
+
+    level.filePath = lvlPath;
+
+    playerState.x = (CHUNK_DIM + CHUNK_DIM * 0.5) * CHUNK_TILE_DIM;
     playerState.y = 5.0f;
-    playerState.z = 24.0f;
+    playerState.z = (CHUNK_DIM + CHUNK_DIM * 0.5) * CHUNK_TILE_DIM;
 }
 
 

@@ -268,6 +268,63 @@ void terrainClearChunkMap(Terrain *terrain)
 }
 
 
+void terrainLoad(Terrain *terrain, FILE *file)
+{
+    terrainClearChunkMap(terrain);
+
+    char buffer[4];
+    safe_read(buffer, 1, 4, file);
+    if (strncmp(buffer, "TERR", 4)) {
+        fprintf(stderr, "Can't parse terrain file!\n");
+        exit(666);
+    }
+
+    safe_read(&terrain->chunkCount, sizeof(int), 1, file);
+
+    for (int i = 0; i < terrain->chunkCount; ++i) {
+        int cx, cz;
+        safe_read(&cx, sizeof(int), 1, file);
+        safe_read(&cz, sizeof(int), 1, file);
+        terrain->chunkMap[cz * MAX_MAP_DIM + cx] = i;
+
+        ChunkHeights *heights = malloc(sizeof(ChunkHeights));
+        malloc_check(heights);
+        safe_read(heights, sizeof(ChunkHeights), 1, file);
+        terrain->heights[i] = heights;
+
+        ChunkTextures *textures = malloc(sizeof(ChunkTextures));
+        malloc_check(textures);
+        safe_read(textures, sizeof(ChunkTextures), 1, file);
+        terrain->textures[i] = textures;
+
+        terrain->objects[i] = createChunkObject();
+    }
+}
+
+
+void terrainSave(Terrain *terrain, FILE *file)
+{
+    safe_write("TERR", 1, 4, file);
+    safe_write(&terrain->chunkCount, sizeof(int), 1, file);
+
+    for (int cz = 0; cz < MAX_MAP_DIM; ++cz) {
+        for (int cx = 0; cx < MAX_MAP_DIM; ++cx) {
+            int chunkID = terrain->chunkMap[cz * MAX_MAP_DIM + cx];
+            if (chunkID != NO_CHUNK) {
+                safe_write(&cx, sizeof(int), 1, file);
+                safe_write(&cz, sizeof(int), 1, file);
+
+                ChunkHeights *heights = terrain->heights[chunkID];
+                safe_write(heights, sizeof(ChunkHeights), 1, file);
+
+                ChunkTextures *textures = terrain->textures[chunkID];
+                safe_write(textures, sizeof(ChunkTextures), 1, file);
+            }
+        }
+    }
+}
+
+
 ChunkObject createChunkObject(void)
 {
     ChunkObject object;

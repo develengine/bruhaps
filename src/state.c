@@ -29,7 +29,7 @@ void initState(void)
         .gaming = true,
         .onGround = false,
         .x = 0.0f, .y = 0.0f, .z = 0.0f,
-        .ay = 0.0f
+        .vy = 0.0f
     };
 
     bagE_getWindowSize(&appState.windowWidth, &appState.windowHeight);

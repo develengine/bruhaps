@@ -20,6 +20,8 @@ static bool spinning = true;
 static unsigned soundLength;
 static int16_t *soundBuffer;
 
+static bool try_jump = true;
+
 
 int bagE_main(int argc, char *argv[])
 {
@@ -174,7 +176,9 @@ int bagE_main(int argc, char *argv[])
             }
 
             if (playerState.gaming) {
-                processPlayerInput(vx, vz, 0.01666f);
+                processPlayerInput(vx, vz, try_jump && inputState.ascendDown, 0.01666f);
+
+                try_jump = !inputState.ascendDown;
 
                 camState.x = playerState.x;
                 camState.y = playerState.y;
@@ -195,6 +199,8 @@ int bagE_main(int argc, char *argv[])
 
         updateLevel(0.01666f);
 
+
+        /**************************************************/
 
         Matrix mul;
 
@@ -239,6 +245,8 @@ int bagE_main(int argc, char *argv[])
             { 1.0f, 1.0f, 1.0f },
         };
         glNamedBufferSubData(envUBO, 0, sizeof(envData), &envData);
+
+        /**************************************************/
 
 
         renderLevel();
@@ -462,6 +470,10 @@ int bagE_eventHandler(bagE_Event *event)
                         printf("pushin P\n");
                         playSound(sound);
                     }
+                    break;
+                case KEY_L:
+                    if (!keyDown)
+                        levelsSaveCurrent();
                     break;
             }
         } break;

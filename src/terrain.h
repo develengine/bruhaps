@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define CHUNK_DIM      16
+#define CHUNK_DIM      32
 #define CHUNK_TILE_DIM 1.0f
 #define CHUNK_HEIGHT   32.0f
 
@@ -146,5 +146,7 @@ void updateChunkObject(
         int cz
 );
 
+void terrainLoad(Terrain *terrain, FILE *file);
+void terrainSave(Terrain *terrain, FILE *file);
 
 #endif

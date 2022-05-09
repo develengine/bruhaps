@@ -5,6 +5,8 @@
 
 #include "bag_engine.h"
 
+#include <stdbool.h>
+
 
 typedef enum {
     LevelBruh,
@@ -27,6 +29,8 @@ typedef struct
 
     unsigned chunkUpdates[MAX_MAP_DIM * MAX_MAP_DIM];
     int chunkUpdateCount;
+
+    const char *filePath;
 } Level;
 
 extern Level level;
@@ -35,13 +39,16 @@ extern Level level;
 void initLevels(void);
 void exitLevels(void);
 
-void processPlayerInput(float vx, float vz, float dt);
+void processPlayerInput(float vx, float vz, bool jump, float dt);
 
 void updateLevel(float dt);
 void renderLevel(void);
 void renderLevelDebugOverlay(void);
 
+void levelsSaveCurrent(void);
+
 void requestChunkUpdate(unsigned chunkPos);
+void invalidateAllChunks(void);
 
 void levelsProcessButton(bagE_MouseButton *mb);
 void levelsProcessWheel(bagE_MouseWheel *mw);

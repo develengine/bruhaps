@@ -51,7 +51,7 @@ typedef struct
     bool gaming;
     bool onGround;
     float x, y, z;
-    float ay;
+    float vy;
 } PlayerState;
 
 extern PlayerState playerState;
