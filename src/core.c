@@ -257,6 +257,17 @@ ModelObject createModelObject(Model model)
 
     glVertexArrayElementBuffer(object.vao, object.ebo);
 
+    object.indexCount = model.indexCount;
+
+    return object;
+}
+
+
+ModelObject loadModelObject(const char *path)
+{
+    Model model = modelLoad(path);
+    ModelObject object = createModelObject(model);
+    modelFree(model);
     return object;
 }
 
@@ -312,6 +323,8 @@ AnimatedObject createAnimatedObject(Animated animated)
     glVertexArrayAttribBinding(object.model.vao, 4, 1);
 
     glVertexArrayElementBuffer(object.model.vao, object.model.ebo);
+
+    object.model.indexCount = animated.model.indexCount;
 
     return object;
 }

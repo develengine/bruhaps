@@ -7,6 +7,34 @@ static const AtlasView atlasViews[] = {
 };
 
 
+typedef enum
+{
+    TextureTree,
+
+    TextureIDCount
+} TextureID;
+
+static const char *levelTexturePaths[TextureIDCount] = {
+    [TextureTree] = "res/tree1.png",
+};
+
+
+typedef enum
+{
+    ModelTree,
+
+    ModelIDCount
+} ModelID;
+
+static const char *levelModelPaths[ModelIDCount] = {
+    [ModelTree] = "res/tree.model",
+};
+
+
+static unsigned    levelTextures[TextureIDCount];
+static ModelObject levelModels  [ModelIDCount];
+
+
 void levelBruhLoad(void)
 {
     level.terrainAtlas = createTexture("res/terrain_atlas.png");
@@ -80,6 +108,18 @@ void levelBruhLoad(void)
 
     level.filePath = lvlPath;
 
+
+    for (int i = 0; i < TextureIDCount; ++i)
+        levelTextures[i] = createTexture(levelTexturePaths[i]);
+
+    for (int i = 0; i < ModelIDCount; ++i)
+        levelModels[i] = loadModelObject(levelModelPaths[i]);
+
+    levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelTree],
+                                          .texture = levelTextures[TextureTree] },
+                             (Collider) { false });
+
+
     playerState.x = (CHUNK_DIM + CHUNK_DIM * 0.5) * CHUNK_TILE_DIM;
     playerState.y = 5.0f;
     playerState.z = (CHUNK_DIM + CHUNK_DIM * 0.5) * CHUNK_TILE_DIM;
@@ -93,6 +133,11 @@ void levelBruhUnload(void)
 
     glDeleteTextures(1, &level.terrainAtlas);
     glDeleteTextures(1, &level.skyboxCubemap);
+
+    glDeleteTextures(ModelIDCount, levelTextures);
+
+    for (int i = 0; i < ModelIDCount; ++i)
+        freeModelObject(levelModels[i]);
 }
 
 

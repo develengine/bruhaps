@@ -4,15 +4,47 @@
 #include "terrain.h"
 
 #include "bag_engine.h"
+#include "core.h"
 
 #include <stdbool.h>
 
 
-typedef enum {
+typedef enum
+{
     LevelBruh,
 
     LevelCount
 } LevelID;
+
+
+#define MAX_STATIC_TYPE_COUNT 128
+/* NOTE: reflected in shader/static_vertex.glsl */
+#define MAX_STATIC_INSTANCE_COUNT 1024
+
+
+typedef struct
+{
+    float x, y, z;
+    float scale;
+    float rx, ry, rz;
+    float padding;
+} ModelTransform;
+
+
+typedef struct
+{
+    bool exists;
+    float x, y, z;
+    float sx, sy, sz;
+    float rx;
+} Collider;
+
+
+typedef struct
+{
+    ModelObject model;
+    unsigned texture;
+} Object;
 
 
 typedef struct
@@ -25,15 +57,30 @@ typedef struct
 
     const AtlasView *atlasViews;
 
+    const char *filePath;
+
     Terrain terrain;
 
-    unsigned chunkUpdates[MAX_MAP_DIM * MAX_MAP_DIM];
     int chunkUpdateCount;
+    unsigned chunkUpdates[MAX_MAP_DIM * MAX_MAP_DIM];
 
-    const char *filePath;
+    int statsTypeCount;
+    int      statsOffsets  [MAX_STATIC_TYPE_COUNT];
+    Object   statsObjects  [MAX_STATIC_TYPE_COUNT];
+    Collider statsColliders[MAX_STATIC_TYPE_COUNT];
+
+    bool recalculateStats;
+    int statsInstanceCount;
+    ModelTransform statsTransforms[MAX_STATIC_INSTANCE_COUNT];
 } Level;
 
 extern Level level;
+
+
+static inline int getStaticCount(int staticID)
+{
+    return level.statsOffsets[staticID + 1] - level.statsOffsets[staticID];
+}
 
 
 void initLevels(void);
@@ -52,5 +99,8 @@ void invalidateAllChunks(void);
 
 void levelsProcessButton(bagE_MouseButton *mb);
 void levelsProcessWheel(bagE_MouseWheel *mw);
+
+void levelsInsertStaticObject(Object object, Collider collider);
+void levelsAddStatic(int statID, ModelTransform transform);
 
 #endif

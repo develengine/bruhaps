@@ -20,9 +20,10 @@ typedef enum
     TerrainTexturing,
     TerrainHeightPaintingAbs,
     TerrainHeightPaintingRel,
+    StaticsPlacing,
 } EditorMode;
 
-static EditorMode editorMode = TerrainHeightPaintingRel;
+static EditorMode editorMode = StaticsPlacing;
 
 
 static bool selected = false;
@@ -35,12 +36,18 @@ static uint8_t selectedViewTrans = 0;
 static float selectedRelHeight = 0.1f;
 static float selectedAbsHeight = 3.0f;
 
+static int selectedStaticID = 0;
+
 
 // TODO remove me
 static Model gatlingModel;
 static ModelObject gatling;
-static int metalProgram;
+static unsigned metalProgram;
 static float timePassed = 0.0f;
+
+static unsigned staticProgram;
+static unsigned staticUBO;
+static Matrix staticMatrixBuffer[MAX_STATIC_INSTANCE_COUNT];
 
 
 #include "levels/bruh.c"
@@ -109,7 +116,8 @@ void initLevels(void)
 
     levelInits();
 
-    // FIXME:
+
+    // FIXME: at least free me
     gatlingModel  = modelLoad("res/gatling_barrel.model");
     gatling = createModelObject(gatlingModel);
 
@@ -118,9 +126,23 @@ void initLevels(void)
             "shaders/metal_fragment.glsl"
     );
 
-    level.filePath = NULL;
+
+    // FIXME: at least free me
+    staticUBO = createBufferObject(
+        MAX_STATIC_INSTANCE_COUNT * sizeof(Matrix),
+        NULL,
+        GL_DYNAMIC_STORAGE_BIT
+    );
+
+    glBindBufferBase(GL_UNIFORM_BUFFER, 2, staticUBO);
+
+    staticProgram = createProgram(
+            "shaders/static_vertex.glsl",
+            "shaders/static_fragment.glsl"
+    );
 
 
+    // FIXME:
     levelLoad(LevelBruh);
 }
 
@@ -133,6 +155,31 @@ void exitLevels(void)
     levelExits();
 
     freeModelObject(boxModel);
+}
+
+
+void levelsInsertStaticObject(Object object, Collider collider)
+{
+    level.statsObjects  [level.statsTypeCount] = object;
+    level.statsColliders[level.statsTypeCount] = collider;
+    ++level.statsTypeCount;
+}
+
+
+void levelsAddStatic(int statID, ModelTransform transform)
+{
+    assert(level.statsInstanceCount < MAX_STATIC_INSTANCE_COUNT);
+
+    ++level.statsInstanceCount;
+    level.recalculateStats = true;
+
+    while (++statID <= level.statsTypeCount) {
+        int oldOffset = level.statsOffsets[statID]++;
+        ModelTransform oldTransform = level.statsTransforms[oldOffset];
+
+        level.statsTransforms[oldOffset] = transform;
+        transform = oldTransform;
+    }
 }
 
 
@@ -329,6 +376,38 @@ void updateLevel(float dt)
     }
 
     level.chunkUpdateCount = 0;
+
+    /* update stats */
+    if (level.recalculateStats) {
+        level.recalculateStats = false;
+
+        for (int i = 0; i < level.statsInstanceCount; ++i) {
+            ModelTransform transform = level.statsTransforms[i];
+
+            Matrix mod = matrixScale(transform.scale, transform.scale, transform.scale);
+
+            Matrix mul = matrixRotationZ(transform.rz);
+            mod = matrixMultiply(&mul, &mod);
+
+            mul = matrixRotationY(transform.ry);
+            mod = matrixMultiply(&mul, &mod);
+
+            mul = matrixRotationX(transform.rx);
+            mod = matrixMultiply(&mul, &mod);
+
+            mul = matrixTranslation(transform.x, transform.y, transform.z);
+            mod = matrixMultiply(&mul, &mod);
+
+            staticMatrixBuffer[i] = mod;
+        }
+
+        glNamedBufferSubData(
+                staticUBO,
+                0,
+                sizeof(Matrix) * level.statsInstanceCount,
+                staticMatrixBuffer
+        );
+    }
 }
 
 
@@ -386,6 +465,25 @@ void renderLevel(void)
     glProgramUniformMatrix4fv(metalProgram, 0, 1, GL_FALSE, modelGatling.data);
 
     glDrawElements(GL_TRIANGLES, gatlingModel.indexCount, GL_UNSIGNED_INT, 0);
+
+    /* render statics */
+    glUseProgram(staticProgram);
+
+    for (int i = 0; i < level.statsTypeCount; ++i) {
+        Object object = level.statsObjects[i];
+        glBindVertexArray(object.model.vao);
+        glBindTextureUnit(0, object.texture);
+
+        glProgramUniform1ui(staticProgram, 0, level.statsOffsets[i]);
+
+        glDrawElementsInstanced(
+                GL_TRIANGLES,
+                object.model.indexCount,
+                GL_UNSIGNED_INT,
+                0,
+                getStaticCount(i)
+        );
+    }
 }
 
 
@@ -500,6 +598,16 @@ void levelsProcessButton(bagE_MouseButton *mb)
                 updateNearbyChunks(selectedX, selectedZ);
             }
             break;
+        case StaticsPlacing:
+            if (mb->button == bagE_ButtonLeft) {
+                levelsAddStatic(selectedStaticID, (ModelTransform) {
+                    .x = selectedX * CHUNK_TILE_DIM,
+                    .y = atTerrainHeight(&level.terrain, selectedX, selectedZ),
+                    .z = selectedZ * CHUNK_TILE_DIM,
+                    .scale = 1.0f,
+                });
+            }
+            break;
     }
 }
 
@@ -565,11 +673,18 @@ void renderLevelDebugOverlay(void)
             toX   =   width  / 2 + width  % 2;
             fromZ = -(height / 2);
             toZ   =   height / 2 + height % 2;
-        } else {
+        } else if (editorMode == TerrainPlacing
+                || editorMode == TerrainHeightPaintingRel
+                || editorMode == TerrainHeightPaintingAbs) {
             fromZ = -brushWidth;
             toZ   =  brushWidth;
             fromX = -brushWidth;
             toX   =  brushWidth;
+        } else {
+            fromZ = 0;
+            toZ   = 0;
+            fromX = 0;
+            toX   = 0;
         }
 
         for (int z = fromZ; z <= toZ; ++z) {

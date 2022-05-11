@@ -11,6 +11,7 @@ typedef struct
     unsigned vao;
     unsigned vbo;
     unsigned ebo;
+    unsigned indexCount;
 } ModelObject;
 
 static inline void freeModelObject(ModelObject object)
@@ -45,6 +46,7 @@ int createProgram(const char *vertexPath, const char *fragmentPath);
 uint8_t *loadImage(const char *path, int *width, int *height, int *channels, bool flip);
 unsigned createTexture(const char *path);
 ModelObject createModelObject(Model model);
+ModelObject loadModelObject(const char *path);
 AnimatedObject createAnimatedObject(Animated animated);
 unsigned createBufferObject(size_t size, void *data, unsigned flags);
 
