@@ -39,7 +39,7 @@ static float selectedAbsHeight = 3.0f;
 static int selectedStaticID = 0;
 
 
-// TODO remove me
+// TODO: remove me
 static Model gatlingModel;
 static ModelObject gatling;
 static unsigned metalProgram;
@@ -204,8 +204,6 @@ static float getHeight(float x, float z)
 // FIXME: a magic function
 void processPlayerInput(float vx, float vz, bool jump, float dt)
 {
-    (void)vx, (void)vz;
-
     float groundTolerance = 0.1f;
     float playerHeight = 2.0f;
 

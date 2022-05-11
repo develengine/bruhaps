@@ -103,6 +103,8 @@ void levelBruhLoad(void)
     terrainLoad(&level.terrain, file);
     invalidateAllChunks();
     
+    eof_check(file);
+
     fclose(file);
 #endif
 
