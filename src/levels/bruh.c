@@ -119,7 +119,8 @@ void levelBruhLoad(void)
 
     levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelTree],
                                           .texture = levelTextures[TextureTree] },
-                             (Collider) { false });
+                             (ColliderType) { true, { 0.0f, 1.5f, 0.0f,
+                                                      0.3f, 1.5f, 0.3f } });
 
 
     playerState.x = (CHUNK_DIM + CHUNK_DIM * 0.5) * CHUNK_TILE_DIM;

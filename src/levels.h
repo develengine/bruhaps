@@ -33,11 +33,17 @@ typedef struct
 
 typedef struct
 {
-    bool exists;
     float x, y, z;
     float sx, sy, sz;
-    float rx;
+    float rx, ry, rz;
 } Collider;
+
+
+typedef struct
+{
+    bool inGame;
+    Collider collider;
+} ColliderType;
 
 
 typedef struct
@@ -45,6 +51,13 @@ typedef struct
     ModelObject model;
     unsigned texture;
 } Object;
+
+
+typedef struct
+{
+    int offset;
+    int count;
+} ChunkColliderID;
 
 
 typedef struct
@@ -65,13 +78,18 @@ typedef struct
     unsigned chunkUpdates[MAX_MAP_DIM * MAX_MAP_DIM];
 
     int statsTypeCount;
-    int      statsOffsets  [MAX_STATIC_TYPE_COUNT];
-    Object   statsObjects  [MAX_STATIC_TYPE_COUNT];
-    Collider statsColliders[MAX_STATIC_TYPE_COUNT];
+    int          statsTypeOffsets [MAX_STATIC_TYPE_COUNT + 1];
+    Object       statsTypeObjects [MAX_STATIC_TYPE_COUNT];
+    ColliderType statsTypeCollider[MAX_STATIC_TYPE_COUNT];
 
     bool recalculateStats;
-    int statsInstanceCount;
-    ModelTransform statsTransforms[MAX_STATIC_INSTANCE_COUNT];
+    int  statsInstanceCount;
+    ModelTransform statsTransforms[MAX_STATIC_INSTANCE_COUNT + 1];
+
+    bool recalculateStatsColliders;
+    int  statsColliderCount;
+    int      statsColliderOffsetMap[MAX_MAP_DIM * MAX_MAP_DIM + 1];
+    Collider statsColliders        [MAX_STATIC_INSTANCE_COUNT];
 } Level;
 
 extern Level level;
@@ -79,7 +97,13 @@ extern Level level;
 
 static inline int getStaticCount(int staticID)
 {
-    return level.statsOffsets[staticID + 1] - level.statsOffsets[staticID];
+    return level.statsTypeOffsets[staticID + 1] - level.statsTypeOffsets[staticID];
+}
+
+
+static inline int getStaticChunkColliderCount(int chunkPos)
+{
+    return level.statsColliderOffsetMap[chunkPos + 1] - level.statsColliderOffsetMap[chunkPos];
 }
 
 
@@ -90,7 +114,7 @@ void processPlayerInput(float vx, float vz, bool jump, float dt);
 
 void updateLevel(float dt);
 void renderLevel(void);
-void renderLevelDebugOverlay(void);
+void renderLevelOverlay(void);
 
 void levelsSaveCurrent(void);
 
@@ -100,7 +124,10 @@ void invalidateAllChunks(void);
 void levelsProcessButton(bagE_MouseButton *mb);
 void levelsProcessWheel(bagE_MouseWheel *mw);
 
-void levelsInsertStaticObject(Object object, Collider collider);
+void levelsInsertStaticObject(Object object, ColliderType collider);
 void levelsAddStatic(int statID, ModelTransform transform);
+
+void staticsLoad(FILE *file);
+void staticsSave(FILE *file);
 
 #endif

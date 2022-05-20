@@ -326,7 +326,7 @@ int bagE_main(int argc, char *argv[])
         glBindVertexArray(dummyVao);
 
 
-        renderLevelDebugOverlay();
+        renderLevelOverlay();
 
 
         /* gui */

@@ -158,10 +158,12 @@ void exitLevels(void)
 }
 
 
-void levelsInsertStaticObject(Object object, Collider collider)
+void levelsInsertStaticObject(Object object, ColliderType collider)
 {
-    level.statsObjects  [level.statsTypeCount] = object;
-    level.statsColliders[level.statsTypeCount] = collider;
+    assert(level.statsTypeCount < MAX_STATIC_TYPE_COUNT);
+
+    level.statsTypeObjects [level.statsTypeCount] = object;
+    level.statsTypeCollider[level.statsTypeCount] = collider;
     ++level.statsTypeCount;
 }
 
@@ -170,16 +172,57 @@ void levelsAddStatic(int statID, ModelTransform transform)
 {
     assert(level.statsInstanceCount < MAX_STATIC_INSTANCE_COUNT);
 
-    ++level.statsInstanceCount;
-    level.recalculateStats = true;
+    level.recalculateStats          = true;
+    level.recalculateStatsColliders = true;
+
+    /* O(P) pattern */
+    int prevOff = level.statsTypeOffsets[++statID]++;
+    ModelTransform tempTrans = level.statsTransforms[prevOff];
+    level.statsTransforms[prevOff] = transform;
+    transform = tempTrans;
 
     while (++statID <= level.statsTypeCount) {
-        int oldOffset = level.statsOffsets[statID]++;
-        ModelTransform oldTransform = level.statsTransforms[oldOffset];
-
-        level.statsTransforms[oldOffset] = transform;
-        transform = oldTransform;
+        int off = level.statsTypeOffsets[statID]++;
+        if (off != prevOff) {
+            tempTrans = level.statsTransforms[off];
+            level.statsTransforms[off] = transform;
+            transform = tempTrans;
+            prevOff = off;
+        }
     }
+
+    ++level.statsInstanceCount;
+}
+
+
+void staticsSave(FILE *file)
+{
+    safe_write("STAT", 1, 4, file);
+
+    safe_write(&level.statsTypeCount, sizeof(int), 1, file);
+    safe_write(&level.statsTypeOffsets, sizeof(int), level.statsTypeCount, file);
+
+    safe_write(&level.statsInstanceCount, sizeof(int), 1, file);
+    safe_write(&level.statsTransforms, sizeof(ModelTransform), level.statsInstanceCount, file);
+}
+
+
+void staticsLoad(FILE *file)
+{
+    char buffer[4];
+    safe_read(buffer, 1, 4, file);
+    if (strncmp(buffer, "STAT", 4)) {
+        fprintf(stderr, "Can't parse statics file!\n");
+        exit(666);
+    }
+
+    safe_read(&level.statsTypeCount, sizeof(int), 1, file);
+    safe_read(&level.statsTypeOffsets, sizeof(int), level.statsTypeCount, file);
+
+    safe_read(&level.statsInstanceCount, sizeof(int), 1, file);
+    safe_read(&level.statsTransforms, sizeof(ModelTransform), level.statsInstanceCount, file);
+
+    level.recalculateStatsColliders = true;
 }
 
 
@@ -214,7 +257,7 @@ void processPlayerInput(float vx, float vz, bool jump, float dt)
     float newY = getHeight(newX, newZ);
 
     float distH = sqrtf(vx * vx + vz * vz);
-    float distV = (newY + playerHeight) - oldY;
+    float distV = newY + playerHeight - oldY;
 
     if (distV > 0.0f) {
         float distDiff = distH - distV;
@@ -375,7 +418,7 @@ void updateLevel(float dt)
 
     level.chunkUpdateCount = 0;
 
-    /* update stats */
+    /* recalculate stats */
     if (level.recalculateStats) {
         level.recalculateStats = false;
 
@@ -405,6 +448,69 @@ void updateLevel(float dt)
                 sizeof(Matrix) * level.statsInstanceCount,
                 staticMatrixBuffer
         );
+    }
+
+    /* recalculate static colliders */
+    if (level.recalculateStatsColliders) {
+        level.recalculateStatsColliders = false;
+
+        level.statsColliderCount = 0;
+        for (int i = 0; i <= MAX_MAP_DIM * MAX_MAP_DIM; ++i)
+            level.statsColliderOffsetMap[i] = 0;
+
+        for (int typeID = 0; typeID < level.statsTypeCount; ++typeID) {
+            ColliderType collType = level.statsTypeCollider[typeID];
+
+            if (!collType.inGame)
+                continue;
+
+            int offset = level.statsTypeOffsets[typeID];
+            int count  = getStaticCount(typeID);
+
+            for (int statOff = offset; statOff < offset + count; ++statOff) {
+                ModelTransform trans = level.statsTransforms[statOff];
+
+                Collider collider = collType.collider;
+
+                collider.x *= trans.scale;
+                collider.y *= trans.scale;
+                collider.z *= trans.scale;
+
+                collider.x += trans.x;
+                collider.y += trans.y;
+                collider.z += trans.z;
+
+                collider.sx *= trans.scale;
+                collider.sy *= trans.scale;
+                collider.sz *= trans.scale;
+
+                collider.rx += trans.rx;
+                collider.ry += trans.ry;
+                collider.rz += trans.rz;
+
+                int cx = (int)(collider.x / (CHUNK_DIM * CHUNK_TILE_DIM));
+                int cz = (int)(collider.z / (CHUNK_DIM * CHUNK_TILE_DIM));
+                int chunkPos = cz * MAX_MAP_DIM + cx;
+
+                /* O(P) pattern */
+                int prevOff = level.statsColliderOffsetMap[++chunkPos]++;
+                Collider tempColl = level.statsColliders[prevOff];
+                level.statsColliders[prevOff] = collider;
+                collider = tempColl;
+
+                while (++chunkPos <= MAX_MAP_DIM * MAX_MAP_DIM) {
+                    int off = level.statsColliderOffsetMap[chunkPos]++;
+                    if (off != prevOff) {
+                        tempColl = level.statsColliders[off];
+                        level.statsColliders[off] = collider;
+                        collider = tempColl;
+                        prevOff = off;
+                    }
+                }
+
+                ++level.statsColliderCount;
+            }
+        }
     }
 }
 
@@ -468,11 +574,11 @@ void renderLevel(void)
     glUseProgram(staticProgram);
 
     for (int i = 0; i < level.statsTypeCount; ++i) {
-        Object object = level.statsObjects[i];
+        Object object = level.statsTypeObjects[i];
         glBindVertexArray(object.model.vao);
         glBindTextureUnit(0, object.texture);
 
-        glProgramUniform1ui(staticProgram, 0, level.statsOffsets[i]);
+        glProgramUniform1ui(staticProgram, 0, level.statsTypeOffsets[i]);
 
         glDrawElementsInstanced(
                 GL_TRIANGLES,
@@ -482,6 +588,43 @@ void renderLevel(void)
                 getStaticCount(i)
         );
     }
+
+#if 1
+    /* debug render static colliders */
+    glUseProgram(pointProgram);
+
+    Vector colors2[] = {
+        { 0.3f, 1.0f, 0.6f, 1.0f }, { 0.3f, 1.0f, 0.6f, 1.0f },
+        { 0.3f, 1.0f, 0.6f, 1.0f }, { 0.3f, 1.0f, 0.6f, 1.0f },
+        { 0.3f, 1.0f, 0.6f, 1.0f }, { 0.3f, 1.0f, 0.6f, 1.0f },
+        { 0.3f, 1.0f, 0.6f, 1.0f }, { 0.3f, 1.0f, 0.6f, 1.0f },
+    };
+
+    Vector points2[] = {
+        { -1.0f, -1.0f, -1.0f, 12.0f }, {  1.0f, -1.0f, -1.0f, 12.0f },
+        { -1.0f, -1.0f,  1.0f, 12.0f }, {  1.0f, -1.0f,  1.0f, 12.0f },
+        { -1.0f,  1.0f, -1.0f, 12.0f }, {  1.0f,  1.0f, -1.0f, 12.0f },
+        { -1.0f,  1.0f,  1.0f, 12.0f }, {  1.0f,  1.0f,  1.0f, 12.0f },
+    };
+
+    glProgramUniform4fv(pointProgram, 1,  8, colors2->data);
+    glProgramUniform4fv(pointProgram, 33, 8, points2->data);
+
+    int chunkPos    = 2 * MAX_MAP_DIM + 2;
+    int chunkOffset = level.statsColliderOffsetMap[chunkPos];
+    int chunkCount  = getStaticChunkColliderCount(chunkPos);
+
+    for (int i = 0; i < chunkCount; ++i) {
+        Collider c = level.statsColliders[chunkOffset + i];
+
+        Matrix modMat = matrixScale(c.sx, c.sy, c.sz);
+        mul = matrixTranslation(c.x, c.y, c.z);
+        modMat = matrixMultiply(&mul, &modMat);
+
+        glProgramUniformMatrix4fv(pointProgram, 0, 1, false, modMat.data);
+        glDrawArraysInstanced(GL_POINTS, 0, 1, 8);
+    }
+#endif
 }
 
 
@@ -568,6 +711,30 @@ static void removeTiles(void)
 }
 
 
+static void removeStatic(int staticOff)
+{
+    /* O(P) pattern */
+    int nextID = 0;
+    while (level.statsTypeOffsets[nextID] <= staticOff)
+        ++nextID;
+    
+    --nextID;
+
+    while (++nextID <= MAX_STATIC_TYPE_COUNT) {
+        int off = --level.statsTypeOffsets[nextID];
+        if (off != staticOff) {
+            level.statsTransforms[staticOff] = level.statsTransforms[off];
+            staticOff = off;
+        }
+    }
+
+    --level.statsInstanceCount;
+
+    level.recalculateStats          = true;
+    level.recalculateStatsColliders = true;
+}
+
+
 void levelsProcessButton(bagE_MouseButton *mb)
 {
     switch (editorMode) {
@@ -588,7 +755,7 @@ void levelsProcessButton(bagE_MouseButton *mb)
             }
             break;
         case TerrainTexturing:
-            if (mb->button == bagE_ButtonLeft) {
+            if (mb->button == bagE_ButtonLeft && selected) {
                 TileTexture tileTex = {
                     .viewID = selectedViewID,
                 };
@@ -597,13 +764,37 @@ void levelsProcessButton(bagE_MouseButton *mb)
             }
             break;
         case StaticsPlacing:
-            if (mb->button == bagE_ButtonLeft) {
+            if (mb->button == bagE_ButtonLeft && selected) {
                 levelsAddStatic(selectedStaticID, (ModelTransform) {
                     .x = selectedX * CHUNK_TILE_DIM,
                     .y = atTerrainHeight(&level.terrain, selectedX, selectedZ),
                     .z = selectedZ * CHUNK_TILE_DIM,
                     .scale = 1.0f,
                 });
+            } else if (mb->button == bagE_ButtonRight) {
+                float x = selectedX * CHUNK_TILE_DIM;
+                float y = atTerrainHeight(&level.terrain, selectedX, selectedZ);
+                float z = selectedZ * CHUNK_TILE_DIM;
+
+                // TODO: could be done in one pass
+                int index = -1;
+                float distS = INFINITY;
+
+                for (int i = 0; i < level.statsInstanceCount; ++i) {
+                    ModelTransform transform = level.statsTransforms[i];
+                    float xd  = x - transform.x;
+                    float yd  = y - transform.y;
+                    float zd  = z - transform.z;
+                    float newDistS = xd * xd + yd * yd + zd * zd;
+
+                    if (newDistS < distS) {
+                        distS = newDistS;
+                        index = i;
+                    }
+                }
+
+                if (index >= 0 && distS < CHUNK_TILE_DIM * CHUNK_TILE_DIM * 1.5f * 1.5f)
+                    removeStatic(index);
             }
             break;
     }
@@ -626,8 +817,6 @@ void levelsProcessWheel(bagE_MouseWheel *mw)
             if (brushWidth > 2)
                 brushWidth = 2;
             break;
-        case TerrainTexturing:
-            break;
     }
 }
 
@@ -647,7 +836,7 @@ void levelsSaveCurrent(void)
 }
 
 
-void renderLevelDebugOverlay(void)
+void renderLevelOverlay(void)
 {
     /* point */
     if (selected) {
@@ -709,10 +898,11 @@ void renderLevelDebugOverlay(void)
             }
         }
 
+        Matrix identity = matrixIdentity();
+        glProgramUniformMatrix4fv(pointProgram, 0, 1, false, identity.data);
         glProgramUniform4fv(pointProgram, 1,  pointCount, colors->data);
         glProgramUniform4fv(pointProgram, 33, pointCount, points->data);
 
         glDrawArraysInstanced(GL_POINTS, 0, 1, pointCount);
-
     }
 }
