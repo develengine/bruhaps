@@ -84,7 +84,7 @@ typedef enum {
 } MobType;
 
 /* NOTE: reflected in shaders/animated_vertex.glsl */
-#define MOB_BONE_POOL_SIZE 2048
+#define MOB_BONE_POOL_SIZE 1024
 #define MAX_BONES_PER_MOB  128
 #define MAX_MOBS_PER_TYPE  64
 

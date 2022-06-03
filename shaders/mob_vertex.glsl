@@ -16,7 +16,7 @@ layout(location = 1) uniform uint u_stride;
 
 layout(std140, binding = 3) uniform Animated
 {
-    mat4 matrices[2048];
+    mat4 matrices[1024];
 } animated;
 
 layout(std140, binding = 0) uniform Cam
