@@ -4,6 +4,7 @@
 
 InputState  inputState;
 AppState    appState;
+GameState   gameState;
 CamState    camState;
 PlayerState playerState;
 
@@ -19,17 +20,22 @@ void initState(void)
         .running = true
     };
 
+    gameState = (GameState) {
+        .inSplash = true
+    };
+
     camState = (CamState) {
         .x = 0.0f, .y = 0.0f, .z = 0.0f,
-        .pitch = 0.0f, .yaw = 0.0f,
+        .pitch = 0.001f, .yaw = 0.001f,
         .fov = 90.0f
     };
 
     playerState = (PlayerState) {
-        .gaming = true,
+        .gaming = false,
         .onGround = false,
         .x = 0.0f, .y = 0.0f, .z = 0.0f,
-        .vy = 0.0f
+        .vy = 0.0f,
+        .tryJump = true
     };
 
     bagE_getWindowSize(&appState.windowWidth, &appState.windowHeight);

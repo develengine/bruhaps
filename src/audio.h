@@ -42,6 +42,6 @@ void exitAudio(void);
 
 bool playSound(Sound info);
 
-int16_t *loadWAV(const char *path, unsigned *length);
+int16_t *loadWAV(const char *path, uint64_t *length);
 
 #endif

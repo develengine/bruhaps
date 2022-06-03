@@ -1,3 +1,6 @@
+# FIXME: unmodified bones do not get redundantly saved and that breaks
+#        everything because this is a piece of shit parser
+
 # file format:
 
 """header"""
@@ -23,6 +26,7 @@ import xml.etree.ElementTree as ET
 import json
 import struct
 import math
+from sys import argv
 
 def named(i, what):
     return i.tag[i.tag.index('}') + 1:] == what
@@ -285,7 +289,7 @@ def transpose(mat):
     return res
 
 
-tree = ET.parse("models/worm.dae")
+tree = ET.parse(argv[1])
 root = tree.getroot()
 
 mesh_data = get_mesh_data(root)
@@ -294,7 +298,7 @@ bone_frames = get_frame_data(root)
 skeleton = get_skeleton_data(root)
 
 
-f = open("output.bin", "wb")
+f = open(argv[2], "wb")
 
 # header
 f.write(struct.pack("i", len(mesh_data.vertices)))

@@ -7,7 +7,7 @@ bool updateAnimation(Animation *animation, float dt)
 
     animation->time += dt;
 
-    //FIXME use fmod
+    // FIXME: use fmod
     float loopTime = animation->end - animation->start;
     while (animation->time > loopTime) {
         animation->time -= loopTime;

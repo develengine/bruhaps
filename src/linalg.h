@@ -177,9 +177,26 @@ typedef union
 
 typedef union
 {
-    struct { float w, x, y, z; };
+    struct { float x, y, z, w; };
+    struct { float r, g, b, a; };
     float data[4];
 } Vector;
+
+typedef Vector Color;
+
+
+typedef union
+{
+    struct { float x, y, z; };
+    float data[3];
+} Vec3;
+
+
+typedef union
+{
+    struct { float x, y; };
+    float data[2];
+} Vec2;
 
 
 static inline Quaternion quaternionNLerp(Quaternion a, Quaternion b, float blend)

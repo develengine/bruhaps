@@ -10,24 +10,34 @@ static const AtlasView atlasViews[] = {
 typedef enum
 {
     TextureTree,
+    TextureStone,
+    TextureGrass,
 
     TextureIDCount
 } TextureID;
 
 static const char *levelTexturePaths[TextureIDCount] = {
-    [TextureTree] = "res/tree1.png",
+    [TextureTree]  = "res/tree1.png",
+    [TextureStone] = "res/stone.png",
+    [TextureGrass] = "res/grass_patch.png",
 };
 
 
 typedef enum
 {
     ModelTree,
+    ModelBush,
+    ModelRock,
+    ModelGrass,
 
     ModelIDCount
 } ModelID;
 
 static const char *levelModelPaths[ModelIDCount] = {
-    [ModelTree] = "res/tree.model",
+    [ModelTree]  = "res/tree.model",
+    [ModelBush]  = "res/bush.model",
+    [ModelRock]  = "res/rock.model",
+    [ModelGrass] = "res/grass.model",
 };
 
 
@@ -40,14 +50,14 @@ void levelBruhLoad(void)
     level.terrainAtlas = createTexture("res/terrain_atlas.png");
 
     level.skyboxCubemap = createCubeTexture(
-            "Maskonaive2/posx.png",
-            "Maskonaive2/negx.png",
+            "res/Maskonaive2/posx.png",
+            "res/Maskonaive2/negx.png",
 
-            "Maskonaive2/posy.png",
-            "Maskonaive2/negy.png",
+            "res/Maskonaive2/posy.png",
+            "res/Maskonaive2/negy.png",
 
-            "Maskonaive2/posz.png",
-            "Maskonaive2/negz.png"
+            "res/Maskonaive2/posz.png",
+            "res/Maskonaive2/negz.png"
     );
 
     level.atlasViews = atlasViews;
@@ -102,6 +112,7 @@ void levelBruhLoad(void)
 
     terrainLoad(&level.terrain, file);
     invalidateAllChunks();
+    staticsLoad(file);
     
     eof_check(file);
 
@@ -119,8 +130,20 @@ void levelBruhLoad(void)
 
     levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelTree],
                                           .texture = levelTextures[TextureTree] },
-                             (ColliderType) { true, { 0.0f, 1.5f, 0.0f,
-                                                      0.3f, 1.5f, 0.3f } });
+                             (ColliderType) { true, { { 0.0f, 1.5f, 0.0f },
+                                                      { 0.3f, 1.5f, 0.3f } } });
+    levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelBush],
+                                          .texture = levelTextures[TextureTree] },
+                             (ColliderType) { false });
+    levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelRock],
+                                          .texture = levelTextures[TextureStone] },
+                             (ColliderType) { true, { 0.0f, 0.2f, 0.0f,
+                                                      0.6f, 0.4f, 0.6f } });
+    /*
+    levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelGrass],
+                                          .texture = levelTextures[TextureGrass] },
+                             (ColliderType) { false });
+    */
 
 
     playerState.x = (CHUNK_DIM + CHUNK_DIM * 0.5) * CHUNK_TILE_DIM;

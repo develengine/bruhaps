@@ -4,12 +4,11 @@
 #include "core.h"
 #include "utils.h"
 #include "state.h"
+#include "audio.h"
 
 
 Level level;
 
-
-static ModelObject boxModel;
 
 static unsigned pointProgram;
 
@@ -21,9 +20,10 @@ typedef enum
     TerrainHeightPaintingAbs,
     TerrainHeightPaintingRel,
     StaticsPlacing,
+    TestMorbing,
 } EditorMode;
 
-static EditorMode editorMode = StaticsPlacing;
+static EditorMode editorMode = TestMorbing;
 
 
 static bool selected = false;
@@ -41,13 +41,17 @@ static int selectedStaticID = 0;
 
 // TODO: remove me
 static Model gatlingModel;
-static ModelObject gatling;
-static unsigned metalProgram;
 static float timePassed = 0.0f;
 
 static unsigned staticProgram;
 static unsigned staticUBO;
 static Matrix staticMatrixBuffer[MAX_STATIC_INSTANCE_COUNT];
+
+static unsigned mobProgram;
+static unsigned mobUBO;
+static int mobBonePoolTaken;
+static Matrix mobBonePool[MOB_BONE_POOL_SIZE];
+static JointTransform mobTransformScratch[MAX_BONES_PER_MOB];
 
 
 #include "levels/bruh.c"
@@ -112,16 +116,16 @@ void initLevels(void)
             "shaders/point_fragment.glsl"
     );
 
-    boxModel = createBoxModelObject();
+    level.boxModel = createBoxModelObject();
 
     levelInits();
 
 
     // FIXME: at least free me
     gatlingModel  = modelLoad("res/gatling_barrel.model");
-    gatling = createModelObject(gatlingModel);
+    level.gatling = createModelObject(gatlingModel);
 
-    metalProgram = createProgram(
+    level.metalProgram = createProgram(
             "shaders/metal_vertex.glsl",
             "shaders/metal_fragment.glsl"
     );
@@ -142,6 +146,36 @@ void initLevels(void)
     );
 
 
+    // FIXME: pls
+    mobUBO = createBufferObject(
+        sizeof(Matrix) * MOB_BONE_POOL_SIZE,
+        NULL,
+        GL_DYNAMIC_STORAGE_BIT
+    );
+
+    glBindBufferBase(GL_UNIFORM_BUFFER, 3, mobUBO);
+
+    mobProgram = createProgram(
+            "shaders/mob_vertex.glsl",
+            "shaders/animated_fragment.glsl"
+    );
+
+    // TODO: refactor out
+    Animated animated = animatedLoad("res/worm.animated");
+    level.mobArmatures[MobWorm] = animated.armature;
+
+    level.mobObjects[MobWorm] = (MobObject) {
+        createAnimatedObject(animated),
+        createTexture("res/worm.png")
+    };
+
+    modelFree(animated.model);
+    free(animated.vertexWeights);
+
+
+    level.vineThud = loadWAV("res/vine_thud.wav", &level.vineThudLength);
+
+
     // FIXME:
     levelLoad(LevelBruh);
 }
@@ -154,7 +188,7 @@ void exitLevels(void)
 
     levelExits();
 
-    freeModelObject(boxModel);
+    freeModelObject(level.boxModel);
 }
 
 
@@ -171,9 +205,6 @@ void levelsInsertStaticObject(Object object, ColliderType collider)
 void levelsAddStatic(int statID, ModelTransform transform)
 {
     assert(level.statsInstanceCount < MAX_STATIC_INSTANCE_COUNT);
-
-    level.recalculateStats          = true;
-    level.recalculateStatsColliders = true;
 
     /* O(P) pattern */
     int prevOff = level.statsTypeOffsets[++statID]++;
@@ -192,6 +223,33 @@ void levelsAddStatic(int statID, ModelTransform transform)
     }
 
     ++level.statsInstanceCount;
+
+    level.recalculateStats          = true;
+    level.recalculateStatsColliders = true;
+}
+
+
+static void removeStatic(int staticOff)
+{
+    /* O(P) pattern */
+    int nextID = 0;
+    while (level.statsTypeOffsets[nextID] <= staticOff)
+        ++nextID;
+    
+    --nextID;
+
+    while (++nextID <= MAX_STATIC_TYPE_COUNT) {
+        int off = --level.statsTypeOffsets[nextID];
+        if (off != staticOff) {
+            level.statsTransforms[staticOff] = level.statsTransforms[off];
+            staticOff = off;
+        }
+    }
+
+    --level.statsInstanceCount;
+
+    level.recalculateStats          = true;
+    level.recalculateStatsColliders = true;
 }
 
 
@@ -216,12 +274,19 @@ void staticsLoad(FILE *file)
         exit(666);
     }
 
-    safe_read(&level.statsTypeCount, sizeof(int), 1, file);
-    safe_read(&level.statsTypeOffsets, sizeof(int), level.statsTypeCount, file);
+    int typeCount;
+    safe_read(&typeCount, sizeof(int), 1, file);
+    safe_read(&level.statsTypeOffsets, sizeof(int), typeCount, file);
 
     safe_read(&level.statsInstanceCount, sizeof(int), 1, file);
     safe_read(&level.statsTransforms, sizeof(ModelTransform), level.statsInstanceCount, file);
 
+    printf("%d\n", level.statsInstanceCount);
+
+    for (int i = typeCount; i <= MAX_STATIC_TYPE_COUNT; ++i)
+        level.statsTypeOffsets[i] = level.statsInstanceCount;
+
+    level.recalculateStats          = true;
     level.recalculateStatsColliders = true;
 }
 
@@ -244,7 +309,61 @@ static float getHeight(float x, float z)
 }
 
 
-// FIXME: a magic function
+void addMob(MobType type, ModelTransform trans, Animation anim)
+{
+    int count = level.mobTypeCounts[type];
+    if (count >= MAX_MOBS_PER_TYPE) {
+        fprintf(stderr, "Can't spawn another mob of type %d\n", type);
+        return;
+    }
+
+    level.mobAnimations[count] = anim;
+    level.mobTransforms[count] = trans;
+    level.mobStates    [count] = MobStateWalking;
+
+    ++level.mobTypeCounts[type];
+}
+
+
+// TODO: replace this function by completely different one
+static Vec2 clipMovement(float x, float z, float w, float vx, float vz)
+{
+    int cx = (int)(x / (CHUNK_TILE_DIM * CHUNK_DIM));
+    int cz = (int)(z / (CHUNK_TILE_DIM * CHUNK_DIM));
+
+    // FIXME: check neighbouring chunks as well
+
+    int chunkPos = cz * MAX_MAP_DIM + cx;
+    int colliderOffset = level.statsColliderOffsetMap[chunkPos];
+    int colliderCount  = getStaticChunkColliderCount(chunkPos);
+
+    for (int i = 0; i < colliderCount; ++i) {
+        Collider collider = level.statsColliders[colliderOffset + i];
+        collider.x -= x;
+        collider.z -= z;
+
+        if (fabsf(collider.x) <= (collider.sx + w) && (vz < 0.0f) == (collider.z < 0.0f)) {
+            float space = fabsf(collider.z) - collider.sz - w - 0.001f;
+            if (space < fabsf(vz)) {
+                vz = space * (vz < 0.0f ? -1.0f : 1.0f);
+            }
+        }
+
+        collider.z -= vz;
+
+        if (fabsf(collider.z) <= (collider.sz + w) && (vx < 0.0f) == (collider.x < 0.0f)) {
+            float space = fabsf(collider.x) - collider.sx - w - 0.001f;
+            if (space < fabsf(vx)) {
+                vx = space * (vx < 0.0f ? -1.0f : 1.0f);
+            }
+        }
+    }
+
+    return (Vec2) { vx, vz };
+}
+
+
+// TODO: a magic function
 void processPlayerInput(float vx, float vz, bool jump, float dt)
 {
     float groundTolerance = 0.1f;
@@ -271,8 +390,15 @@ void processPlayerInput(float vx, float vz, bool jump, float dt)
         }
     }
 
-    playerState.x += vx;
-    playerState.z += vz;
+    if (playerState.onGround) {
+        vx *= 0.8f;
+        vz *= 0.8f;
+    }
+
+    Vec2 clipped = clipMovement(playerState.x, playerState.z, 0.5f, vx, vz);
+
+    playerState.x += clipped.x;
+    playerState.z += clipped.y;
 
     float height = getHeight(playerState.x, playerState.z);
 
@@ -318,7 +444,7 @@ static void selectVertex(
 
     for (int i = 0; i < 10; ++i) {
         /* NOTE: in case we are exactly aligned with an axis,
-         * we skip to avoid divide by 0 */
+         *       we skip to avoid divide by 0 */
         if (vx == 0.0f || vz == 0.0f)
             break;
 
@@ -422,25 +548,8 @@ void updateLevel(float dt)
     if (level.recalculateStats) {
         level.recalculateStats = false;
 
-        for (int i = 0; i < level.statsInstanceCount; ++i) {
-            ModelTransform transform = level.statsTransforms[i];
-
-            Matrix mod = matrixScale(transform.scale, transform.scale, transform.scale);
-
-            Matrix mul = matrixRotationZ(transform.rz);
-            mod = matrixMultiply(&mul, &mod);
-
-            mul = matrixRotationY(transform.ry);
-            mod = matrixMultiply(&mul, &mod);
-
-            mul = matrixRotationX(transform.rx);
-            mod = matrixMultiply(&mul, &mod);
-
-            mul = matrixTranslation(transform.x, transform.y, transform.z);
-            mod = matrixMultiply(&mul, &mod);
-
-            staticMatrixBuffer[i] = mod;
-        }
+        for (int i = 0; i < level.statsInstanceCount; ++i)
+            staticMatrixBuffer[i] = modelTransformToMatrix(level.statsTransforms[i]);
 
         glNamedBufferSubData(
                 staticUBO,
@@ -512,6 +621,39 @@ void updateLevel(float dt)
             }
         }
     }
+
+    /* update mobs */
+    mobBonePoolTaken = 0;
+
+    for (MobType type = 0; type < MobCount; ++type) {
+        int count = level.mobTypeCounts[type];
+        int boneCount = level.mobArmatures[type].boneCount;
+
+        for (int i = 0; i < count; ++i) {
+            assert(mobBonePoolTaken + boneCount < MOB_BONE_POOL_SIZE);
+
+            int mobID = type * MAX_MOBS_PER_TYPE + i;
+
+            updateAnimation(level.mobAnimations + mobID, dt);
+            Animation anim = level.mobAnimations[mobID];
+            computePoseTransforms(
+                    level.mobArmatures + type,
+                    mobTransformScratch,
+                    anim.start + anim.time
+            );
+
+            Matrix modelMat = modelTransformToMatrix(level.mobTransforms[mobID]);
+            computeArmatureMatrices(
+                    modelMat,
+                    mobBonePool + mobBonePoolTaken,
+                    mobTransformScratch,
+                    level.mobArmatures + type,
+                    0
+            );
+
+            mobBonePoolTaken += boneCount;
+        }
+    }
 }
 
 
@@ -521,7 +663,7 @@ void renderLevel(void)
     glDisable(GL_DEPTH_TEST);
 
     glUseProgram(level.skyboxProgram);
-    glBindVertexArray(boxModel.vao);
+    glBindVertexArray(level.boxModel.vao);
     glBindTextureUnit(0, level.skyboxCubemap);
 
     glDrawElements(GL_TRIANGLES, BOX_INDEX_COUNT, GL_UNSIGNED_INT, 0);
@@ -563,10 +705,10 @@ void renderLevel(void)
     modelGatling = matrixMultiply(&mul, &modelGatling);
 
 
-    glUseProgram(metalProgram);
-    glBindVertexArray(gatling.vao);
+    glUseProgram(level.metalProgram);
+    glBindVertexArray(level.gatling.vao);
 
-    glProgramUniformMatrix4fv(metalProgram, 0, 1, GL_FALSE, modelGatling.data);
+    glProgramUniformMatrix4fv(level.metalProgram, 0, 1, GL_FALSE, modelGatling.data);
 
     glDrawElements(GL_TRIANGLES, gatlingModel.indexCount, GL_UNSIGNED_INT, 0);
 
@@ -587,6 +729,36 @@ void renderLevel(void)
                 0,
                 getStaticCount(i)
         );
+    }
+
+    /* render mobs */
+    glNamedBufferSubData(
+            mobUBO,
+            0,
+            sizeof(Matrix) * mobBonePoolTaken,
+            (float*)mobBonePool
+    );
+
+    glUseProgram(mobProgram);
+
+    int mobOffset = 0;
+    for (MobType type = 0; type < MobCount; ++type) {
+        MobObject object = level.mobObjects[type];
+        glBindVertexArray(object.animated.model.vao);
+        glBindTextureUnit(0, object.texture);
+
+        glProgramUniform1ui(mobProgram, 0, mobOffset);
+        glProgramUniform1ui(mobProgram, 1, level.mobArmatures[type].boneCount);
+
+        glDrawElementsInstanced(
+                GL_TRIANGLES,
+                object.animated.model.indexCount,
+                GL_UNSIGNED_INT,
+                0,
+                level.mobTypeCounts[type]
+        );
+
+        mobOffset += level.mobTypeCounts[type] * level.mobArmatures[type].boneCount;
     }
 
 #if 1
@@ -610,12 +782,8 @@ void renderLevel(void)
     glProgramUniform4fv(pointProgram, 1,  8, colors2->data);
     glProgramUniform4fv(pointProgram, 33, 8, points2->data);
 
-    int chunkPos    = 2 * MAX_MAP_DIM + 2;
-    int chunkOffset = level.statsColliderOffsetMap[chunkPos];
-    int chunkCount  = getStaticChunkColliderCount(chunkPos);
-
-    for (int i = 0; i < chunkCount; ++i) {
-        Collider c = level.statsColliders[chunkOffset + i];
+    for (int i = 0; i < level.statsColliderCount; ++i) {
+        Collider c = level.statsColliders[i];
 
         Matrix modMat = matrixScale(c.sx, c.sy, c.sz);
         mul = matrixTranslation(c.x, c.y, c.z);
@@ -625,6 +793,26 @@ void renderLevel(void)
         glDrawArraysInstanced(GL_POINTS, 0, 1, 8);
     }
 #endif
+}
+
+
+Matrix modelTransformToMatrix(ModelTransform transform)
+{
+    Matrix res = matrixScale(transform.scale, transform.scale, transform.scale);
+
+    Matrix mul = matrixRotationZ(transform.rz);
+    res = matrixMultiply(&mul, &res);
+
+    mul = matrixRotationY(transform.ry);
+    res = matrixMultiply(&mul, &res);
+
+    mul = matrixRotationX(transform.rx);
+    res = matrixMultiply(&mul, &res);
+
+    mul = matrixTranslation(transform.x, transform.y, transform.z);
+    res = matrixMultiply(&mul, &res);
+
+    return res;
 }
 
 
@@ -711,30 +899,6 @@ static void removeTiles(void)
 }
 
 
-static void removeStatic(int staticOff)
-{
-    /* O(P) pattern */
-    int nextID = 0;
-    while (level.statsTypeOffsets[nextID] <= staticOff)
-        ++nextID;
-    
-    --nextID;
-
-    while (++nextID <= MAX_STATIC_TYPE_COUNT) {
-        int off = --level.statsTypeOffsets[nextID];
-        if (off != staticOff) {
-            level.statsTransforms[staticOff] = level.statsTransforms[off];
-            staticOff = off;
-        }
-    }
-
-    --level.statsInstanceCount;
-
-    level.recalculateStats          = true;
-    level.recalculateStatsColliders = true;
-}
-
-
 void levelsProcessButton(bagE_MouseButton *mb)
 {
     switch (editorMode) {
@@ -797,6 +961,16 @@ void levelsProcessButton(bagE_MouseButton *mb)
                     removeStatic(index);
             }
             break;
+        case TestMorbing:
+            if (mb->button == bagE_ButtonLeft && selected) {
+                float x = selectedX * CHUNK_TILE_DIM;
+                float z = selectedZ * CHUNK_TILE_DIM;
+                addMob(MobWorm, (ModelTransform) { x, getHeight(x, z), z, 1.0f },
+                                (Animation)      { .start = level.mobArmatures[MobWorm].timeStamps[0],
+                                                   .end   = level.mobArmatures[MobWorm].timeStamps[2],
+                                                   .time  = 0.0f });
+            }
+            break;
     }
 }
 
@@ -810,12 +984,17 @@ void levelsProcessWheel(bagE_MouseWheel *mw)
             /* fallthrough */
         case TerrainHeightPaintingRel:
             brushWidth += mw->scrollUp;
-
             if (brushWidth < 0)
                 brushWidth = 0;
-
             if (brushWidth > 2)
                 brushWidth = 2;
+            break;
+        case StaticsPlacing:
+            selectedStaticID += mw->scrollUp;
+            if (selectedStaticID < 0)
+                selectedStaticID = 0;
+            if (selectedStaticID >= level.statsTypeCount)
+                selectedStaticID = level.statsTypeCount - 1;
             break;
     }
 }
@@ -829,6 +1008,7 @@ void levelsSaveCurrent(void)
     file_check(file, level.filePath);
 
     terrainSave(&level.terrain, file);
+    staticsSave(file);
 
     fclose(file);
 

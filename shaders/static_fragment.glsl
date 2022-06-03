@@ -18,7 +18,7 @@ layout(std140, binding = 1) uniform Env
 
 void main()
 {
-    vec3 objColor = texture(textureSampler, o_textures).rgb;
+    vec4 texColor = texture(textureSampler, o_textures);
 
     float brightness = max(dot(o_normals, env.toLight), 0.0) * 0.9;
     vec3 lightColor = env.sunColor * brightness;
@@ -31,6 +31,6 @@ void main()
     vec3 specular = shine * 0.5 * lightColor;
 
     o_color = vec4(ambientColor + lightColor + specular, 1.0)
-            * vec4(objColor, 1.0);
+            * texColor;
 }
 

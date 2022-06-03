@@ -2,9 +2,10 @@
 #define LEVELS_H
 
 #include "terrain.h"
-
 #include "bag_engine.h"
 #include "core.h"
+#include "state.h"
+#include "animation.h"
 
 #include <stdbool.h>
 
@@ -18,7 +19,7 @@ typedef enum
 
 
 #define MAX_STATIC_TYPE_COUNT 128
-/* NOTE: reflected in shader/static_vertex.glsl */
+/* NOTE: reflected in shaders/static_vertex.glsl */
 #define MAX_STATIC_INSTANCE_COUNT 1024
 
 
@@ -33,9 +34,18 @@ typedef struct
 
 typedef struct
 {
-    float x, y, z;
-    float sx, sy, sz;
-    float rx, ry, rz;
+    union {
+        struct { float x, y, z; };
+        float pos[3];
+    };
+    union {
+        struct { float sx, sy, sz; };
+        float size[3];
+    };
+    union {
+        struct { float rx, ry, rz; };
+        float rot[3];
+    };
 } Collider;
 
 
@@ -55,18 +65,51 @@ typedef struct
 
 typedef struct
 {
+    AnimatedObject animated;
+    unsigned texture;
+} MobObject;
+
+
+typedef struct
+{
     int offset;
     int count;
 } ChunkColliderID;
 
 
+typedef enum {
+    MobWorm,
+
+    MobCount
+} MobType;
+
+/* NOTE: reflected in shaders/animated_vertex.glsl */
+#define MOB_BONE_POOL_SIZE 2048
+#define MAX_BONES_PER_MOB  128
+#define MAX_MOBS_PER_TYPE  64
+
+typedef enum {
+    MobStateWalking,
+    MobStateIdle,
+
+    MobStateCount
+} MobState;
+
+
 typedef struct
 {
+    uint64_t vineThudLength;
+    int16_t *vineThud;
+
     unsigned terrainProgram;
     unsigned terrainAtlas;
     
+    ModelObject boxModel;
     unsigned skyboxProgram;
     unsigned skyboxCubemap;
+
+    ModelObject gatling;
+    unsigned metalProgram;
 
     const AtlasView *atlasViews;
 
@@ -90,6 +133,13 @@ typedef struct
     int  statsColliderCount;
     int      statsColliderOffsetMap[MAX_MAP_DIM * MAX_MAP_DIM + 1];
     Collider statsColliders        [MAX_STATIC_INSTANCE_COUNT];
+
+    int            mobTypeCounts[MobCount];
+    Armature       mobArmatures [MobCount];
+    MobObject      mobObjects   [MobCount];
+    Animation      mobAnimations[MobCount * MAX_MOBS_PER_TYPE];
+    ModelTransform mobTransforms[MobCount * MAX_MOBS_PER_TYPE];
+    MobState       mobStates    [MobCount * MAX_MOBS_PER_TYPE];
 } Level;
 
 extern Level level;
@@ -106,6 +156,8 @@ static inline int getStaticChunkColliderCount(int chunkPos)
     return level.statsColliderOffsetMap[chunkPos + 1] - level.statsColliderOffsetMap[chunkPos];
 }
 
+
+Matrix modelTransformToMatrix(ModelTransform transform);
 
 void initLevels(void);
 void exitLevels(void);
@@ -129,5 +181,7 @@ void levelsAddStatic(int statID, ModelTransform transform);
 
 void staticsLoad(FILE *file);
 void staticsSave(FILE *file);
+
+void addMob(MobType type, ModelTransform trans, Animation anim);
 
 #endif

@@ -11,7 +11,7 @@ layout(location = 1) out vec3 o_position;
 layout(location = 2) out vec2 o_texture;
 layout(location = 3) out vec3 o_cameraPos;
 
-layout(location = 3) uniform mat4 u_jointMatrices[64];
+layout(location = 0) uniform mat4 u_jointMatrices[64];
 
 layout(std140, binding = 0) uniform Cam
 {

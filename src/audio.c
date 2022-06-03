@@ -123,7 +123,7 @@ void exitAudio(void)
 }
 
 
-int16_t *loadWAV(const char *path, unsigned *length)
+int16_t *loadWAV(const char *path, uint64_t *length)
 {
     char buffer[4];
     uint16_t typeOfFormat, channelCount, frameSize, bitsPerSample;

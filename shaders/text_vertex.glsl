@@ -17,8 +17,9 @@ layout(location = 0) out vec2 o_coords;
 layout(location = 0) uniform ivec2 u_winRes;
 layout(location = 1) uniform ivec2 u_position;
 layout(location = 2) uniform ivec2 u_size;
+layout(location = 3) uniform ivec2 u_spaces;
 
-layout(location = 4) uniform uvec4 u_text[256];
+layout(location = 5) uniform uvec4 u_text[256];
 
 void main(void)
 {
@@ -28,7 +29,7 @@ void main(void)
     uint chr = ((ch << (24 - 8 * n)) >> 24) - 33;
 
     vec2 coords  = data[gl_VertexID];
-    ivec2 offset = u_size * ivec2(gl_InstanceID, 0);
+    ivec2 offset = (u_size + u_spaces) * ivec2(gl_InstanceID, 0);
     vec2 pos     = ((vec2(u_position) + coords * u_size + offset) / u_winRes) * 2.0 - 1;
     pos.y        = pos.y * -1.0;
 

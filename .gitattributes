@@ -1,2 +1,3 @@
 models/*.obj eol=lf
 models/*.mtl eol=lf
+models/*.dae eol=lf
