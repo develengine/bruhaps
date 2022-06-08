@@ -196,11 +196,11 @@ void renderSplashOverlay(void)
 {
     guiBeginRect();
 
-    Color rectColor = { 0.5f, 0.5f, 0.5f, 0.5f };
-    Color textColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+    Color rectColor = {{ 0.5f, 0.5f, 0.5f, 0.5f }};
+    Color textColor = {{ 1.0f, 1.0f, 1.0f, 1.0f }};
 
-    Color rectColor2 = { 1.0f, 1.0f, 1.0f, 1.0f };
-    Color textColor2 = { 0.0f, 0.0f, 0.0f, 1.0f };
+    Color rectColor2 = {{ 1.0f, 1.0f, 1.0f, 1.0f }};
+    Color textColor2 = {{ 0.0f, 0.0f, 0.0f, 1.0f }};
 
     int maxTextLen = (int)strlen(buttonNames[0]);
 

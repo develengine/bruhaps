@@ -359,7 +359,7 @@ static Vec2 clipMovement(float x, float z, float w, float vx, float vz)
         }
     }
 
-    return (Vec2) { vx, vz };
+    return (Vec2) {{ vx, vz }};
 }
 
 
@@ -766,17 +766,17 @@ void renderLevel(void)
     glUseProgram(pointProgram);
 
     Vector colors2[] = {
-        { 0.3f, 1.0f, 0.6f, 1.0f }, { 0.3f, 1.0f, 0.6f, 1.0f },
-        { 0.3f, 1.0f, 0.6f, 1.0f }, { 0.3f, 1.0f, 0.6f, 1.0f },
-        { 0.3f, 1.0f, 0.6f, 1.0f }, { 0.3f, 1.0f, 0.6f, 1.0f },
-        { 0.3f, 1.0f, 0.6f, 1.0f }, { 0.3f, 1.0f, 0.6f, 1.0f },
+        {{ 0.3f, 1.0f, 0.6f, 1.0f }}, {{ 0.3f, 1.0f, 0.6f, 1.0f }},
+        {{ 0.3f, 1.0f, 0.6f, 1.0f }}, {{ 0.3f, 1.0f, 0.6f, 1.0f }},
+        {{ 0.3f, 1.0f, 0.6f, 1.0f }}, {{ 0.3f, 1.0f, 0.6f, 1.0f }},
+        {{ 0.3f, 1.0f, 0.6f, 1.0f }}, {{ 0.3f, 1.0f, 0.6f, 1.0f }},
     };
 
     Vector points2[] = {
-        { -1.0f, -1.0f, -1.0f, 12.0f }, {  1.0f, -1.0f, -1.0f, 12.0f },
-        { -1.0f, -1.0f,  1.0f, 12.0f }, {  1.0f, -1.0f,  1.0f, 12.0f },
-        { -1.0f,  1.0f, -1.0f, 12.0f }, {  1.0f,  1.0f, -1.0f, 12.0f },
-        { -1.0f,  1.0f,  1.0f, 12.0f }, {  1.0f,  1.0f,  1.0f, 12.0f },
+        {{ -1.0f, -1.0f, -1.0f, 12.0f }}, {{  1.0f, -1.0f, -1.0f, 12.0f }},
+        {{ -1.0f, -1.0f,  1.0f, 12.0f }}, {{  1.0f, -1.0f,  1.0f, 12.0f }},
+        {{ -1.0f,  1.0f, -1.0f, 12.0f }}, {{  1.0f,  1.0f, -1.0f, 12.0f }},
+        {{ -1.0f,  1.0f,  1.0f, 12.0f }}, {{  1.0f,  1.0f,  1.0f, 12.0f }},
     };
 
     glProgramUniform4fv(pointProgram, 1,  8, colors2->data);
@@ -966,9 +966,9 @@ void levelsProcessButton(bagE_MouseButton *mb)
                 float x = selectedX * CHUNK_TILE_DIM;
                 float z = selectedZ * CHUNK_TILE_DIM;
                 addMob(MobWorm, (ModelTransform) { x, getHeight(x, z), z, 1.0f },
-                                (Animation)      { .start = level.mobArmatures[MobWorm].timeStamps[0],
-                                                   .end   = level.mobArmatures[MobWorm].timeStamps[2],
-                                                   .time  = 0.0f });
+                                (Animation) { .start = level.mobArmatures[MobWorm].timeStamps[0],
+                                              .end   = level.mobArmatures[MobWorm].timeStamps[2],
+                                              .time  = 0.0f });
             }
             break;
     }

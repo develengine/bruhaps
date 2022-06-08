@@ -18,10 +18,6 @@
 #include <stdbool.h>
 
 
-// static unsigned soundLength;
-// static int16_t *soundBuffer;
-
-
 int bagE_main(int argc, char *argv[])
 {
     (void)argc; (void)argv;
