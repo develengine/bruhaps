@@ -15,8 +15,9 @@ typedef struct
 typedef struct
 {
     unsigned rectProgram;
-    
     unsigned textProgram;
+    unsigned imageProgram;
+
     unsigned textFont;
 
     unsigned dummyVao;
@@ -31,11 +32,18 @@ typedef void (*GUIButtonCallback)(void);
 void initGUI(void);
 void exitGUI(void);
 
+void guiUpdateResolution(int windowWidth, int windowHeight);
+
 void guiBeginRect(void);
 void guiBeginText(void);
+void guiBeginImage(void);
+
+void guiUseImage(unsigned texture);
 
 void guiDrawRect(int x, int y, int w, int h, Vector color);
 void guiDrawText(const char *text, int x, int y, int w, int h, int s, Vector color);
+void guiDrawImage(int x, int y, int w, int h,
+                  float tx, float ty, float tw, float th);
 
 
 #endif

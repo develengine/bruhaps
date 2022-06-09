@@ -21,7 +21,8 @@ void initState(void)
     };
 
     gameState = (GameState) {
-        .inSplash = true
+        .inSplash = true,
+        .isEditor = false
     };
 
     camState = (CamState) {

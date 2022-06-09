@@ -18,15 +18,17 @@ layout(std140, binding = 1) uniform Env
 
 void main()
 {
+    vec3 normal = normalize(o_normals);
+
     vec3 objColor = texture(textureSampler, o_textures).rgb;
 
-    float brightness = max(dot(o_normals, env.toLight), 0.0) * 0.9;
+    float brightness = max(dot(normal, env.toLight), 0.0) * 0.9;
     vec3 lightColor = env.sunColor * brightness;
 
     vec3 ambientColor = env.ambient.xyz * env.ambient.w;
 
     vec3 toCamera = normalize(o_cameraPos - o_position);
-    vec3 reflection = normalize(reflect(-env.toLight, o_normals));
+    vec3 reflection = normalize(reflect(-env.toLight, normal));
     float shine = pow(max(dot(toCamera, reflection), 0.0), 32);
     vec3 specular = shine * 0.5 * lightColor;
 

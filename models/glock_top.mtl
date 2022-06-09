@@ -1,0 +1,12 @@
+# Blender MTL File: 'glock.blend'
+# Material Count: 1
+
+newmtl Material
+Ns 752.705762
+Ka 0.741935 0.741935 0.741935
+Kd 0.673847 0.673847 0.673847
+Ks 0.846774 0.846774 0.846774
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3

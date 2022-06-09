@@ -5,6 +5,7 @@
 #include "utils.h"
 #include "state.h"
 #include "audio.h"
+#include "gui.h"
 
 
 Level level;
@@ -40,7 +41,6 @@ static int selectedStaticID = 0;
 
 
 // TODO: remove me
-static Model gatlingModel;
 static float timePassed = 0.0f;
 
 static unsigned staticProgram;
@@ -121,14 +121,23 @@ void initLevels(void)
     levelInits();
 
 
-    // FIXME: at least free me
-    gatlingModel  = modelLoad("res/gatling_barrel.model");
-    level.gatling = createModelObject(gatlingModel);
+    level.textureProgram = createProgram(
+            "shaders/texture_vertex.glsl",
+            "shaders/texture_fragment.glsl"
+    );
 
     level.metalProgram = createProgram(
             "shaders/metal_vertex.glsl",
             "shaders/metal_fragment.glsl"
     );
+
+    // FIXME: at least free me
+    level.gatling     = loadModelObject("res/gatling_barrel.model");
+    level.gatlingBase = loadModelObject("res/gatling_base.model");
+    level.glock       = loadModelObject("res/glock_top.model");
+    level.glockBase   = loadModelObject("res/glock_base.model");
+
+    level.gunTexture = createTexture("res/glock.png");
 
 
     // FIXME: at least free me
@@ -174,6 +183,9 @@ void initLevels(void)
 
 
     level.vineThud = loadWAV("res/vine_thud.wav", &level.vineThudLength);
+
+
+    playerState.hp = PLAYER_HP_FULL;
 
 
     // FIXME:
@@ -320,6 +332,7 @@ void addMob(MobType type, ModelTransform trans, Animation anim)
     level.mobAnimations[count] = anim;
     level.mobTransforms[count] = trans;
     level.mobStates    [count] = MobStateWalking;
+    level.mobAttackTOs [count] = 0.0f;
 
     ++level.mobTypeCounts[type];
 }
@@ -623,6 +636,43 @@ void updateLevel(float dt)
     }
 
     /* update mobs */
+    for (MobType type = 0; type < MobCount; ++type) {
+        int count = level.mobTypeCounts[type];
+
+        for (int i = 0; i < count; ++i) {
+            int mobID = type * MAX_MOBS_PER_TYPE + i;
+            ModelTransform transform = level.mobTransforms[mobID];
+
+            float toPlayerX = playerState.x - transform.x;
+            float toPlayerZ = playerState.z - transform.z;
+            float toPlayerDistance = sqrtf(toPlayerX * toPlayerX + toPlayerZ * toPlayerZ);
+
+            level.mobAttackTOs[mobID] -= dt;
+            if (level.mobAttackTOs[mobID] < 0.0f)
+                level.mobAttackTOs[mobID] = 0.0f;
+
+            if (toPlayerDistance < MOB_BITE_RANGE) {
+                if (level.mobAttackTOs[mobID] == 0.0f) {
+                    level.mobAttackTOs[mobID] = MOB_ATTACK_TO;
+                    playerState.hp -= PLAYER_HP_FULL / 5;
+                    if (playerState.hp < 0)
+                        playerState.hp = 0;
+                }
+            } else if (toPlayerDistance < MOB_CHASE_RADIUS) {
+                toPlayerX /= toPlayerDistance;
+                toPlayerZ /= toPlayerDistance;
+
+                level.mobTransforms[mobID].x += toPlayerX * MOB_SPEED * dt;
+                level.mobTransforms[mobID].z += toPlayerZ * MOB_SPEED * dt;
+                level.mobTransforms[mobID].y = getHeight(level.mobTransforms[mobID].x,
+                                                         level.mobTransforms[mobID].z);
+
+                level.mobTransforms[mobID].ry = atanf(toPlayerX / toPlayerZ)
+                                              + (toPlayerZ > 0.0f ? M_PI : 0.0f);
+            }
+        }
+    }
+
     mobBonePoolTaken = 0;
 
     for (MobType type = 0; type < MobCount; ++type) {
@@ -710,7 +760,7 @@ void renderLevel(void)
 
     glProgramUniformMatrix4fv(level.metalProgram, 0, 1, GL_FALSE, modelGatling.data);
 
-    glDrawElements(GL_TRIANGLES, gatlingModel.indexCount, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, level.gatling.indexCount, GL_UNSIGNED_INT, 0);
 
     /* render statics */
     glUseProgram(staticProgram);
@@ -965,7 +1015,7 @@ void levelsProcessButton(bagE_MouseButton *mb)
             if (mb->button == bagE_ButtonLeft && selected) {
                 float x = selectedX * CHUNK_TILE_DIM;
                 float z = selectedZ * CHUNK_TILE_DIM;
-                addMob(MobWorm, (ModelTransform) { x, getHeight(x, z), z, 1.0f },
+                addMob(MobWorm, (ModelTransform) { x, getHeight(x, z), z, 2.0f },
                                 (Animation) { .start = level.mobArmatures[MobWorm].timeStamps[0],
                                               .end   = level.mobArmatures[MobWorm].timeStamps[2],
                                               .time  = 0.0f });
@@ -1018,71 +1068,91 @@ void levelsSaveCurrent(void)
 
 void renderLevelOverlay(void)
 {
-    /* point */
-    if (selected) {
-        glUseProgram(pointProgram);
+    if (playerState.gaming) {
+        Vector healthColor = {{ 1.0f, 0.0f, 0.0f, 1.0f }};
+        Vector backColor   = {{ 0.2f, 0.0f, 0.0f, 1.0f }};
 
-        int pointCount = 0;
+        int barWidth  = appState.windowWidth / 5;
+        int barHeight = barWidth / 10;
+        int margin    = barHeight * 2;
+        int padding   = 3;
 
-        Vector colors[32];
-        Vector points[32];
+        guiBeginRect();
+        guiDrawRect(margin, appState.windowHeight - margin - barHeight,
+                    barWidth, barHeight,
+                    backColor);
+        guiDrawRect(margin + padding,
+                    appState.windowHeight - margin - barHeight + padding,
+                    (int)(((float)barWidth / PLAYER_HP_FULL) * playerState.hp) - 2 * padding,
+                    barHeight - 2 * padding,
+                    healthColor);
+    } else {
+        /* point */
+        if (selected) {
+            glUseProgram(pointProgram);
 
-        float midHeight = atTerrainHeight(&level.terrain, selectedX, selectedZ);
+            int pointCount = 0;
 
-        int fromZ, toZ, fromX, toX;
+            Vector colors[32];
+            Vector points[32];
 
-        if (editorMode == TerrainTexturing) {
-            AtlasView view = level.atlasViews[selectedViewID];
-            int width  = view.wn;
-            int height = view.hn;
+            float midHeight = atTerrainHeight(&level.terrain, selectedX, selectedZ);
 
-            fromX = -(width  / 2);
-            toX   =   width  / 2 + width  % 2;
-            fromZ = -(height / 2);
-            toZ   =   height / 2 + height % 2;
-        } else if (editorMode == TerrainPlacing
-                || editorMode == TerrainHeightPaintingRel
-                || editorMode == TerrainHeightPaintingAbs) {
-            fromZ = -brushWidth;
-            toZ   =  brushWidth;
-            fromX = -brushWidth;
-            toX   =  brushWidth;
-        } else {
-            fromZ = 0;
-            toZ   = 0;
-            fromX = 0;
-            toX   = 0;
-        }
+            int fromZ, toZ, fromX, toX;
 
-        for (int z = fromZ; z <= toZ; ++z) {
-            for (int x = fromX; x <= toX; ++x) {
-                float height = atTerrainHeight(&level.terrain, selectedX + x, selectedZ + z);
+            if (editorMode == TerrainTexturing) {
+                AtlasView view = level.atlasViews[selectedViewID];
+                int width  = view.wn;
+                int height = view.hn;
 
-                if (height == NO_TILE) {
-                    height = midHeight;
-                    colors[pointCount] = (Vector) { { 0.5f, 1.0f,  0.75f, 1.0f } };
-                } else if (x == 0 && z == 0) {
-                    colors[pointCount] = (Vector) { { 1.0f, 0.5f,  0.75f, 1.0f } };
-                } else {
-                    colors[pointCount] = (Vector) { { 1.0f, 0.75f, 0.75f, 1.0f } };
-                }
-
-                points[pointCount] = (Vector) { {
-                    (selectedX + x) * CHUNK_TILE_DIM,
-                    height,
-                    (selectedZ + z) * CHUNK_TILE_DIM,
-                    (x == 0 && z == 0 ? 18.0f : 12.0f)
-                } };
-
-                ++pointCount;
+                fromX = -(width  / 2);
+                toX   =   width  / 2 + width  % 2;
+                fromZ = -(height / 2);
+                toZ   =   height / 2 + height % 2;
+            } else if (editorMode == TerrainPlacing
+                    || editorMode == TerrainHeightPaintingRel
+                    || editorMode == TerrainHeightPaintingAbs) {
+                fromZ = -brushWidth;
+                toZ   =  brushWidth;
+                fromX = -brushWidth;
+                toX   =  brushWidth;
+            } else {
+                fromZ = 0;
+                toZ   = 0;
+                fromX = 0;
+                toX   = 0;
             }
+
+            for (int z = fromZ; z <= toZ; ++z) {
+                for (int x = fromX; x <= toX; ++x) {
+                    float height = atTerrainHeight(&level.terrain, selectedX + x, selectedZ + z);
+
+                    if (height == NO_TILE) {
+                        height = midHeight;
+                        colors[pointCount] = (Vector) { { 0.5f, 1.0f,  0.75f, 1.0f } };
+                    } else if (x == 0 && z == 0) {
+                        colors[pointCount] = (Vector) { { 1.0f, 0.5f,  0.75f, 1.0f } };
+                    } else {
+                        colors[pointCount] = (Vector) { { 1.0f, 0.75f, 0.75f, 1.0f } };
+                    }
+
+                    points[pointCount] = (Vector) { {
+                        (selectedX + x) * CHUNK_TILE_DIM,
+                        height,
+                        (selectedZ + z) * CHUNK_TILE_DIM,
+                        (x == 0 && z == 0 ? 18.0f : 12.0f)
+                    } };
+
+                    ++pointCount;
+                }
+            }
+
+            Matrix identity = matrixIdentity();
+            glProgramUniformMatrix4fv(pointProgram, 0, 1, false, identity.data);
+            glProgramUniform4fv(pointProgram, 1,  pointCount, colors->data);
+            glProgramUniform4fv(pointProgram, 33, pointCount, points->data);
+
+            glDrawArraysInstanced(GL_POINTS, 0, 1, pointCount);
         }
-
-        Matrix identity = matrixIdentity();
-        glProgramUniformMatrix4fv(pointProgram, 0, 1, false, identity.data);
-        glProgramUniform4fv(pointProgram, 1,  pointCount, colors->data);
-        glProgramUniform4fv(pointProgram, 33, pointCount, points->data);
-
-        glDrawArraysInstanced(GL_POINTS, 0, 1, pointCount);
     }
 }

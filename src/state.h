@@ -39,6 +39,7 @@ extern AppState appState;
 typedef struct
 {
     bool inSplash;
+    bool isEditor;
 } GameState;
 
 extern GameState gameState;
@@ -61,6 +62,7 @@ typedef struct
     float x, y, z;
     float vy;
     bool tryJump;
+    int hp;
 } PlayerState;
 
 extern PlayerState playerState;

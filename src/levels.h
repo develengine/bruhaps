@@ -96,6 +96,12 @@ typedef enum {
 } MobState;
 
 
+#define MOB_SPEED 3.0f
+#define MOB_CHASE_RADIUS 48.0f
+#define MOB_BITE_RANGE 1.0f
+#define MOB_ATTACK_TO 1.0f
+
+
 typedef struct
 {
     uint64_t vineThudLength;
@@ -108,8 +114,14 @@ typedef struct
     unsigned skyboxProgram;
     unsigned skyboxCubemap;
 
-    ModelObject gatling;
+    unsigned textureProgram;
     unsigned metalProgram;
+
+    ModelObject gatling;
+    ModelObject gatlingBase;
+    ModelObject glock;
+    ModelObject glockBase;
+    unsigned gunTexture;
 
     const AtlasView *atlasViews;
 
@@ -140,9 +152,13 @@ typedef struct
     Animation      mobAnimations[MobCount * MAX_MOBS_PER_TYPE];
     ModelTransform mobTransforms[MobCount * MAX_MOBS_PER_TYPE];
     MobState       mobStates    [MobCount * MAX_MOBS_PER_TYPE];
+    float          mobAttackTOs [MobCount * MAX_MOBS_PER_TYPE];
 } Level;
 
 extern Level level;
+
+
+#define PLAYER_HP_FULL 100
 
 
 static inline int getStaticCount(int staticID)

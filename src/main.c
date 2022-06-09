@@ -20,8 +20,6 @@
 
 int bagE_main(int argc, char *argv[])
 {
-    (void)argc; (void)argv;
-
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(openglCallback, 0);
 
@@ -48,6 +46,10 @@ int bagE_main(int argc, char *argv[])
 
     initAudio();
     initState();
+
+    if (argc > 1)
+        gameState.isEditor = strcmp(argv[1], "--editor") == 0;
+
     initGUI();
     initLevels();
     initSplash();
@@ -235,8 +237,7 @@ int bagE_main(int argc, char *argv[])
         glDisable(GL_DEPTH_TEST);
         glBindVertexArray(gui.dummyVao);
 
-        glProgramUniform2i(gui.rectProgram, 0, appState.windowWidth, appState.windowHeight);
-        glProgramUniform2i(gui.textProgram, 0, appState.windowWidth, appState.windowHeight);
+        guiUpdateResolution(appState.windowWidth, appState.windowHeight);
 
         if (gameState.inSplash) {
             renderSplashOverlay();

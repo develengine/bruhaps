@@ -23,10 +23,10 @@ typedef enum
 
 
 static const char *buttonNames[] = {
-    [SplashNewGame]  = "New Game",
-    [SplashContinue] = "Continue",
-    [SplashSettings] = "Settings",
-    [SplashQuit]     = "  Quit  ",
+    [SplashNewGame]  = " NEW GAME ",
+    [SplashContinue] = " CONTINUE ",
+    [SplashSettings] = " SETTINGS ",
+    [SplashQuit]     = "   QUIT   ",
 };
 
 static_assert(length(buttonNames) == SplashButtonCount,
@@ -37,7 +37,7 @@ static void onNewGame(void)
 {
     printf("New Game\n");
     gameState.inSplash = false;
-    playerState.gaming = true;
+    playerState.gaming = !gameState.isEditor;
     inputState.playerInput = true;
     bagE_setHiddenCursor(true);
 }
@@ -70,8 +70,6 @@ static_assert(length(buttonCallbacks) == SplashButtonCount,
 
 static Rect buttonRects[SplashButtonCount];
 
-static unsigned textureProgram;
-
 static ModelObject    brugModel;
 static unsigned       brugTexture;
 static ModelTransform brugTransform;
@@ -90,11 +88,6 @@ void initSplash(void)
         .scale = 1.0f,
         .rx = 0.0f, .ry = (float)(-M_PI / 2.0 + 0.5), .rz = 0.0f
     };
-
-    textureProgram = createProgram(
-        "shaders/texture_vertex.glsl",
-        "shaders/texture_fragment.glsl"
-    );
 
     brugTexture = createTexture("res/brug.png");
     brugModel   = loadModelObject("res/brug_pose.model");
@@ -149,7 +142,7 @@ void renderSplash(void)
 
 
     /* brug */
-    glUseProgram(textureProgram);
+    glUseProgram(level.textureProgram);
 
     glBindVertexArray(brugModel.vao);
     glBindTextureUnit(0, brugTexture);
@@ -157,7 +150,7 @@ void renderSplash(void)
     Matrix modelMat = modelTransformToMatrix(brugTransform);
 
     glProgramUniformMatrix4fv(
-            textureProgram,
+            level.textureProgram,
             0,
             1,
             GL_FALSE,
@@ -166,11 +159,58 @@ void renderSplash(void)
 
     glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
 
+    /* glock base */
+    Matrix modelGlock = matrixScale(0.1f, 0.1f, 0.1f);
+
+    Matrix mul = matrixRotationY((float)-(M_PI / 2));
+    modelGlock = matrixMultiply(&mul, &modelGlock);
+
+    mul = matrixTranslation(0.0f, 0.0f, -1.0f);
+    modelGlock = matrixMultiply(&mul, &modelGlock);
+
+    glBindVertexArray(level.glockBase.vao);
+    glBindTextureUnit(0, level.gunTexture);
+
+    glProgramUniformMatrix4fv(
+            level.textureProgram,
+            0,
+            1,
+            GL_FALSE,
+            modelGlock.data
+    );
+
+    glDrawElements(GL_TRIANGLES, level.glockBase.indexCount, GL_UNSIGNED_INT, 0);
+
+    {
+        /* gatling base */
+        Matrix modelGatling = matrixScale(0.5f, 0.5f, 0.5f);
+
+        Matrix mul = matrixRotationX((float)(M_PI / 16));
+        modelGatling = matrixMultiply(&mul, &modelGatling);
+
+        mul = matrixRotationY((float)(M_PI / 3.5));
+        modelGatling = matrixMultiply(&mul, &modelGatling);
+
+        mul = matrixTranslation(-0.9f, 0.0f, -1.0f);
+        modelGatling = matrixMultiply(&mul, &modelGatling);
+
+        glBindVertexArray(level.gatlingBase.vao);
+
+        glProgramUniformMatrix4fv(
+                level.textureProgram,
+                0,
+                1,
+                GL_FALSE,
+                modelGatling.data
+        );
+
+        glDrawElements(GL_TRIANGLES, level.gatlingBase.indexCount, GL_UNSIGNED_INT, 0);
+    }
 
     /* gatling */
     Matrix modelGatling = matrixScale(0.5f, 0.5f, 0.5f);
 
-    Matrix mul = matrixRotationZ(timePassed * 2.0f);
+    mul = matrixRotationZ(timePassed * 2.0f);
     modelGatling = matrixMultiply(&mul, &modelGatling);
 
     mul = matrixRotationX((float)(M_PI / 16));
@@ -189,14 +229,19 @@ void renderSplash(void)
     glProgramUniformMatrix4fv(level.metalProgram, 0, 1, GL_FALSE, modelGatling.data);
 
     glDrawElements(GL_TRIANGLES, level.gatling.indexCount, GL_UNSIGNED_INT, 0);
+
+
+    glBindVertexArray(level.glock.vao);
+
+    glProgramUniformMatrix4fv(level.metalProgram, 0, 1, GL_FALSE, modelGlock.data);
+
+    glDrawElements(GL_TRIANGLES, level.glock.indexCount, GL_UNSIGNED_INT, 0);
 }
 
 
 void renderSplashOverlay(void)
 {
-    guiBeginRect();
-
-    Color rectColor = {{ 0.5f, 0.5f, 0.5f, 0.5f }};
+    Color rectColor = {{ 0.2f, 0.3f, 0.4f, 0.75f }};
     Color textColor = {{ 1.0f, 1.0f, 1.0f, 1.0f }};
 
     Color rectColor2 = {{ 1.0f, 1.0f, 1.0f, 1.0f }};
@@ -212,12 +257,18 @@ void renderSplashOverlay(void)
 
     int margin = TEXT_MUL * 2;
 
+    guiBeginRect();
+
     for (int i = 0; i < SplashButtonCount; ++i) {
         Rect rect = buttonRects[i];
         if (i == selectedButton) {
-            guiDrawRect(rect.x - margin, rect.y, rect.w * maxTextLen + margin * 2, rect.h, rectColor2);
+            guiDrawRect(rect.x - margin, rect.y,
+                        rect.w * maxTextLen + margin * 2, rect.h,
+                        rectColor2);
         } else {
-            guiDrawRect(rect.x - margin, rect.y, rect.w * maxTextLen + margin * 2, rect.h, rectColor);
+            guiDrawRect(rect.x - margin, rect.y,
+                        rect.w * maxTextLen + margin * 2, rect.h,
+                        rectColor);
         }
     }
 
