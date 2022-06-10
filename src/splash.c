@@ -160,12 +160,15 @@ void renderSplash(void)
     glDrawElements(GL_TRIANGLES, brugModel.indexCount, GL_UNSIGNED_INT, 0);
 
     /* glock base */
-    Matrix modelGlock = matrixScale(0.1f, 0.1f, 0.1f);
+    Matrix modelGlock = matrixScale(0.15f, 0.15f, 0.15f);
 
-    Matrix mul = matrixRotationY((float)-(M_PI / 2));
+    Matrix mul = matrixRotationX((float)(M_PI / 16));
     modelGlock = matrixMultiply(&mul, &modelGlock);
 
-    mul = matrixTranslation(0.0f, 0.0f, -1.0f);
+    mul = matrixRotationY((float)-(M_PI / 2));
+    modelGlock = matrixMultiply(&mul, &modelGlock);
+
+    mul = matrixTranslation(-1.1f, 0.85f, -2.6f);
     modelGlock = matrixMultiply(&mul, &modelGlock);
 
     glBindVertexArray(level.glockBase.vao);

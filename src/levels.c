@@ -11,6 +11,14 @@
 Level level;
 
 
+const char *spawnerGroupNames[] = {
+    [SpawnerInit] = "On init"
+};
+
+static_assert(length(spawnerGroupNames) == SpawnerGroupCount,
+              "unfilled spawner group name");
+
+
 static unsigned pointProgram;
 
 
@@ -21,10 +29,10 @@ typedef enum
     TerrainHeightPaintingAbs,
     TerrainHeightPaintingRel,
     StaticsPlacing,
-    TestMorbing,
+    SpawnerPlacing,
 } EditorMode;
 
-static EditorMode editorMode = TestMorbing;
+static EditorMode editorMode = SpawnerPlacing;
 
 
 static bool selected = false;
@@ -38,6 +46,8 @@ static float selectedRelHeight = 0.1f;
 static float selectedAbsHeight = 3.0f;
 
 static int selectedStaticID = 0;
+
+static MobType selectedSpawnerType = MobWorm;
 
 
 // TODO: remove me
@@ -186,6 +196,9 @@ void initLevels(void)
 
 
     playerState.hp = PLAYER_HP_FULL;
+
+    // FIXME:
+    level.selectedGun = Glock;
 
 
     // FIXME:
@@ -742,25 +755,53 @@ void renderLevel(void)
         }
     }
 
-    /* model gatling */
-    Matrix modelGatling = matrixScale(1.0f, 1.0f, 1.0f);
+    Matrix mul;
 
-    Matrix mul = matrixRotationZ(timePassed * 2.0f);
-    modelGatling = matrixMultiply(&mul, &modelGatling);
+    /* render gun */
+    if (playerState.gaming && level.selectedGun != NoGun) {
+        float scale = level.selectedGun == Gatling ? 0.5f : 0.2f;
+        Matrix modelGun = matrixScale(scale, scale, scale);
 
-    mul = matrixRotationY(0.0f);
-    modelGatling = matrixMultiply(&mul, &modelGatling);
+        if (level.selectedGun == Gatling) {
+            mul = matrixRotationZ(timePassed * 2.0f);
+            modelGun = matrixMultiply(&mul, &modelGun);
+        } else {
+            mul = matrixRotationY(M_PI);
+            modelGun = matrixMultiply(&mul, &modelGun);
+        }
 
-    mul = matrixTranslation(-10.0f, 0.0f, 0.0f);
-    modelGatling = matrixMultiply(&mul, &modelGatling);
+        float offset = level.selectedGun == Gatling ? 0.5f : 0.75f;
 
+        mul = matrixTranslation(-0.5f, -0.5f, offset);
+        modelGun = matrixMultiply(&mul, &modelGun);
 
-    glUseProgram(level.metalProgram);
-    glBindVertexArray(level.gatling.vao);
+        mul = matrixRotationX(camState.pitch);
+        modelGun = matrixMultiply(&mul, &modelGun);
 
-    glProgramUniformMatrix4fv(level.metalProgram, 0, 1, GL_FALSE, modelGatling.data);
+        mul = matrixRotationY(-camState.yaw + M_PI);
+        modelGun = matrixMultiply(&mul, &modelGun);
 
-    glDrawElements(GL_TRIANGLES, level.gatling.indexCount, GL_UNSIGNED_INT, 0);
+        mul = matrixTranslation(camState.x, camState.y, camState.z);
+        modelGun = matrixMultiply(&mul, &modelGun);
+
+        glUseProgram(level.metalProgram);
+        glProgramUniformMatrix4fv(level.metalProgram, 0, 1, GL_FALSE, modelGun.data);
+
+        if (level.selectedGun == Gatling) {
+            glBindVertexArray(level.gatling.vao);
+            glDrawElements(GL_TRIANGLES, level.gatling.indexCount, GL_UNSIGNED_INT, 0);
+        } else {
+            glBindVertexArray(level.glock.vao);
+            glDrawElements(GL_TRIANGLES, level.glock.indexCount, GL_UNSIGNED_INT, 0);
+
+            glUseProgram(level.textureProgram);
+            glProgramUniformMatrix4fv(level.textureProgram, 0, 1, GL_FALSE, modelGun.data);
+
+            glBindVertexArray(level.glockBase.vao);
+            glBindTextureUnit(0, level.gunTexture);
+            glDrawElements(GL_TRIANGLES, level.glockBase.indexCount, GL_UNSIGNED_INT, 0);
+        }
+    }
 
     /* render statics */
     glUseProgram(staticProgram);
@@ -811,38 +852,44 @@ void renderLevel(void)
         mobOffset += level.mobTypeCounts[type] * level.mobArmatures[type].boneCount;
     }
 
-#if 1
-    /* debug render static colliders */
-    glUseProgram(pointProgram);
 
-    Vector colors2[] = {
-        {{ 0.3f, 1.0f, 0.6f, 1.0f }}, {{ 0.3f, 1.0f, 0.6f, 1.0f }},
-        {{ 0.3f, 1.0f, 0.6f, 1.0f }}, {{ 0.3f, 1.0f, 0.6f, 1.0f }},
-        {{ 0.3f, 1.0f, 0.6f, 1.0f }}, {{ 0.3f, 1.0f, 0.6f, 1.0f }},
-        {{ 0.3f, 1.0f, 0.6f, 1.0f }}, {{ 0.3f, 1.0f, 0.6f, 1.0f }},
-    };
-
-    Vector points2[] = {
-        {{ -1.0f, -1.0f, -1.0f, 12.0f }}, {{  1.0f, -1.0f, -1.0f, 12.0f }},
-        {{ -1.0f, -1.0f,  1.0f, 12.0f }}, {{  1.0f, -1.0f,  1.0f, 12.0f }},
-        {{ -1.0f,  1.0f, -1.0f, 12.0f }}, {{  1.0f,  1.0f, -1.0f, 12.0f }},
-        {{ -1.0f,  1.0f,  1.0f, 12.0f }}, {{  1.0f,  1.0f,  1.0f, 12.0f }},
-    };
-
-    glProgramUniform4fv(pointProgram, 1,  8, colors2->data);
-    glProgramUniform4fv(pointProgram, 33, 8, points2->data);
-
-    for (int i = 0; i < level.statsColliderCount; ++i) {
-        Collider c = level.statsColliders[i];
-
-        Matrix modMat = matrixScale(c.sx, c.sy, c.sz);
-        mul = matrixTranslation(c.x, c.y, c.z);
-        modMat = matrixMultiply(&mul, &modMat);
-
-        glProgramUniformMatrix4fv(pointProgram, 0, 1, false, modMat.data);
-        glDrawArraysInstanced(GL_POINTS, 0, 1, 8);
+    /* editor render mob spawners */
+    if (!playerState.gaming) {
+        
     }
-#endif
+
+    /* editor render static colliders */
+    if (!playerState.gaming && editorMode == StaticsPlacing) {
+        glUseProgram(pointProgram);
+
+        Vector colors2[] = {
+            {{ 0.3f, 1.0f, 0.6f, 1.0f }}, {{ 0.3f, 1.0f, 0.6f, 1.0f }},
+            {{ 0.3f, 1.0f, 0.6f, 1.0f }}, {{ 0.3f, 1.0f, 0.6f, 1.0f }},
+            {{ 0.3f, 1.0f, 0.6f, 1.0f }}, {{ 0.3f, 1.0f, 0.6f, 1.0f }},
+            {{ 0.3f, 1.0f, 0.6f, 1.0f }}, {{ 0.3f, 1.0f, 0.6f, 1.0f }},
+        };
+
+        Vector points2[] = {
+            {{ -1.0f, -1.0f, -1.0f, 12.0f }}, {{  1.0f, -1.0f, -1.0f, 12.0f }},
+            {{ -1.0f, -1.0f,  1.0f, 12.0f }}, {{  1.0f, -1.0f,  1.0f, 12.0f }},
+            {{ -1.0f,  1.0f, -1.0f, 12.0f }}, {{  1.0f,  1.0f, -1.0f, 12.0f }},
+            {{ -1.0f,  1.0f,  1.0f, 12.0f }}, {{  1.0f,  1.0f,  1.0f, 12.0f }},
+        };
+
+        glProgramUniform4fv(pointProgram, 1,  8, colors2->data);
+        glProgramUniform4fv(pointProgram, 33, 8, points2->data);
+
+        for (int i = 0; i < level.statsColliderCount; ++i) {
+            Collider c = level.statsColliders[i];
+
+            Matrix modMat = matrixScale(c.sx, c.sy, c.sz);
+            mul = matrixTranslation(c.x, c.y, c.z);
+            modMat = matrixMultiply(&mul, &modMat);
+
+            glProgramUniformMatrix4fv(pointProgram, 0, 1, false, modMat.data);
+            glDrawArraysInstanced(GL_POINTS, 0, 1, 8);
+        }
+    }
 }
 
 
@@ -951,101 +998,106 @@ static void removeTiles(void)
 
 void levelsProcessButton(bagE_MouseButton *mb)
 {
-    switch (editorMode) {
-        case TerrainPlacing:
-            if (mb->button == bagE_ButtonLeft) {
-                extendHeights();
-            } else if (mb->button == bagE_ButtonRight) {
-                removeTiles();
-            }
-            break;
-        case TerrainHeightPaintingAbs:
-            /* fallthrough */
-        case TerrainHeightPaintingRel:
-            if (mb->button == bagE_ButtonLeft) {
-                scaleHeights(1.0f);
-            } else if (mb->button == bagE_ButtonRight) {
-                scaleHeights(-1.0f);
-            }
-            break;
-        case TerrainTexturing:
-            if (mb->button == bagE_ButtonLeft && selected) {
-                TileTexture tileTex = {
-                    .viewID = selectedViewID,
-                };
-                setTerrainTexture(&level.terrain, selectedX, selectedZ, tileTex);
-                updateNearbyChunks(selectedX, selectedZ);
-            }
-            break;
-        case StaticsPlacing:
-            if (mb->button == bagE_ButtonLeft && selected) {
-                levelsAddStatic(selectedStaticID, (ModelTransform) {
-                    .x = selectedX * CHUNK_TILE_DIM,
-                    .y = atTerrainHeight(&level.terrain, selectedX, selectedZ),
-                    .z = selectedZ * CHUNK_TILE_DIM,
-                    .scale = 1.0f,
-                });
-            } else if (mb->button == bagE_ButtonRight) {
-                float x = selectedX * CHUNK_TILE_DIM;
-                float y = atTerrainHeight(&level.terrain, selectedX, selectedZ);
-                float z = selectedZ * CHUNK_TILE_DIM;
-
-                // TODO: could be done in one pass
-                int index = -1;
-                float distS = INFINITY;
-
-                for (int i = 0; i < level.statsInstanceCount; ++i) {
-                    ModelTransform transform = level.statsTransforms[i];
-                    float xd  = x - transform.x;
-                    float yd  = y - transform.y;
-                    float zd  = z - transform.z;
-                    float newDistS = xd * xd + yd * yd + zd * zd;
-
-                    if (newDistS < distS) {
-                        distS = newDistS;
-                        index = i;
-                    }
+    if (!playerState.gaming) {
+        switch (editorMode) {
+            case TerrainPlacing:
+                if (mb->button == bagE_ButtonLeft) {
+                    extendHeights();
+                } else if (mb->button == bagE_ButtonRight) {
+                    removeTiles();
                 }
+                break;
+            case TerrainHeightPaintingAbs:
+                /* fallthrough */
+            case TerrainHeightPaintingRel:
+                if (mb->button == bagE_ButtonLeft) {
+                    scaleHeights(1.0f);
+                } else if (mb->button == bagE_ButtonRight) {
+                    scaleHeights(-1.0f);
+                }
+                break;
+            case TerrainTexturing:
+                if (mb->button == bagE_ButtonLeft && selected) {
+                    TileTexture tileTex = {
+                        .viewID = selectedViewID,
+                    };
+                    setTerrainTexture(&level.terrain, selectedX, selectedZ, tileTex);
+                    updateNearbyChunks(selectedX, selectedZ);
+                }
+                break;
+            case StaticsPlacing:
+                if (mb->button == bagE_ButtonLeft && selected) {
+                    levelsAddStatic(selectedStaticID, (ModelTransform) {
+                        .x = selectedX * CHUNK_TILE_DIM,
+                        .y = atTerrainHeight(&level.terrain, selectedX, selectedZ),
+                        .z = selectedZ * CHUNK_TILE_DIM,
+                        .scale = 1.0f,
+                    });
+                } else if (mb->button == bagE_ButtonRight) {
+                    float x = selectedX * CHUNK_TILE_DIM;
+                    float y = atTerrainHeight(&level.terrain, selectedX, selectedZ);
+                    float z = selectedZ * CHUNK_TILE_DIM;
 
-                if (index >= 0 && distS < CHUNK_TILE_DIM * CHUNK_TILE_DIM * 1.5f * 1.5f)
-                    removeStatic(index);
-            }
-            break;
-        case TestMorbing:
-            if (mb->button == bagE_ButtonLeft && selected) {
-                float x = selectedX * CHUNK_TILE_DIM;
-                float z = selectedZ * CHUNK_TILE_DIM;
-                addMob(MobWorm, (ModelTransform) { x, getHeight(x, z), z, 2.0f },
-                                (Animation) { .start = level.mobArmatures[MobWorm].timeStamps[0],
-                                              .end   = level.mobArmatures[MobWorm].timeStamps[2],
-                                              .time  = 0.0f });
-            }
-            break;
+                    // TODO: could be done in one pass
+                    int index = -1;
+                    float distS = INFINITY;
+
+                    for (int i = 0; i < level.statsInstanceCount; ++i) {
+                        ModelTransform transform = level.statsTransforms[i];
+                        float xd  = x - transform.x;
+                        float yd  = y - transform.y;
+                        float zd  = z - transform.z;
+                        float newDistS = xd * xd + yd * yd + zd * zd;
+
+                        if (newDistS < distS) {
+                            distS = newDistS;
+                            index = i;
+                        }
+                    }
+
+                    if (index >= 0 && distS < CHUNK_TILE_DIM * CHUNK_TILE_DIM * 1.5f * 1.5f)
+                        removeStatic(index);
+                }
+                break;
+            case SpawnerPlacing:
+                if (mb->button == bagE_ButtonLeft && selected) {
+                    float x = selectedX * CHUNK_TILE_DIM;
+                    float z = selectedZ * CHUNK_TILE_DIM;
+                    addMob(MobWorm,
+                            (ModelTransform) { x, getHeight(x, z), z, 2.0f },
+                            (Animation) { .start = level.mobArmatures[MobWorm].timeStamps[0],
+                                          .end   = level.mobArmatures[MobWorm].timeStamps[2],
+                                          .time  = 0.0f });
+                }
+                break;
+        }
     }
 }
 
 
 void levelsProcessWheel(bagE_MouseWheel *mw)
 {
-    switch (editorMode) {
-        case TerrainPlacing:
-            /* fallthrough */
-        case TerrainHeightPaintingAbs:
-            /* fallthrough */
-        case TerrainHeightPaintingRel:
-            brushWidth += mw->scrollUp;
-            if (brushWidth < 0)
-                brushWidth = 0;
-            if (brushWidth > 2)
-                brushWidth = 2;
-            break;
-        case StaticsPlacing:
-            selectedStaticID += mw->scrollUp;
-            if (selectedStaticID < 0)
-                selectedStaticID = 0;
-            if (selectedStaticID >= level.statsTypeCount)
-                selectedStaticID = level.statsTypeCount - 1;
-            break;
+    if (!playerState.gaming) {
+        switch (editorMode) {
+            case TerrainPlacing:
+                /* fallthrough */
+            case TerrainHeightPaintingAbs:
+                /* fallthrough */
+            case TerrainHeightPaintingRel:
+                brushWidth += mw->scrollUp;
+                if (brushWidth < 0)
+                    brushWidth = 0;
+                if (brushWidth > 2)
+                    brushWidth = 2;
+                break;
+            case StaticsPlacing:
+                selectedStaticID += mw->scrollUp;
+                if (selectedStaticID < 0)
+                    selectedStaticID = 0;
+                if (selectedStaticID >= level.statsTypeCount)
+                    selectedStaticID = level.statsTypeCount - 1;
+                break;
+        }
     }
 }
 

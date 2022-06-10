@@ -77,7 +77,8 @@ typedef struct
 } ChunkColliderID;
 
 
-typedef enum {
+typedef enum
+{
     MobWorm,
 
     MobCount
@@ -88,7 +89,8 @@ typedef enum {
 #define MAX_BONES_PER_MOB  128
 #define MAX_MOBS_PER_TYPE  64
 
-typedef enum {
+typedef enum
+{
     MobStateWalking,
     MobStateIdle,
 
@@ -100,6 +102,37 @@ typedef enum {
 #define MOB_CHASE_RADIUS 48.0f
 #define MOB_BITE_RANGE 1.0f
 #define MOB_ATTACK_TO 1.0f
+
+
+typedef enum
+{
+    SpawnerInit,
+
+    SpawnerGroupCount
+} SpawnerGroup;
+
+#define SpawnerGroupAll -1
+
+
+typedef struct
+{
+    MobType type;
+    SpawnerGroup group;
+    float x, y, z;
+    bool emmited;
+} Spawner;
+
+
+#define MAX_SPAWNER_COUNT 256
+
+
+typedef enum {
+    NoGun,
+    Glock,
+    Gatling,
+
+    GunTypeCount
+} GunType;
 
 
 typedef struct
@@ -122,6 +155,8 @@ typedef struct
     ModelObject glock;
     ModelObject glockBase;
     unsigned gunTexture;
+
+    GunType selectedGun;
 
     const AtlasView *atlasViews;
 
@@ -153,6 +188,9 @@ typedef struct
     ModelTransform mobTransforms[MobCount * MAX_MOBS_PER_TYPE];
     MobState       mobStates    [MobCount * MAX_MOBS_PER_TYPE];
     float          mobAttackTOs [MobCount * MAX_MOBS_PER_TYPE];
+
+    int spawnerCount;
+    Spawner spawners[MAX_SPAWNER_COUNT];
 } Level;
 
 extern Level level;
