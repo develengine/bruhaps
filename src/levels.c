@@ -336,6 +336,9 @@ void spawnersLoad(FILE *file)
 
     safe_read(&level.spawnerCount, sizeof(int), 1, file);
     safe_read(level.spawners, sizeof(Spawner), level.spawnerCount, file);
+
+    for (int i = 0; i < level.spawnerCount; ++i)
+        level.spawners[i].emitted = false;
 }
 
 
@@ -371,6 +374,18 @@ void addMob(MobType type, ModelTransform trans, Animation anim)
     level.mobAttackTOs [count] = 0.0f;
 
     ++level.mobTypeCounts[type];
+}
+
+
+void removeMob(MobType type, int index)
+{
+    int pos  = type * MAX_MOBS_PER_TYPE + index;
+    int last = type * MAX_MOBS_PER_TYPE + (--level.mobTypeCounts[type]);
+
+    level.mobAnimations[pos] = level.mobAnimations[last];
+    level.mobTransforms[pos] = level.mobTransforms[last];
+    level.mobStates    [pos] = level.mobStates    [last];
+    level.mobAttackTOs [pos] = level.mobAttackTOs [last];
 }
 
 
@@ -561,6 +576,48 @@ void invalidateAllChunks(void)
 }
 
 
+void playerShoot(int damage)
+{
+    float cosX =  cosf(camState.pitch);
+    float sinX = -sinf(camState.pitch);
+    float cosY = -cosf(camState.yaw);
+    float sinY = -sinf(camState.yaw);
+
+    float closestDist = 666.666f;
+    MobType closestType;
+    int closestIndex = -1;
+
+    for (MobType type = 0; type < MobCount; ++type) {
+        int count = level.mobTypeCounts[type];
+
+        for (int i = 0; i < count; ++i) {
+            ModelTransform t = level.mobTransforms[type * MAX_MOBS_PER_TYPE + i];
+            float px = t.x - camState.x;
+            float py = t.y - camState.y;
+            float pz = t.z - camState.z;
+
+            float x  = cosY * px + sinY * pz;
+            float nz = cosY * pz - sinY * px;
+
+            float z = cosX * nz + sinX * py;
+            float y = cosX * py - sinX * nz;
+
+            if (x < 2.0f && x > -2.0f
+             && y < 2.0f && y > -2.0f
+             && z > 0.0f) {
+                if (z < closestDist) {
+                    closestType = type;
+                    closestIndex = i;
+                }
+            }
+        }
+    }
+
+    if (closestIndex != -1)
+        removeMob(closestType, closestIndex);
+}
+
+
 void updateLevel(float dt)
 {
     timePassed += dt;
@@ -740,6 +797,14 @@ void updateLevel(float dt)
             mobBonePoolTaken += boneCount;
         }
     }
+
+    /* update gun time */
+    if (level.selectedGun == Glock) {
+        level.gunTime += dt;
+        if (level.gunTime > GLOCK_BUMP_TIME)
+            level.gunTime = GLOCK_BUMP_TIME;
+    } else if (level.selectedGun == Gatling) {
+    }
 }
 
 
@@ -789,11 +854,16 @@ void renderLevel(void)
             mul = matrixRotationZ(timePassed * 2.0f);
             modelGun = matrixMultiply(&mul, &modelGun);
         } else {
+            mul = matrixRotationX((M_PI / 3) * sinf((level.gunTime / GLOCK_BUMP_TIME) * M_PI));
+            modelGun = matrixMultiply(&mul, &modelGun);
+
             mul = matrixRotationY(M_PI);
             modelGun = matrixMultiply(&mul, &modelGun);
         }
 
-        float offset = level.selectedGun == Gatling ? 0.5f : 0.75f;
+        float offset = level.selectedGun == Gatling
+                     ? 0.5f
+                     : 0.75f -  0.2f * sinf((level.gunTime / GLOCK_BUMP_TIME) * M_PI);
 
         mul = matrixTranslation(-0.5f, -0.5f, offset);
         modelGun = matrixMultiply(&mul, &modelGun);
@@ -1057,7 +1127,7 @@ void spawnersBroadcast(SpawnerGroup group)
         if (s.emitted || s.group != group)
             continue;
 
-        // FIXME: this currently works only for worms
+        // FIXME: this currently works for worms only
         addMob(MobWorm,
                 (ModelTransform) { s.x, s.y, s.z, 2.0f },
                 (Animation) { .start = level.mobArmatures[MobWorm].timeStamps[0],
@@ -1071,7 +1141,15 @@ void spawnersBroadcast(SpawnerGroup group)
 
 void levelsProcessButton(bagE_MouseButton *mb)
 {
-    if (!playerState.gaming) {
+    if (playerState.gaming) {
+        if (level.selectedGun == Glock) {
+            if (mb->button == bagE_ButtonLeft && level.gunTime == GLOCK_BUMP_TIME) {
+                level.gunTime = 0.0f;
+                playerShoot(0);
+            }
+        } else if (level.selectedGun == Gatling) {
+        }
+    } else {
         switch (editorMode) {
             case TerrainPlacing:
                 if (mb->button == bagE_ButtonLeft) {

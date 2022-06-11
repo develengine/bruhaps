@@ -151,7 +151,7 @@ void levelBruhLoad(void)
     playerState.y = 5.0f;
     playerState.z = (CHUNK_DIM + CHUNK_DIM * 0.5) * CHUNK_TILE_DIM;
 
-    if (playerState.gaming)
+    if (!gameState.isEditor)
         spawnersBroadcast(SpawnerInit);
 }
 

@@ -100,7 +100,7 @@ typedef enum
 
 #define MOB_SPEED 3.0f
 #define MOB_CHASE_RADIUS 48.0f
-#define MOB_BITE_RANGE 1.0f
+#define MOB_BITE_RANGE 4.0f
 #define MOB_ATTACK_TO 1.0f
 
 
@@ -135,6 +135,9 @@ typedef enum {
 } GunType;
 
 
+#define GLOCK_BUMP_TIME 0.16f
+
+
 typedef struct
 {
     uint64_t vineThudLength;
@@ -155,6 +158,7 @@ typedef struct
     ModelObject glock;
     ModelObject glockBase;
     unsigned gunTexture;
+    float gunTime;
 
     GunType selectedGun;
 
@@ -240,9 +244,12 @@ void spawnersLoad(FILE *file);
 void spawnersSave(FILE *file);
 
 void addMob(MobType type, ModelTransform trans, Animation anim);
+void removeMob(MobType type, int index);
 
 void addSpawner(Spawner spawner);
 void removeSpawner(int index);
 void spawnersBroadcast(SpawnerGroup group);
+
+void playerShoot(int damage);
 
 #endif
