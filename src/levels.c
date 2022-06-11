@@ -316,6 +316,29 @@ void staticsLoad(FILE *file)
 }
 
 
+void spawnersSave(FILE *file)
+{
+    safe_write("SPWN", 1, 4, file);
+
+    safe_write(&level.spawnerCount, sizeof(int), 1, file);
+    safe_write(level.spawners, sizeof(Spawner), level.spawnerCount, file);
+}
+
+
+void spawnersLoad(FILE *file)
+{
+    char buffer[4];
+    safe_read(buffer, 1, 4, file);
+    if (strncmp(buffer, "SPWN", 4)) {
+        fprintf(stderr, "Can't parse statics file!\n");
+        exit(666);
+    }
+
+    safe_read(&level.spawnerCount, sizeof(int), 1, file);
+    safe_read(level.spawners, sizeof(Spawner), level.spawnerCount, file);
+}
+
+
 static float getHeight(float x, float z)
 {
     int xp = (int)x;
@@ -854,8 +877,26 @@ void renderLevel(void)
 
 
     /* editor render mob spawners */
-    if (!playerState.gaming) {
-        
+    if (!playerState.gaming && editorMode == SpawnerPlacing) {
+        glUseProgram(level.textureProgram);
+
+        for (MobType type = 0; type < MobCount; ++type) {
+            MobObject object = level.mobObjects[type];
+            glBindVertexArray(object.animated.model.vao);
+            glBindTextureUnit(0, object.texture);
+
+            for (int i = 0; i < level.spawnerCount; ++i) {
+                Spawner s = level.spawners[i];
+                if (s.type != type || s.emitted)
+                    break;
+
+                // FIXME: This rendering is busted but it looks cool so
+                //        I don't care for now
+                Matrix modelMat = matrixTranslation(s.x, s.y, s.z);
+                glProgramUniformMatrix4fv(level.textureProgram, 0, 1, GL_FALSE, modelMat.data);
+                glDrawElements(GL_TRIANGLES, object.animated.model.indexCount, GL_UNSIGNED_INT, 0);
+            }
+        }
     }
 
     /* editor render static colliders */
@@ -996,6 +1037,38 @@ static void removeTiles(void)
 }
 
 
+void addSpawner(Spawner spawner)
+{
+    level.spawners[level.spawnerCount++] = spawner;
+}
+
+
+void removeSpawner(int index)
+{
+    level.spawners[index] = level.spawners[--level.spawnerCount];
+}
+
+
+void spawnersBroadcast(SpawnerGroup group)
+{
+    for (int i = 0; i < level.spawnerCount; ++i) {
+        Spawner s = level.spawners[i];
+
+        if (s.emitted || s.group != group)
+            continue;
+
+        // FIXME: this currently works only for worms
+        addMob(MobWorm,
+                (ModelTransform) { s.x, s.y, s.z, 2.0f },
+                (Animation) { .start = level.mobArmatures[MobWorm].timeStamps[0],
+                              .end   = level.mobArmatures[MobWorm].timeStamps[2],
+                              .time  = 0.0f });
+
+        level.spawners[i].emitted = true;
+    }
+}
+
+
 void levelsProcessButton(bagE_MouseButton *mb)
 {
     if (!playerState.gaming) {
@@ -1060,14 +1133,33 @@ void levelsProcessButton(bagE_MouseButton *mb)
                 }
                 break;
             case SpawnerPlacing:
-                if (mb->button == bagE_ButtonLeft && selected) {
+                if (selected) {
                     float x = selectedX * CHUNK_TILE_DIM;
                     float z = selectedZ * CHUNK_TILE_DIM;
-                    addMob(MobWorm,
-                            (ModelTransform) { x, getHeight(x, z), z, 2.0f },
-                            (Animation) { .start = level.mobArmatures[MobWorm].timeStamps[0],
-                                          .end   = level.mobArmatures[MobWorm].timeStamps[2],
-                                          .time  = 0.0f });
+                    float y = getHeight(x, z);
+
+                    if (mb->button == bagE_ButtonLeft) {
+                        addSpawner((Spawner) { MobWorm, SpawnerInit, x, y + 1.0f, z });
+                    } else {
+                        float minDist = 666.666f;
+                        int closest = -1;
+
+                        for (int i = 0; i < level.spawnerCount; ++i) {
+                            Spawner s = level.spawners[i];
+                            float dx = x - s.x;
+                            float dy = y - s.y;
+                            float dz = z - s.z;
+                            float dist =  dx * dx + dy * dy + dz * dz;
+
+                            if (dist < minDist) {
+                                minDist = dist;
+                                closest = i;
+                            }
+                        }
+
+                        if (closest != -1)
+                            removeSpawner(closest);
+                    }
                 }
                 break;
         }
@@ -1111,6 +1203,7 @@ void levelsSaveCurrent(void)
 
     terrainSave(&level.terrain, file);
     staticsSave(file);
+    spawnersSave(file);
 
     fclose(file);
 

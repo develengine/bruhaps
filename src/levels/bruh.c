@@ -113,6 +113,7 @@ void levelBruhLoad(void)
     terrainLoad(&level.terrain, file);
     invalidateAllChunks();
     staticsLoad(file);
+    spawnersLoad(file);
     
     eof_check(file);
 
@@ -149,6 +150,9 @@ void levelBruhLoad(void)
     playerState.x = (CHUNK_DIM + CHUNK_DIM * 0.5) * CHUNK_TILE_DIM;
     playerState.y = 5.0f;
     playerState.z = (CHUNK_DIM + CHUNK_DIM * 0.5) * CHUNK_TILE_DIM;
+
+    if (playerState.gaming)
+        spawnersBroadcast(SpawnerInit);
 }
 
 

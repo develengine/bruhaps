@@ -119,7 +119,7 @@ typedef struct
     MobType type;
     SpawnerGroup group;
     float x, y, z;
-    bool emmited;
+    bool emitted;
 } Spawner;
 
 
@@ -236,6 +236,13 @@ void levelsAddStatic(int statID, ModelTransform transform);
 void staticsLoad(FILE *file);
 void staticsSave(FILE *file);
 
+void spawnersLoad(FILE *file);
+void spawnersSave(FILE *file);
+
 void addMob(MobType type, ModelTransform trans, Animation anim);
+
+void addSpawner(Spawner spawner);
+void removeSpawner(int index);
+void spawnersBroadcast(SpawnerGroup group);
 
 #endif
