@@ -102,12 +102,21 @@ void guiDrawText(const char *text, int x, int y, int w, int h, int s, Vector col
 }
 
 
+void guiDrawImageColored(int x, int y, int w, int h,
+                         float tx, float ty, float tw, float th,
+                         Color color)
+{
+    glProgramUniform2i(gui.imageProgram, 1, x, y);
+    glProgramUniform2i(gui.imageProgram, 2, w, h);
+    glProgramUniform2f(gui.imageProgram, 3, tx, ty);
+    glProgramUniform2f(gui.imageProgram, 4, tw, th);
+    glProgramUniform4f(gui.imageProgram, 5, color.r, color.g, color.b, color.a);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+}
+
 void guiDrawImage(int x, int y, int w, int h,
                   float tx, float ty, float tw, float th)
 {
-    glProgramUniform2i(gui.rectProgram, 1, x, y);
-    glProgramUniform2i(gui.rectProgram, 2, w, h);
-    glProgramUniform2f(gui.rectProgram, 3, tx, ty);
-    glProgramUniform2f(gui.rectProgram, 4, tw, th);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    Color color = {{ 1.0f, 1.0f, 1.0f, 1.0f }};
+    guiDrawImageColored(x, y, w, h, tx, ty, tw, th, color);
 }

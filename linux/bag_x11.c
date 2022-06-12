@@ -537,7 +537,7 @@ static void bagX11_translateEvent(bagE_Event *events, XEvent *xevent)
                     event->data.mouseButton.button = buttonCode;
 
                 event->type = xevent->type == ButtonPress ? bagE_EventMouseButtonDown
-                                                         : bagE_EventMouseButtonUp;
+                                                          : bagE_EventMouseButtonUp;
                 event->data.mouseButton.x = xevent->xbutton.x;
                 event->data.mouseButton.y = xevent->xbutton.y;
             }

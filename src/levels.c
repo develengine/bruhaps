@@ -19,6 +19,14 @@ static_assert(length(spawnerGroupNames) == SpawnerGroupCount,
               "unfilled spawner group name");
 
 
+int mobStartingHPs[] = {
+    [MobWorm] = 100
+};
+
+static_assert(length(mobStartingHPs) == MobCount,
+              "unfilled mob starting HPs");
+
+
 static unsigned pointProgram;
 
 
@@ -62,6 +70,8 @@ static unsigned mobUBO;
 static int mobBonePoolTaken;
 static Matrix mobBonePool[MOB_BONE_POOL_SIZE];
 static JointTransform mobTransformScratch[MAX_BONES_PER_MOB];
+
+static bool fireDown = false;
 
 
 #include "levels/bruh.c"
@@ -199,6 +209,8 @@ void initLevels(void)
 
     // FIXME:
     level.selectedGun = Glock;
+
+    level.guiAtlas = createTexture("res/gui_atlas.png");
 
 
     // FIXME:
@@ -372,6 +384,7 @@ void addMob(MobType type, ModelTransform trans, Animation anim)
     level.mobTransforms[count] = trans;
     level.mobStates    [count] = MobStateWalking;
     level.mobAttackTOs [count] = 0.0f;
+    level.mobHPs       [count] = mobStartingHPs[type];
 
     ++level.mobTypeCounts[type];
 }
@@ -386,6 +399,7 @@ void removeMob(MobType type, int index)
     level.mobTransforms[pos] = level.mobTransforms[last];
     level.mobStates    [pos] = level.mobStates    [last];
     level.mobAttackTOs [pos] = level.mobAttackTOs [last];
+    level.mobHPs       [pos] = level.mobHPs       [last];
 }
 
 
@@ -576,7 +590,7 @@ void invalidateAllChunks(void)
 }
 
 
-void playerShoot(int damage)
+int playerRaySelect(void)
 {
     float cosX =  cosf(camState.pitch);
     float sinX = -sinf(camState.pitch);
@@ -602,8 +616,8 @@ void playerShoot(int damage)
             float z = cosX * nz + sinX * py;
             float y = cosX * py - sinX * nz;
 
-            if (x < 2.0f && x > -2.0f
-             && y < 2.0f && y > -2.0f
+            if (x < MOB_THICKNESS && x > -MOB_THICKNESS
+             && y < MOB_THICKNESS && y > -MOB_THICKNESS
              && z > 0.0f) {
                 if (z < closestDist) {
                     closestType = type;
@@ -613,8 +627,21 @@ void playerShoot(int damage)
         }
     }
 
-    if (closestIndex != -1)
-        removeMob(closestType, closestIndex);
+    return closestIndex == -1
+         ? -1
+         : (int)closestType * MAX_MOBS_PER_TYPE + closestIndex;
+}
+
+
+void playerShoot(int damage)
+{
+    int pos = playerRaySelect();
+
+    if (pos != -1) {
+        level.mobHPs[pos] -= damage;
+        if (level.mobHPs[pos] <= 0)
+            removeMob(pos / MAX_MOBS_PER_TYPE, pos % MAX_MOBS_PER_TYPE);
+    }
 }
 
 
@@ -755,10 +782,43 @@ void updateLevel(float dt)
                 toPlayerX /= toPlayerDistance;
                 toPlayerZ /= toPlayerDistance;
 
-                level.mobTransforms[mobID].x += toPlayerX * MOB_SPEED * dt;
-                level.mobTransforms[mobID].z += toPlayerZ * MOB_SPEED * dt;
-                level.mobTransforms[mobID].y = getHeight(level.mobTransforms[mobID].x,
-                                                         level.mobTransforms[mobID].z);
+                float newX = level.mobTransforms[mobID].x + toPlayerX * MOB_SPEED * dt;
+                float newZ = level.mobTransforms[mobID].z + toPlayerZ * MOB_SPEED * dt;
+                float newY = getHeight(newX, newZ);
+
+                // TODO: pickups should be chunk associated and this realy
+                //       should not be O(N^2) over all the mobs in the map
+                bool collides = false;
+
+                for (MobType cType = 0; cType < MobCount && !collides; ++cType) {
+                    int cCount = level.mobTypeCounts[cType];
+
+                    for (int ci = 0; ci < cCount; ++ci) {
+                        int cID = cType * MAX_MOBS_PER_TYPE + ci;
+
+                        if (cID != mobID) {
+                            ModelTransform cTrans = level.mobTransforms[cID];
+
+                            float distXS = cTrans.x - newX;
+                            float distYS = cTrans.y - newY;
+                            float distZS = cTrans.z - newZ;
+                            distXS *= distXS;
+                            distYS *= distYS;
+                            distZS *= distZS;
+
+                            if (distXS + distYS + distZS < MOB_THICKNESS * MOB_THICKNESS) {
+                                collides = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!collides) {
+                    level.mobTransforms[mobID].x = newX;
+                    level.mobTransforms[mobID].y = newY;
+                    level.mobTransforms[mobID].z = newZ;
+                }
 
                 level.mobTransforms[mobID].ry = atanf(toPlayerX / toPlayerZ)
                                               + (toPlayerZ > 0.0f ? M_PI : 0.0f);
@@ -798,12 +858,36 @@ void updateLevel(float dt)
         }
     }
 
-    /* update gun time */
+    /* update guns */
     if (level.selectedGun == Glock) {
         level.gunTime += dt;
         if (level.gunTime > GLOCK_BUMP_TIME)
             level.gunTime = GLOCK_BUMP_TIME;
     } else if (level.selectedGun == Gatling) {
+        float acc = (GATLING_SPIN_SPEED / GATLING_SPINUP) * dt;
+        level.gatlingSpeed += fireDown ? acc : -acc;
+
+        if (fireDown && level.gatlingSpeed > GATLING_SPIN_SPEED) {
+            level.gatlingSpeed = GATLING_SPIN_SPEED;
+
+            level.gatlingTO -= GATLING_FIRE_RATE * dt;
+            if (level.gatlingTO < 0.0f) {
+                level.gatlingTO = 1.0f;
+                playerShoot(10);
+                playSound((Sound) {
+                    .data = level.vineThud,
+                    .end   = level.vineThudLength / 8,
+                    .volL  = 0.15f,
+                    .volR  = 0.15f,
+                    .times = 1,
+                });
+            }
+
+        } else if (!fireDown && level.gatlingSpeed < 0.0f) {
+            level.gatlingSpeed = 0.0f;
+        }
+
+        level.gunTime += level.gatlingSpeed * dt;
     }
 }
 
@@ -846,12 +930,12 @@ void renderLevel(void)
     Matrix mul;
 
     /* render gun */
-    if (playerState.gaming && level.selectedGun != NoGun) {
+    if (playerState.gaming) {
         float scale = level.selectedGun == Gatling ? 0.5f : 0.2f;
         Matrix modelGun = matrixScale(scale, scale, scale);
 
         if (level.selectedGun == Gatling) {
-            mul = matrixRotationZ(timePassed * 2.0f);
+            mul = matrixRotationZ(level.gunTime * M_PI * 2);
             modelGun = matrixMultiply(&mul, &modelGun);
         } else {
             mul = matrixRotationX((M_PI / 3) * sinf((level.gunTime / GLOCK_BUMP_TIME) * M_PI));
@@ -1128,26 +1212,37 @@ void spawnersBroadcast(SpawnerGroup group)
             continue;
 
         // FIXME: this currently works for worms only
+        float animLength = level.mobArmatures[MobWorm].timeStamps[2];
+
         addMob(MobWorm,
                 (ModelTransform) { s.x, s.y, s.z, 2.0f },
                 (Animation) { .start = level.mobArmatures[MobWorm].timeStamps[0],
-                              .end   = level.mobArmatures[MobWorm].timeStamps[2],
-                              .time  = 0.0f });
+                              .end   = animLength,
+                              .time  = (animLength / 10) * (rand() % 10) });
 
         level.spawners[i].emitted = true;
     }
 }
 
 
-void levelsProcessButton(bagE_MouseButton *mb)
+void levelsProcessButton(bagE_MouseButton *mb, bool down)
 {
     if (playerState.gaming) {
         if (level.selectedGun == Glock) {
             if (mb->button == bagE_ButtonLeft && level.gunTime == GLOCK_BUMP_TIME) {
                 level.gunTime = 0.0f;
-                playerShoot(0);
+                playerShoot(20);
+                playSound((Sound) {
+                    .data = level.vineThud,
+                    .end   = level.vineThudLength,
+                    .volL  = 0.15f,
+                    .volR  = 0.15f,
+                    .times = 1,
+                });
             }
         } else if (level.selectedGun == Gatling) {
+            if (mb->button == bagE_ButtonLeft)
+                fireDown = down;
         }
     } else {
         switch (editorMode) {
@@ -1247,7 +1342,9 @@ void levelsProcessButton(bagE_MouseButton *mb)
 
 void levelsProcessWheel(bagE_MouseWheel *mw)
 {
-    if (!playerState.gaming) {
+    if (playerState.gaming) {
+        level.selectedGun = (level.selectedGun + 1) % GunTypeCount;
+    } else {
         switch (editorMode) {
             case TerrainPlacing:
                 /* fallthrough */
@@ -1292,23 +1389,112 @@ void levelsSaveCurrent(void)
 void renderLevelOverlay(void)
 {
     if (playerState.gaming) {
-        Vector healthColor = {{ 1.0f, 0.0f, 0.0f, 1.0f }};
-        Vector backColor   = {{ 0.2f, 0.0f, 0.0f, 1.0f }};
+        Color healthColor = {{ 1.0f, 0.0f, 0.0f, 1.0f }};
+        Color backColor   = {{ 0.2f, 0.0f, 0.0f, 1.0f }};
+        Color ammoBack    = {{ 0.2f, 0.2f, 0.2f, 1.0f }};
+        Color textColor   = {{ 1.0f, 1.0f, 1.0f, 1.0f }};
 
         int barWidth  = appState.windowWidth / 5;
         int barHeight = barWidth / 10;
         int margin    = barHeight * 2;
         int padding   = 3;
 
+        int healthSize = barHeight * 4;
+
+        int ammoSize     = barHeight * 4;
+        int ammoTextSize = 16;
+
         guiBeginRect();
-        guiDrawRect(margin, appState.windowHeight - margin - barHeight,
-                    barWidth, barHeight,
-                    backColor);
-        guiDrawRect(margin + padding,
-                    appState.windowHeight - margin - barHeight + padding,
-                    (int)(((float)barWidth / PLAYER_HP_FULL) * playerState.hp) - 2 * padding,
-                    barHeight - 2 * padding,
-                    healthColor);
+        guiDrawRect(
+                margin + healthSize,
+                appState.windowHeight - margin - barHeight,
+                barWidth, barHeight,
+                backColor
+        );
+        guiDrawRect(
+                margin + healthSize + padding,
+                appState.windowHeight - margin - barHeight + padding,
+                (int)(((float)barWidth / PLAYER_HP_FULL) * playerState.hp) - 2 * padding,
+                barHeight - 2 * padding,
+                healthColor
+        );
+        guiDrawRect(
+                appState.windowWidth  - margin * 2 - ammoSize * 2,
+                appState.windowHeight - margin / 2 - ammoTextSize * 2,
+                ammoSize, ammoTextSize * 2,
+                ammoBack
+        );
+        guiDrawRect(
+                appState.windowWidth  - margin - ammoSize,
+                appState.windowHeight - margin / 2 - ammoTextSize * 2,
+                ammoSize, ammoTextSize * 2,
+                ammoBack
+        );
+
+        guiBeginImage();
+        guiUseImage(level.guiAtlas);
+        guiDrawImage(
+                margin / 2,
+                appState.windowHeight - healthSize,
+                healthSize, healthSize,
+                0.0f, 0.0f, 0.25f, 0.25f
+        );
+        guiDrawImage(
+                appState.windowWidth  - margin * 2 - ammoSize * 2,
+                appState.windowHeight - margin / 2 - ammoTextSize * 2 - ammoSize,
+                ammoSize, ammoSize,
+                0.5f, 0.0f, 0.25f, 0.25f
+        );
+        guiDrawImage(
+                appState.windowWidth  - margin - ammoSize,
+                appState.windowHeight - margin / 2 - ammoTextSize * 2 - ammoSize,
+                ammoSize, ammoSize,
+                0.75f, 0.0f, 0.25f, 0.25f
+        );
+
+        int crossSize = 32;
+        Color crossColor = {{ 1.0f, 1.0f, 1.0f, 1.0f }};
+
+        int mobPos = playerRaySelect();
+        if (mobPos != -1) {
+            MobType type = mobPos / MAX_MOBS_PER_TYPE;
+            int part = mobStartingHPs[type] / 4;
+
+            int hp = level.mobHPs[mobPos];
+            if (hp <= part) {
+                crossColor = (Color) {{ 1.0f, 0.0f, 0.0f, 1.0f }};
+            } else if (hp <= part * 2) {
+                crossColor = (Color) {{ 1.0f, 0.5f, 0.0f, 1.0f }};
+            } else if (hp <= part * 3) {
+                crossColor = (Color) {{ 1.0f, 1.0f, 0.0f, 1.0f }};
+            } else {
+                crossColor = (Color) {{ 0.0f, 1.0f, 0.0f, 1.0f }};
+            }
+        }
+
+        guiDrawImageColored(
+                (appState.windowWidth  - crossSize) / 2,
+                (appState.windowHeight - crossSize) / 2,
+                crossSize, crossSize,
+                0.25f, 0.0f, 0.25f, 0.25f,
+                crossColor
+        );
+
+        guiBeginText();
+        guiDrawText("INF",
+                appState.windowWidth  - margin * 2 - ammoSize - (ammoSize + 3 * ammoTextSize) / 2,
+                appState.windowHeight - margin / 2 - ammoTextSize * 2,
+                ammoTextSize, ammoTextSize * 2, 0,
+                textColor
+        );
+        char buffer[64] = { 0 };
+        int written = snprintf(buffer, 64, "%d", level.gatlingAmmo);
+        guiDrawText(buffer,
+                appState.windowWidth  - margin - (ammoSize + written * ammoTextSize) / 2,
+                appState.windowHeight - margin / 2 - ammoTextSize * 2,
+                ammoTextSize, ammoTextSize * 2, 0,
+                textColor
+        );
     } else {
         /* point */
         if (selected) {

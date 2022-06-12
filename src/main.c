@@ -354,12 +354,15 @@ int bagE_eventHandler(bagE_Event *event)
             }
             break;
 
-        case bagE_EventMouseButtonDown: {
+        case bagE_EventMouseButtonDown:
+            keyDown = true;
+            /* fallthrough */
+        case bagE_EventMouseButtonUp: {
                 bagE_MouseButton *mb = &(event->data.mouseButton);
                 if (gameState.inSplash) {
                     splashProcessButton(mb);
                 } else {
-                    levelsProcessButton(mb);
+                    levelsProcessButton(mb, keyDown);
                 }
             }
             break;

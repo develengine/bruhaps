@@ -100,8 +100,9 @@ typedef enum
 
 #define MOB_SPEED 3.0f
 #define MOB_CHASE_RADIUS 48.0f
-#define MOB_BITE_RANGE 4.0f
+#define MOB_BITE_RANGE 2.0f
 #define MOB_ATTACK_TO 1.0f
+#define MOB_THICKNESS 1.0f
 
 
 typedef enum
@@ -126,8 +127,8 @@ typedef struct
 #define MAX_SPAWNER_COUNT 256
 
 
-typedef enum {
-    NoGun,
+typedef enum
+{
     Glock,
     Gatling,
 
@@ -136,12 +137,33 @@ typedef enum {
 
 
 #define GLOCK_BUMP_TIME 0.16f
+#define GATLING_SPINUP 1.5f
+#define GATLING_SPIN_SPEED 1.5f
+#define GATLING_FIRE_RATE 16.0f
+
+
+typedef enum
+{
+    HealthPickup,
+    AmmoPickup,
+
+    Key1Pickup,
+    Key2Pickup,
+    Key3Pickup,
+
+    PickupCount
+} Pickup;
+
+
+#define MAX_PICKUP_COUNT 256
 
 
 typedef struct
 {
     uint64_t vineThudLength;
     int16_t *vineThud;
+
+    unsigned guiAtlas;
 
     unsigned terrainProgram;
     unsigned terrainAtlas;
@@ -159,6 +181,9 @@ typedef struct
     ModelObject glockBase;
     unsigned gunTexture;
     float gunTime;
+    float gatlingSpeed;
+    float gatlingTO;
+    int gatlingAmmo;
 
     GunType selectedGun;
 
@@ -192,9 +217,14 @@ typedef struct
     ModelTransform mobTransforms[MobCount * MAX_MOBS_PER_TYPE];
     MobState       mobStates    [MobCount * MAX_MOBS_PER_TYPE];
     float          mobAttackTOs [MobCount * MAX_MOBS_PER_TYPE];
+    int            mobHPs       [MobCount * MAX_MOBS_PER_TYPE];
 
     int spawnerCount;
     Spawner spawners[MAX_SPAWNER_COUNT];
+
+    int pickupCount;
+    Pickup pickups        [MAX_PICKUP_COUNT];
+    Vector pickupPositions[MAX_PICKUP_COUNT];
 } Level;
 
 extern Level level;
@@ -231,7 +261,7 @@ void levelsSaveCurrent(void);
 void requestChunkUpdate(unsigned chunkPos);
 void invalidateAllChunks(void);
 
-void levelsProcessButton(bagE_MouseButton *mb);
+void levelsProcessButton(bagE_MouseButton *mb, bool down);
 void levelsProcessWheel(bagE_MouseWheel *mw);
 
 void levelsInsertStaticObject(Object object, ColliderType collider);
@@ -250,6 +280,7 @@ void addSpawner(Spawner spawner);
 void removeSpawner(int index);
 void spawnersBroadcast(SpawnerGroup group);
 
+int playerRaySelect(void);
 void playerShoot(int damage);
 
 #endif

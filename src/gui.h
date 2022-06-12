@@ -40,8 +40,11 @@ void guiBeginImage(void);
 
 void guiUseImage(unsigned texture);
 
-void guiDrawRect(int x, int y, int w, int h, Vector color);
+void guiDrawRect(int x, int y, int w, int h, Color color);
 void guiDrawText(const char *text, int x, int y, int w, int h, int s, Vector color);
+void guiDrawImageColored(int x, int y, int w, int h,
+                         float tx, float ty, float tw, float th,
+                         Color color);
 void guiDrawImage(int x, int y, int w, int h,
                   float tx, float ty, float tw, float th);
 
