@@ -125,7 +125,7 @@ int bagE_main(int argc, char *argv[])
                 vz += 0.1f * cosf(camState.yaw);
             }
 
-            if (playerState.gaming) {
+            if (!gameState.isEditor) {
                 processPlayerInput(vx, vz, playerState.tryJump && inputState.ascendDown, 0.01666f);
 
                 playerState.tryJump = !inputState.ascendDown;
@@ -259,7 +259,7 @@ int bagE_eventHandler(bagE_Event *event)
                     inputState.ascendDown = keyDown;
 
                     if (!keyDown && !gameState.inSplash
-                     && playerState.gaming && playerState.hp <= 0)
+                     && !gameState.isEditor && playerState.hp <= 0)
                         restartLevel();
                     break;
                 case KEY_SHIFT_LEFT:

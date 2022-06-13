@@ -1520,7 +1520,10 @@ void spawnersBroadcast(SpawnerGroup group)
 
 void levelsProcessButton(bagE_MouseButton *mb, bool down)
 {
-    if (playerState.gaming && playerState.hp > 0) {
+    if (!gameState.isEditor) {
+        if (playerState.hp <= 0)
+            return;
+
         if (level.selectedGun == Glock) {
             if (mb->button == bagE_ButtonLeft && level.gunTime == GLOCK_BUMP_TIME) {
                 level.gunTime = 0.0f;
@@ -1684,7 +1687,7 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
 
 void levelsProcessWheel(bagE_MouseWheel *mw)
 {
-    if (playerState.gaming) {
+    if (!gameState.isEditor) {
         if (playerState.hp <= 0)
             return;
 
@@ -1734,7 +1737,7 @@ void levelsSaveCurrent(void)
 
 void renderLevelOverlay(void)
 {
-    if (playerState.gaming) {
+    if (!gameState.isEditor) {
         Color healthColor = {{ 1.0f, 0.0f, 0.0f, 1.0f }};
         Color backColor   = {{ 0.2f, 0.0f, 0.0f, 1.0f }};
         Color ammoBack    = {{ 0.2f, 0.2f, 0.2f, 1.0f }};
