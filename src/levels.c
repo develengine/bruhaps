@@ -20,11 +20,51 @@ static_assert(length(spawnerGroupNames) == SpawnerGroupCount,
 
 
 int mobStartingHPs[] = {
-    [MobWorm] = 100
+    [MobWorm] = 100,
 };
 
 static_assert(length(mobStartingHPs) == MobCount,
               "unfilled mob starting HPs");
+
+
+float pickupScales[] = {
+    [HealthPickup] = 2.0f,
+    [AmmoPickup]   = 0.5f,
+};
+
+static_assert(length(pickupScales) == PickupCount,
+              "unfilled pickup scales");
+
+
+bool pickupHealth(void)
+{
+    if (playerState.hp < PLAYER_HP_FULL) {
+        playerState.hp += 50;
+
+        if (playerState.hp > PLAYER_HP_FULL)
+            playerState.hp = PLAYER_HP_FULL;
+
+        return true;
+    }
+
+    return false;
+}
+
+
+bool pickupAmmo(void)
+{
+    level.gatlingAmmo += 50;
+    return true;
+}
+
+
+PickupAction pickupActions[] = {
+    [HealthPickup] = pickupHealth,
+    [AmmoPickup]   = pickupAmmo,
+};
+
+static_assert(length(pickupActions) == PickupCount,
+              "unfilled pickup action");
 
 
 static unsigned pointProgram;
@@ -38,14 +78,17 @@ typedef enum
     TerrainHeightPaintingRel,
     StaticsPlacing,
     SpawnerPlacing,
+    PickupPlacing
 } EditorMode;
 
-static EditorMode editorMode = SpawnerPlacing;
+static EditorMode editorMode = TerrainHeightPaintingRel;
 
 
 static bool selected = false;
 static int selectedX, selectedZ;
-static int brushWidth = 2;
+static int brushWidth = 3;
+
+#define MAX_BRUSH_WIDTH 3
 
 static uint8_t selectedViewID = 1;
 static uint8_t selectedViewTrans = 0;
@@ -56,6 +99,12 @@ static float selectedAbsHeight = 3.0f;
 static int selectedStaticID = 0;
 
 static MobType selectedSpawnerType = MobWorm;
+
+static Pickup selectedPickup = AmmoPickup;
+
+static int terrainHeightDown = false;
+
+static void scaleHeights(float scale);
 
 
 // TODO: remove me
@@ -116,6 +165,10 @@ static void levelUnload(LevelID id)
     }
 
     level.filePath = NULL;
+
+    for (MobType type = 0; type < MobCount; ++type)
+        level.mobTypeCounts[type] = 0;
+
 }
 
 
@@ -203,17 +256,35 @@ void initLevels(void)
 
 
     level.vineThud = loadWAV("res/vine_thud.wav", &level.vineThudLength);
+    level.bite87   = loadWAV("res/bite87.wav",    &level.bite87Length);
 
-
-    playerState.hp = PLAYER_HP_FULL;
 
     // FIXME:
-    level.selectedGun = Glock;
-
     level.guiAtlas = createTexture("res/gui_atlas.png");
 
 
+    // FIXME: everything in this function is not freed but it 
+    //        unironically doesn't matter since the OS is unretarded
+    level.pickupObjects[HealthPickup] = (Object) {
+        .model = loadModelObject("res/energy.model"),
+        .texture = createTexture("res/monser.png")
+    };
+    level.pickupObjects[AmmoPickup] = (Object) {
+        .model = loadModelObject("res/ammo.model"),
+        .texture = createTexture("res/ammo.png")
+    };
+    
+
     // FIXME:
+    levelLoad(LevelBruh);
+}
+
+
+void restartLevel(void)
+{
+    // FIXME: this should work for other levels as well
+
+    levelUnload(LevelBruh);
     levelLoad(LevelBruh);
 }
 
@@ -318,8 +389,6 @@ void staticsLoad(FILE *file)
     safe_read(&level.statsInstanceCount, sizeof(int), 1, file);
     safe_read(&level.statsTransforms, sizeof(ModelTransform), level.statsInstanceCount, file);
 
-    printf("%d\n", level.statsInstanceCount);
-
     for (int i = typeCount; i <= MAX_STATIC_TYPE_COUNT; ++i)
         level.statsTypeOffsets[i] = level.statsInstanceCount;
 
@@ -342,7 +411,7 @@ void spawnersLoad(FILE *file)
     char buffer[4];
     safe_read(buffer, 1, 4, file);
     if (strncmp(buffer, "SPWN", 4)) {
-        fprintf(stderr, "Can't parse statics file!\n");
+        fprintf(stderr, "Can't parse spawner file!\n");
         exit(666);
     }
 
@@ -351,6 +420,31 @@ void spawnersLoad(FILE *file)
 
     for (int i = 0; i < level.spawnerCount; ++i)
         level.spawners[i].emitted = false;
+}
+
+
+void pickupsSave(FILE *file)
+{
+    safe_write("PICK", 1, 4, file);
+
+    safe_write(&level.pickupCount, sizeof(int), 1, file);
+    safe_write(level.pickups, sizeof(Pickup), level.pickupCount, file);
+    safe_write(level.pickupPositions, sizeof(Vector), level.pickupCount, file);
+}
+
+
+void pickupsLoad(FILE *file)
+{
+    char buffer[4];
+    safe_read(buffer, 1, 4, file);
+    if (strncmp(buffer, "PICK", 4)) {
+        fprintf(stderr, "Can't parse pickup file!\n");
+        exit(666);
+    }
+
+    safe_read(&level.pickupCount, sizeof(int), 1, file);
+    safe_read(level.pickups, sizeof(Pickup), level.pickupCount, file);
+    safe_read(level.pickupPositions, sizeof(Vector), level.pickupCount, file);
 }
 
 
@@ -400,6 +494,24 @@ void removeMob(MobType type, int index)
     level.mobStates    [pos] = level.mobStates    [last];
     level.mobAttackTOs [pos] = level.mobAttackTOs [last];
     level.mobHPs       [pos] = level.mobHPs       [last];
+}
+
+
+void addPickup(Pickup pickup, Vector position)
+{
+    level.pickups        [level.pickupCount] = pickup;
+    level.pickupPositions[level.pickupCount] = position;
+
+    ++level.pickupCount;
+}
+
+
+void removePickup(int index)
+{
+    --level.pickupCount;
+
+    level.pickups        [index] = level.pickups        [level.pickupCount];
+    level.pickupPositions[index] = level.pickupPositions[level.pickupCount];
 }
 
 
@@ -622,6 +734,7 @@ int playerRaySelect(void)
                 if (z < closestDist) {
                     closestType = type;
                     closestIndex = i;
+                    closestDist = z;
                 }
             }
         }
@@ -775,8 +888,17 @@ void updateLevel(float dt)
                 if (level.mobAttackTOs[mobID] == 0.0f) {
                     level.mobAttackTOs[mobID] = MOB_ATTACK_TO;
                     playerState.hp -= PLAYER_HP_FULL / 5;
+
                     if (playerState.hp < 0)
                         playerState.hp = 0;
+
+                    playSound((Sound) {
+                        .data  = level.bite87,
+                        .end   = level.bite87Length,
+                        .volL  = 0.5f,
+                        .volR  = 0.5f,
+                        .times = 1,
+                    });
                 }
             } else if (toPlayerDistance < MOB_CHASE_RADIUS) {
                 toPlayerX /= toPlayerDistance;
@@ -873,14 +995,18 @@ void updateLevel(float dt)
             level.gatlingTO -= GATLING_FIRE_RATE * dt;
             if (level.gatlingTO < 0.0f) {
                 level.gatlingTO = 1.0f;
-                playerShoot(10);
-                playSound((Sound) {
-                    .data = level.vineThud,
-                    .end   = level.vineThudLength / 8,
-                    .volL  = 0.15f,
-                    .volR  = 0.15f,
-                    .times = 1,
-                });
+
+                if (level.gatlingAmmo > 0) {
+                    playerShoot(10);
+                    playSound((Sound) {
+                        .data  = level.vineThud,
+                        .end   = level.vineThudLength / 8,
+                        .volL  = 0.25f,
+                        .volR  = 0.25f,
+                        .times = 1,
+                    });
+                    --level.gatlingAmmo;
+                }
             }
 
         } else if (!fireDown && level.gatlingSpeed < 0.0f) {
@@ -889,6 +1015,38 @@ void updateLevel(float dt)
 
         level.gunTime += level.gatlingSpeed * dt;
     }
+
+
+    /* update pickups */
+    level.pickupTime += dt * PICKUP_SPEED;
+
+    for (int i = 0; i < level.pickupCount; ) {
+        Vector pos = level.pickupPositions[i];
+
+        float distXS = playerState.x - pos.x;
+        // FIXME: a hack to account for players height
+        float distYS = playerState.y - pos.y - 2.0f;
+        float distZS = playerState.z - pos.z;
+        distXS *= distXS;
+        distYS *= distYS;
+        distZS *= distZS;
+
+        float distS = distXS + distYS + distZS;
+
+        if (distS < PICKUP_RADIUS * PICKUP_RADIUS) {
+            if (pickupActions[level.pickups[i]]()) {
+                removePickup(i);
+                continue;
+            }
+        }
+
+        ++i;
+    }
+
+
+    /* editor update */
+    if (terrainHeightDown)
+        scaleHeights((float)terrainHeightDown);
 }
 
 
@@ -1030,10 +1188,37 @@ void renderLevel(void)
     }
 
 
+    /* render pickups */
+    glUseProgram(level.textureProgram);
+
+    for (Pickup pickup = 0; pickup < PickupCount; ++pickup) {
+        Object object = level.pickupObjects[pickup];
+        glBindVertexArray(object.model.vao);
+        glBindTextureUnit(0, object.texture);
+
+        for (int i = 0; i < level.pickupCount; ++i) {
+            if (level.pickups[i] == pickup) {
+                Vector pos = level.pickupPositions[i];
+
+                float scale = pickupScales[pickup];
+                Matrix modelMat = matrixScale(scale, scale, scale);
+
+                mul = matrixRotationY(level.pickupTime);
+                modelMat = matrixMultiply(&mul, &modelMat);
+
+                mul = matrixTranslation(pos.x, pos.y + 0.25f, pos.z);
+                modelMat = matrixMultiply(&mul, &modelMat);
+
+                glProgramUniformMatrix4fv(level.textureProgram, 0, 1, GL_FALSE, modelMat.data);
+                glDrawElements(GL_TRIANGLES, object.model.indexCount, GL_UNSIGNED_INT, 0);
+            }
+        }
+    }
+
+
     /* editor render mob spawners */
     if (!playerState.gaming && editorMode == SpawnerPlacing) {
-        glUseProgram(level.textureProgram);
-
+        /* NOTE: using texture program from previous section */
         for (MobType type = 0; type < MobCount; ++type) {
             MobObject object = level.mobObjects[type];
             glBindVertexArray(object.animated.model.vao);
@@ -1072,7 +1257,7 @@ void renderLevel(void)
         };
 
         glProgramUniform4fv(pointProgram, 1,  8, colors2->data);
-        glProgramUniform4fv(pointProgram, 33, 8, points2->data);
+        glProgramUniform4fv(pointProgram, 65, 8, points2->data);
 
         for (int i = 0; i < level.statsColliderCount; ++i) {
             Collider c = level.statsColliders[i];
@@ -1235,8 +1420,8 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
                 playSound((Sound) {
                     .data = level.vineThud,
                     .end   = level.vineThudLength,
-                    .volL  = 0.15f,
-                    .volR  = 0.15f,
+                    .volL  = 0.25f,
+                    .volR  = 0.25f,
                     .times = 1,
                 });
             }
@@ -1247,6 +1432,9 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
     } else {
         switch (editorMode) {
             case TerrainPlacing:
+                if (!down)
+                    return;
+
                 if (mb->button == bagE_ButtonLeft) {
                     extendHeights();
                 } else if (mb->button == bagE_ButtonRight) {
@@ -1255,14 +1443,20 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
                 break;
             case TerrainHeightPaintingAbs:
                 /* fallthrough */
-            case TerrainHeightPaintingRel:
-                if (mb->button == bagE_ButtonLeft) {
-                    scaleHeights(1.0f);
-                } else if (mb->button == bagE_ButtonRight) {
-                    scaleHeights(-1.0f);
+            case TerrainHeightPaintingRel: {
+                    int dir = 0;
+                    if (mb->button == bagE_ButtonLeft) {
+                        dir = 1;
+                    } else if (mb->button == bagE_ButtonRight) {
+                        dir = -1;
+                    }
+                    terrainHeightDown = dir * down;
                 }
                 break;
             case TerrainTexturing:
+                if (!down)
+                    return;
+
                 if (mb->button == bagE_ButtonLeft && selected) {
                     TileTexture tileTex = {
                         .viewID = selectedViewID,
@@ -1272,6 +1466,9 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
                 }
                 break;
             case StaticsPlacing:
+                if (!down)
+                    return;
+
                 if (mb->button == bagE_ButtonLeft && selected) {
                     levelsAddStatic(selectedStaticID, (ModelTransform) {
                         .x = selectedX * CHUNK_TILE_DIM,
@@ -1306,6 +1503,9 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
                 }
                 break;
             case SpawnerPlacing:
+                if (!down)
+                    return;
+
                 if (selected) {
                     float x = selectedX * CHUNK_TILE_DIM;
                     float z = selectedZ * CHUNK_TILE_DIM;
@@ -1335,6 +1535,39 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
                     }
                 }
                 break;
+            case PickupPlacing:
+                if (!down)
+                    return;
+
+                if (selected) {
+                    float x = selectedX * CHUNK_TILE_DIM;
+                    float z = selectedZ * CHUNK_TILE_DIM;
+                    float y = getHeight(x, z);
+
+                    if (mb->button == bagE_ButtonLeft) {
+                        addPickup(selectedPickup, (Vector) {{ x, y, z }});
+                    } else {
+                        float minDist = 666.666f;
+                        int closest = -1;
+
+                        for (int i = 0; i < level.pickupCount; ++i) {
+                            Vector s = level.pickupPositions[i];
+                            float dx = x - s.x;
+                            float dy = y - s.y;
+                            float dz = z - s.z;
+                            float dist =  dx * dx + dy * dy + dz * dz;
+
+                            if (dist < minDist) {
+                                minDist = dist;
+                                closest = i;
+                            }
+                        }
+
+                        if (closest != -1)
+                            removePickup(closest);
+                    }
+                }
+                break;
         }
     }
 }
@@ -1354,8 +1587,8 @@ void levelsProcessWheel(bagE_MouseWheel *mw)
                 brushWidth += mw->scrollUp;
                 if (brushWidth < 0)
                     brushWidth = 0;
-                if (brushWidth > 2)
-                    brushWidth = 2;
+                if (brushWidth > MAX_BRUSH_WIDTH)
+                    brushWidth = MAX_BRUSH_WIDTH;
                 break;
             case StaticsPlacing:
                 selectedStaticID += mw->scrollUp;
@@ -1379,6 +1612,7 @@ void levelsSaveCurrent(void)
     terrainSave(&level.terrain, file);
     staticsSave(file);
     spawnersSave(file);
+    pickupsSave(file);
 
     fclose(file);
 
@@ -1502,8 +1736,8 @@ void renderLevelOverlay(void)
 
             int pointCount = 0;
 
-            Vector colors[32];
-            Vector points[32];
+            Vector colors[64];
+            Vector points[64];
 
             float midHeight = atTerrainHeight(&level.terrain, selectedX, selectedZ);
 
@@ -1559,7 +1793,7 @@ void renderLevelOverlay(void)
             Matrix identity = matrixIdentity();
             glProgramUniformMatrix4fv(pointProgram, 0, 1, false, identity.data);
             glProgramUniform4fv(pointProgram, 1,  pointCount, colors->data);
-            glProgramUniform4fv(pointProgram, 33, pointCount, points->data);
+            glProgramUniform4fv(pointProgram, 65, pointCount, points->data);
 
             glDrawArraysInstanced(GL_POINTS, 0, 1, pointCount);
         }

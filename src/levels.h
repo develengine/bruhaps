@@ -147,21 +147,33 @@ typedef enum
     HealthPickup,
     AmmoPickup,
 
+    /*
     Key1Pickup,
     Key2Pickup,
     Key3Pickup,
+    */
 
     PickupCount
 } Pickup;
 
 
 #define MAX_PICKUP_COUNT 256
+#define PICKUP_SPEED 2.0f
+#define PICKUP_RADIUS 1.5f
+
+typedef bool (*PickupAction)(void);
 
 
 typedef struct
 {
+    // TODO: This stuff should not be here but for
+    //       now it's fine
+    //       This whole file should be name something
+    //       more like 'game' rather then 'levels'
     uint64_t vineThudLength;
     int16_t *vineThud;
+    uint64_t bite87Length;
+    int16_t *bite87;
 
     unsigned guiAtlas;
 
@@ -225,6 +237,8 @@ typedef struct
     int pickupCount;
     Pickup pickups        [MAX_PICKUP_COUNT];
     Vector pickupPositions[MAX_PICKUP_COUNT];
+    float pickupTime;
+    Object pickupObjects[PickupCount];
 } Level;
 
 extern Level level;
@@ -273,6 +287,9 @@ void staticsSave(FILE *file);
 void spawnersLoad(FILE *file);
 void spawnersSave(FILE *file);
 
+void pickupsLoad(FILE *file);
+void pickupsSave(FILE *file);
+
 void addMob(MobType type, ModelTransform trans, Animation anim);
 void removeMob(MobType type, int index);
 
@@ -282,5 +299,10 @@ void spawnersBroadcast(SpawnerGroup group);
 
 int playerRaySelect(void);
 void playerShoot(int damage);
+
+void addPickup(Pickup pickup, Vector pos);
+void removePickup(int index);
+
+void restartLevel(void);
 
 #endif

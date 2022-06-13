@@ -156,7 +156,6 @@ int16_t *loadWAV(const char *path, uint64_t *length)
 
     int32_t lof;
     fread(&lof, 1, 4, file);
-    printf("lof: %d\n", lof);
 
     fread(&typeOfFormat, 1, 2, file);
     fread(&channelCount, 1, 2, file);

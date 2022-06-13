@@ -55,6 +55,7 @@ int bagE_main(int argc, char *argv[])
     initSplash();
 
 
+    /*
     Model energyModel  = modelLoad("res/energy.model");
     ModelObject energy = createModelObject(energyModel);
     modelFree(energyModel);
@@ -65,6 +66,7 @@ int bagE_main(int argc, char *argv[])
     );
 
     unsigned texture = createTexture("res/monser.png");
+    */
     
 
     unsigned camUBO = createBufferObject(
@@ -80,6 +82,7 @@ int bagE_main(int argc, char *argv[])
     );
 
 
+    /*
     double t = 0;
 
     float objX = 0.0f;
@@ -88,6 +91,7 @@ int bagE_main(int argc, char *argv[])
 
     float objScale = 1.0f;
     float objRotation = 0.0f;
+    */
 
     glActiveTexture(GL_TEXTURE0);
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, camUBO);
@@ -127,6 +131,7 @@ int bagE_main(int argc, char *argv[])
 
         if (inputState.playerInput && !gameState.inSplash) {
             float vx = 0.0f, vz = 0.0f;
+            float editSpeedup = 3.0f;
 
             if (inputState.leftDown) {
                 vx -= 0.1f * cosf(camState.yaw);
@@ -155,16 +160,16 @@ int bagE_main(int argc, char *argv[])
                 camState.z = playerState.z;
             } else {
                 if (inputState.ascendDown)
-                    camState.y += 0.1f;
+                    camState.y += 0.1f * editSpeedup;
                 if (inputState.descendDown)
-                    camState.y -= 0.1f;
+                    camState.y -= 0.1f * editSpeedup;
 
-                camState.x += vx;
-                camState.z += vz;
+                camState.x += vx * editSpeedup;
+                camState.z += vz * editSpeedup;
             }
         }
 
-        objRotation += 0.025f;
+        // objRotation += 0.025f;
 
 
         if (gameState.inSplash) {
@@ -215,6 +220,7 @@ int bagE_main(int argc, char *argv[])
 
 
         /* model energy */
+        /*
         Matrix modelEnergy = matrixScale(objScale, objScale, objScale);
 
         mul = matrixRotationY(objRotation);
@@ -231,6 +237,7 @@ int bagE_main(int argc, char *argv[])
         glProgramUniformMatrix4fv(textureProgram, 0, 1, GL_FALSE, modelEnergy.data);
 
         glDrawElements(GL_TRIANGLES, energy.indexCount, GL_UNSIGNED_INT, 0);
+        */
 
 
         /* overlay */
@@ -250,14 +257,14 @@ int bagE_main(int argc, char *argv[])
 
         bagE_swapBuffers();
 
-        t += 0.1;
+        // t += 0.1;
     }
   
-    freeModelObject(energy);
+    // freeModelObject(energy);
 
-    glDeleteTextures(1, &texture);
+    // glDeleteTextures(1, &texture);
 
-    glDeleteProgram(textureProgram);
+    // glDeleteProgram(textureProgram);
 
     exitSplash();
     exitLevels();
@@ -333,8 +340,12 @@ int bagE_eventHandler(bagE_Event *event)
                     }
                     break;
                 case KEY_L:
-                    if (!keyDown && !gameState.inSplash)
+                    if (!keyDown && !gameState.inSplash && gameState.isEditor)
                         levelsSaveCurrent();
+                    break;
+                case KEY_R:
+                    if (!keyDown && !gameState.inSplash && playerState.gaming)
+                        restartLevel();
                     break;
             }
         } break;
