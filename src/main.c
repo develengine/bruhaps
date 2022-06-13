@@ -55,20 +55,6 @@ int bagE_main(int argc, char *argv[])
     initSplash();
 
 
-    /*
-    Model energyModel  = modelLoad("res/energy.model");
-    ModelObject energy = createModelObject(energyModel);
-    modelFree(energyModel);
-
-    int textureProgram = createProgram(
-            "shaders/texture_vertex.glsl",
-            "shaders/texture_fragment.glsl"
-    );
-
-    unsigned texture = createTexture("res/monser.png");
-    */
-    
-
     unsigned camUBO = createBufferObject(
         sizeof(Matrix) * 3 + sizeof(float) * 4,
         NULL,
@@ -81,17 +67,6 @@ int bagE_main(int argc, char *argv[])
         GL_DYNAMIC_STORAGE_BIT
     );
 
-
-    /*
-    double t = 0;
-
-    float objX = 0.0f;
-    float objY = 0.0f;
-    float objZ = -10.0f;
-
-    float objScale = 1.0f;
-    float objRotation = 0.0f;
-    */
 
     glActiveTexture(GL_TEXTURE0);
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, camUBO);
@@ -169,8 +144,6 @@ int bagE_main(int argc, char *argv[])
             }
         }
 
-        // objRotation += 0.025f;
-
 
         if (gameState.inSplash) {
             updateSplash(0.01666f);
@@ -196,7 +169,7 @@ int bagE_main(int argc, char *argv[])
                 (float)appState.windowWidth,
                 (float)appState.windowHeight,
                 0.1f,
-                100.0f
+                150.0f /* NOTE: for now so the map doesn't clip */
         );
 
         /* vp */
@@ -219,27 +192,6 @@ int bagE_main(int argc, char *argv[])
         }
 
 
-        /* model energy */
-        /*
-        Matrix modelEnergy = matrixScale(objScale, objScale, objScale);
-
-        mul = matrixRotationY(objRotation);
-        modelEnergy = matrixMultiply(&mul, &modelEnergy);
-
-        mul = matrixTranslation(objX - 5.0f, objY, objZ);
-        modelEnergy = matrixMultiply(&mul, &modelEnergy);
-
-
-        glUseProgram(textureProgram);
-        glBindVertexArray(energy.vao);
-        glBindTextureUnit(0, texture);
-
-        glProgramUniformMatrix4fv(textureProgram, 0, 1, GL_FALSE, modelEnergy.data);
-
-        glDrawElements(GL_TRIANGLES, energy.indexCount, GL_UNSIGNED_INT, 0);
-        */
-
-
         /* overlay */
         glDisable(GL_DEPTH_TEST);
         glBindVertexArray(gui.dummyVao);
@@ -256,16 +208,8 @@ int bagE_main(int argc, char *argv[])
 
 
         bagE_swapBuffers();
-
-        // t += 0.1;
     }
   
-    // freeModelObject(energy);
-
-    // glDeleteTextures(1, &texture);
-
-    // glDeleteProgram(textureProgram);
-
     exitSplash();
     exitLevels();
     exitGUI();
@@ -313,6 +257,10 @@ int bagE_eventHandler(bagE_Event *event)
                     break;
                 case KEY_SPACE:
                     inputState.ascendDown = keyDown;
+
+                    if (!keyDown && !gameState.inSplash
+                     && playerState.gaming && playerState.hp <= 0)
+                        restartLevel();
                     break;
                 case KEY_SHIFT_LEFT:
                     inputState.descendDown = keyDown;
@@ -342,10 +290,6 @@ int bagE_eventHandler(bagE_Event *event)
                 case KEY_L:
                     if (!keyDown && !gameState.inSplash && gameState.isEditor)
                         levelsSaveCurrent();
-                    break;
-                case KEY_R:
-                    if (!keyDown && !gameState.inSplash && playerState.gaming)
-                        restartLevel();
                     break;
             }
         } break;

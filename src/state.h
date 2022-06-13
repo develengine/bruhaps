@@ -63,6 +63,7 @@ typedef struct
     float vy;
     bool tryJump;
     int hp;
+    bool won;
 } PlayerState;
 
 extern PlayerState playerState;

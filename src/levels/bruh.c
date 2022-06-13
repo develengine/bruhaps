@@ -65,26 +65,16 @@ void levelBruhLoad(void)
     level.filePath = lvlPath;
 
 
-    levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelTree],
-                                          .texture = levelTextures[TextureTree] },
-                             (ColliderType) { true, { {{ 0.0f, 1.5f, 0.0f }},
-                                                      {{ 0.3f, 1.5f, 0.3f }} } });
-    levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelBush],
-                                          .texture = levelTextures[TextureTree] },
-                             (ColliderType) { false });
-    levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelRock],
-                                          .texture = levelTextures[TextureStone] },
-                             (ColliderType) { true, { {{ 0.0f, 0.2f, 0.0f }},
-                                                      {{ 0.6f, 0.4f, 0.6f }} } });
-
-    playerState.x = (CHUNK_DIM + CHUNK_DIM * 0.5) * CHUNK_TILE_DIM;
+    // FIXME: should not be hardcoded
+    playerState.x = (CHUNK_DIM + CHUNK_DIM * 1.75) * CHUNK_TILE_DIM;
     playerState.y = 5.0f;
-    playerState.z = (CHUNK_DIM + CHUNK_DIM * 0.5) * CHUNK_TILE_DIM;
+    playerState.z = (CHUNK_DIM + CHUNK_DIM * 1.0) * CHUNK_TILE_DIM;
     camState.pitch = 0.0f;
-    camState.yaw   = 0.0f;
+    camState.yaw   = M_PI;
 
     if (!gameState.isEditor)
         spawnersBroadcast(SpawnerInit);
+
 
     level.selectedGun = Glock;
     playerState.hp = PLAYER_HP_FULL;
@@ -123,6 +113,19 @@ void levelBruhInit(void)
 
     for (int i = 0; i < ModelIDCount; ++i)
         levelModels[i] = loadModelObject(levelModelPaths[i]);
+
+    // FIXME: and also this
+    levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelTree],
+                                          .texture = levelTextures[TextureTree] },
+                             (ColliderType) { true, { {{ 0.0f, 1.5f, 0.0f }},
+                                                      {{ 0.3f, 1.5f, 0.3f }} } });
+    levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelBush],
+                                          .texture = levelTextures[TextureTree] },
+                             (ColliderType) { false });
+    levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelRock],
+                                          .texture = levelTextures[TextureStone] },
+                             (ColliderType) { true, { {{ 0.0f, 0.2f, 0.0f }},
+                                                      {{ 0.6f, 0.4f, 0.6f }} } });
 
 }
 

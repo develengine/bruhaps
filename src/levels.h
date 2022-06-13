@@ -98,8 +98,8 @@ typedef enum
 } MobState;
 
 
-#define MOB_SPEED 3.0f
-#define MOB_CHASE_RADIUS 48.0f
+#define MOB_SPEED 5.0f
+#define MOB_CHASE_RADIUS 32.0f
 #define MOB_BITE_RANGE 2.0f
 #define MOB_ATTACK_TO 1.0f
 #define MOB_THICKNESS 1.0f
@@ -146,12 +146,7 @@ typedef enum
 {
     HealthPickup,
     AmmoPickup,
-
-    /*
-    Key1Pickup,
-    Key2Pickup,
-    Key3Pickup,
-    */
+    HeadPickup,
 
     PickupCount
 } Pickup;
@@ -185,8 +180,14 @@ typedef struct
     unsigned skyboxCubemap;
 
     unsigned textureProgram;
-    unsigned metalProgram;
 
+    /* NOTE: exists purely because of 2 light requirement */
+    unsigned lightProgram;
+
+    ModelObject platform;
+    unsigned platformTexture;
+
+    unsigned metalProgram;
     ModelObject gatling;
     ModelObject gatlingBase;
     ModelObject glock;
@@ -198,6 +199,11 @@ typedef struct
     int gatlingAmmo;
 
     GunType selectedGun;
+
+    ModelObject head;
+    unsigned headTexture;
+    int headCount;
+    int carryHeadCount;
 
     const AtlasView *atlasViews;
 
@@ -304,5 +310,8 @@ void addPickup(Pickup pickup, Vector pos);
 void removePickup(int index);
 
 void restartLevel(void);
+
+void levelLoad(LevelID id);
+void levelUnload(LevelID id);
 
 #endif

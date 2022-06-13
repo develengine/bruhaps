@@ -40,6 +40,9 @@ static void onNewGame(void)
     playerState.gaming = !gameState.isEditor;
     inputState.playerInput = true;
     bagE_setHiddenCursor(true);
+
+    // FIXME:
+    levelLoad(LevelBruh);
 }
 
 static void onContinue(void)

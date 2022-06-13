@@ -30,7 +30,13 @@ void main()
     float shine = pow(max(dot(toCamera, reflection), 0.0), 32);
     vec3 specular = shine * 0.5 * lightColor;
 
-    o_color = vec4(ambientColor + lightColor + specular, 1.0)
-            * texColor;
+    vec4 cleanColor = vec4(ambientColor + lightColor + specular, 1.0)
+                    * texColor;
+
+    float dist = distance(o_position, o_cameraPos);
+    float farDist = 64.0;
+    float ratio = min(dist / farDist, 1.0);
+    o_color = (1.0 - ratio) * cleanColor
+            + ratio         * vec4(ambientColor, 1.0);
 }
 
