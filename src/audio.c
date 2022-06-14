@@ -199,7 +199,7 @@ int16_t *loadWAV(const char *path, uint64_t *length)
 
     fread(&dataSize, 1, 4, file);
     
-#if 1
+#if 0
     printf("WAV file: %s\n"
            "    PCM: %d\n"
            "    Channels: %d\n"

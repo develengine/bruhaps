@@ -159,16 +159,36 @@ typedef enum
 typedef bool (*PickupAction)(void);
 
 
+#define WALK_LENGTH 0.3f
+
+
 typedef struct
 {
     // TODO: This stuff should not be here but for
     //       now it's fine
-    //       This whole file should be name something
+    //       This whole file should be named something
     //       more like 'game' rather then 'levels'
     uint64_t vineThudLength;
     int16_t *vineThud;
     uint64_t bite87Length;
     int16_t *bite87;
+    uint64_t ssAmmoPickupLength;
+    int16_t *ssAmmoPickup;
+    uint64_t bruh2Length;
+    int16_t *bruh2;
+    uint64_t gulpLength;
+    int16_t *gulp;
+    uint64_t stoneHitLength;
+    int16_t *stoneHit;
+    uint64_t happyWheelsWinLength;
+    int16_t *happyWheelsWin;
+    uint64_t steveRevLength;
+    int16_t *steveRev;
+    uint64_t landLength;
+    int16_t *land;
+
+    float walkTime;
+    bool inJump;
 
     unsigned guiAtlas;
 

@@ -45,6 +45,14 @@ bool pickupHealth(void)
         if (playerState.hp > PLAYER_HP_FULL)
             playerState.hp = PLAYER_HP_FULL;
 
+        playSound((Sound) {
+            .data  = level.gulp,
+            .end   = level.gulpLength,
+            .volL  = 0.5f,
+            .volR  = 0.5f,
+            .times = 1,
+        });
+
         return true;
     }
 
@@ -55,6 +63,15 @@ bool pickupHealth(void)
 bool pickupAmmo(void)
 {
     level.gatlingAmmo += 50;
+
+    playSound((Sound) {
+        .data  = level.ssAmmoPickup,
+        .end   = level.ssAmmoPickupLength,
+        .volL  = 0.5f,
+        .volR  = 0.5f,
+        .times = 1,
+    });
+
     return true;
 }
 
@@ -62,6 +79,15 @@ bool pickupAmmo(void)
 bool pickupHead(void)
 {
     ++level.carryHeadCount;
+
+    playSound((Sound) {
+        .data  = level.bruh2,
+        .end   = level.bruh2Length,
+        .volL  = 0.5f,
+        .volR  = 0.5f,
+        .times = 1,
+    });
+
     return true;
 }
 
@@ -90,7 +116,7 @@ typedef enum
     PickupPlacing
 } EditorMode;
 
-static EditorMode editorMode = PickupPlacing;
+static EditorMode editorMode = TerrainHeightPaintingRel;
 
 
 static bool selected = false;
@@ -264,8 +290,15 @@ void initLevels(void)
     free(animated.vertexWeights);
 
 
-    level.vineThud = loadWAV("res/vine_thud.wav", &level.vineThudLength);
-    level.bite87   = loadWAV("res/bite87.wav",    &level.bite87Length);
+    level.vineThud       = loadWAV("res/vine_thud.wav",        &level.vineThudLength);
+    level.bite87         = loadWAV("res/bite87.wav",           &level.bite87Length);
+    level.ssAmmoPickup   = loadWAV("res/ss_ammo_pickup.wav",   &level.ssAmmoPickupLength);
+    level.bruh2          = loadWAV("res/bruh2.wav",            &level.bruh2Length);
+    level.gulp           = loadWAV("res/gulp.wav",             &level.gulpLength);
+    level.stoneHit       = loadWAV("res/stone_hit.wav",        &level.stoneHitLength);
+    level.happyWheelsWin = loadWAV("res/happy_wheels_win.wav", &level.happyWheelsWinLength);
+    level.steveRev       = loadWAV("res/steve_rev.wav",        &level.steveRevLength);
+    level.land           = loadWAV("res/land.wav",             &level.landLength);
 
 
     // FIXME:
@@ -625,10 +658,26 @@ void processPlayerInput(float vx, float vz, bool jump, float dt)
     height += playerHeight;
     // TODO: remove
 
+    if (!level.inJump && (vx != 0.0f || vz != 0.0f))
+        level.walkTime += dt;
+
+    if (!level.inJump && level.walkTime > WALK_LENGTH) {
+        level.walkTime -= WALK_LENGTH;
+
+        playSound((Sound) {
+            .data  = level.land,
+            .end   = level.landLength,
+            .volL  = 0.5f,
+            .volR  = 0.5f,
+            .times = 1,
+        });
+    }
+
     if (playerState.y < height + groundTolerance) {
         playerState.y = height;
         playerState.vy = 0.0f;
         playerState.onGround = true;
+        level.inJump = false;
     } else {
         playerState.onGround = false;
     }
@@ -636,6 +685,15 @@ void processPlayerInput(float vx, float vz, bool jump, float dt)
     if (jump && playerState.onGround) {
         playerState.vy += 5.0f;
         playerState.y += groundTolerance;
+        level.inJump = true;
+        level.walkTime = WALK_LENGTH + 0.1f;
+        playSound((Sound) {
+            .data  = level.steveRev,
+            .end   = level.steveRevLength,
+            .volL  = 0.5f,
+            .volR  = 0.5f,
+            .times = 1,
+        });
     }
 }
 
@@ -1089,9 +1147,30 @@ void updateLevel(float dt)
 
         if (distS < 4.0f) {
             level.headCount += level.carryHeadCount;
+
+            if (level.carryHeadCount > 0) {
+                playSound((Sound) {
+                    .data  = level.stoneHit,
+                    .end   = level.stoneHitLength,
+                    .volL  = 0.5f,
+                    .volR  = 0.5f,
+                    .times = 1,
+                });
+            }
+
             level.carryHeadCount = 0;
-            if (level.headCount == 3)
+
+            if (level.headCount == 3 && !playerState.won) {
+                playSound((Sound) {
+                    .data  = level.happyWheelsWin,
+                    .end   = level.happyWheelsWinLength,
+                    .volL  = 0.5f,
+                    .volR  = 0.5f,
+                    .times = 1,
+                });
+
                 playerState.won = true;
+            }
         }
     }
 
