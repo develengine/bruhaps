@@ -1,9 +1,10 @@
 #include "levels.h"
 
+#define EPS 0.03f
 
 static const AtlasView atlasViews[] = {
-    { 0.0f,  0.75f, 0.25f, 0.25f, 1, 1 },  // grass
-    { 0.25f, 0.75f, 0.25f, 0.25f, 1, 1 },  // cobble
+    { 0.0f + EPS,  0.75f + EPS, 0.25f - EPS * 2, 0.25f - EPS * 2, 1, 1 },  // grass
+    { 0.25f + EPS, 0.75f + EPS, 0.25f - EPS * 2, 0.25f - EPS * 2, 1, 1 },  // cobble
 };
 
 
