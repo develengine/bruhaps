@@ -667,8 +667,8 @@ void processPlayerInput(float vx, float vz, bool jump, float dt)
         playSound((Sound) {
             .data  = level.land,
             .end   = level.landLength,
-            .volL  = 0.5f,
-            .volR  = 0.5f,
+            .volL  = 0.25f,
+            .volR  = 0.25f,
             .times = 1,
         });
     }
@@ -1027,7 +1027,7 @@ void updateLevel(float dt)
                 }
 
                 level.mobTransforms[mobID].ry = atanf(toPlayerX / toPlayerZ)
-                                              + (toPlayerZ > 0.0f ? M_PI : 0.0f);
+                                              + (toPlayerZ > 0.0f ? (float)M_PI : 0.0f);
             }
         }
     }
@@ -1224,19 +1224,19 @@ void renderLevel(void)
         Matrix modelGun = matrixScale(scale, scale, scale);
 
         if (level.selectedGun == Gatling) {
-            mul = matrixRotationZ(level.gunTime * M_PI * 2);
+            mul = matrixRotationZ(level.gunTime * (float)M_PI * 2);
             modelGun = matrixMultiply(&mul, &modelGun);
         } else {
-            mul = matrixRotationX((M_PI / 3) * sinf((level.gunTime / GLOCK_BUMP_TIME) * M_PI));
+            mul = matrixRotationX(((float)M_PI / 3) * sinf((level.gunTime / GLOCK_BUMP_TIME) * (float)M_PI));
             modelGun = matrixMultiply(&mul, &modelGun);
 
-            mul = matrixRotationY(M_PI);
+            mul = matrixRotationY((float)M_PI);
             modelGun = matrixMultiply(&mul, &modelGun);
         }
 
         float offset = level.selectedGun == Gatling
                      ? 0.5f
-                     : 0.75f -  0.2f * sinf((level.gunTime / GLOCK_BUMP_TIME) * M_PI);
+                     : 0.75f -  0.2f * sinf((level.gunTime / GLOCK_BUMP_TIME) * (float)M_PI);
 
         mul = matrixTranslation(-0.5f, -0.5f, offset);
         modelGun = matrixMultiply(&mul, &modelGun);
@@ -1244,7 +1244,7 @@ void renderLevel(void)
         mul = matrixRotationX(camState.pitch);
         modelGun = matrixMultiply(&mul, &modelGun);
 
-        mul = matrixRotationY(-camState.yaw + M_PI);
+        mul = matrixRotationY(-camState.yaw + (float)M_PI);
         modelGun = matrixMultiply(&mul, &modelGun);
 
         mul = matrixTranslation(camState.x, camState.y, camState.z);
@@ -1665,7 +1665,7 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
                         .y = atTerrainHeight(&level.terrain, selectedX, selectedZ),
                         .z = selectedZ * CHUNK_TILE_DIM,
                         .scale = 1.0f,
-                        .ry = ((M_PI * 2) / 100) * (rand() % 100), // FIXME: temporary
+                        .ry = (((float)M_PI * 2) / 100) * (rand() % 100), // FIXME: temporary
                     });
                 } else if (mb->button == bagE_ButtonRight) {
                     float x = selectedX * CHUNK_TILE_DIM;

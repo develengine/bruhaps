@@ -191,7 +191,7 @@ void renderSplash(void)
         /* gatling base */
         Matrix modelGatling = matrixScale(0.5f, 0.5f, 0.5f);
 
-        Matrix mul = matrixRotationX((float)(M_PI / 16));
+        mul = matrixRotationX((float)(M_PI / 16));
         modelGatling = matrixMultiply(&mul, &modelGatling);
 
         mul = matrixRotationY((float)(M_PI / 3.5));
