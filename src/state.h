@@ -7,6 +7,8 @@
 
 typedef struct
 {
+    // TODO: Duplicate state for gameState.isPaused
+    //       remove and rewrite a ton of code
     bool playerInput;
 
     bool leftDown;
@@ -16,8 +18,8 @@ typedef struct
     bool ascendDown;
     bool descendDown;
 
-    bool altDown;
-    bool fDown;
+    bool escDown;
+    bool f11Down;
 
     float motionYaw;
     float motionPitch;
@@ -40,6 +42,7 @@ typedef struct
 {
     bool inSplash;
     bool isEditor;
+    bool isPaused;
 } GameState;
 
 extern GameState gameState;

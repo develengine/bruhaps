@@ -99,8 +99,11 @@ int bagE_main(int argc, char *argv[])
         );
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        camState.pitch += inputState.motionPitch * MOUSE_SENSITIVITY;
-        camState.yaw   += inputState.motionYaw   * MOUSE_SENSITIVITY;
+        if (!gameState.isPaused) {
+            camState.pitch += inputState.motionPitch * MOUSE_SENSITIVITY;
+            camState.yaw   += inputState.motionYaw   * MOUSE_SENSITIVITY;
+        }
+
         inputState.motionPitch = 0.0f;
         inputState.motionYaw   = 0.0f;
 
@@ -126,13 +129,15 @@ int bagE_main(int argc, char *argv[])
             }
 
             if (!gameState.isEditor) {
-                processPlayerInput(vx, vz, playerState.tryJump && inputState.ascendDown, 0.01666f);
+                if (!gameState.isPaused) {
+                    processPlayerInput(vx, vz, playerState.tryJump && inputState.ascendDown, 0.01666f);
 
-                playerState.tryJump = !inputState.ascendDown;
+                    playerState.tryJump = !inputState.ascendDown;
 
-                camState.x = playerState.x;
-                camState.y = playerState.y;
-                camState.z = playerState.z;
+                    camState.x = playerState.x;
+                    camState.y = playerState.y;
+                    camState.z = playerState.z;
+                }
             } else {
                 if (inputState.ascendDown)
                     camState.y += 0.1f * editSpeedup;
@@ -148,7 +153,8 @@ int bagE_main(int argc, char *argv[])
         if (gameState.inSplash) {
             updateSplash(0.01666f);
         } else {
-            updateLevel(0.01666f);
+            if (!gameState.isPaused)
+                updateLevel(0.01666f);
         }
 
 
@@ -265,26 +271,27 @@ int bagE_eventHandler(bagE_Event *event)
                 case KEY_SHIFT_LEFT:
                     inputState.descendDown = keyDown;
                     break;
-                case KEY_ALT_LEFT:
+                case KEY_F11:
                     if (keyDown) {
-                        if (!inputState.altDown) {
-                            inputState.altDown = true;
-                            inputState.playerInput = !inputState.playerInput;
-                            bagE_setHiddenCursor(inputState.playerInput);
-                        }
-                    } else {
-                        inputState.altDown = false;
-                    }
-                    break;
-                case KEY_F:
-                    if (keyDown) {
-                        if(!inputState.fDown) {
-                            inputState.fDown = true;
+                        if(!inputState.f11Down) {
+                            inputState.f11Down = true;
                             appState.fullscreen = !appState.fullscreen;
                             bagE_setFullscreen(appState.fullscreen);
                         }
                     } else {
-                        inputState.fDown = false;
+                        inputState.f11Down = false;
+                    }
+                    break;
+                case KEY_ESCAPE:
+                    if (keyDown) {
+                        if (!inputState.escDown) {
+                            inputState.escDown = true;
+                            inputState.playerInput = !inputState.playerInput;
+                            gameState.isPaused = !gameState.isPaused;
+                            bagE_setHiddenCursor(inputState.playerInput);
+                        }
+                    } else {
+                        inputState.escDown = false;
                     }
                     break;
                 case KEY_L:

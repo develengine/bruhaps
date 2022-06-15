@@ -22,11 +22,13 @@ void initState(void)
 
     gameState = (GameState) {
         .inSplash = true,
-        .isEditor = false
+        .isEditor = false,
+        .isPaused = false
     };
 
     camState = (CamState) {
         .x = 0.0f, .y = 0.0f, .z = 0.0f,
+        // COPE: Slight offset so that skybox doesn't mess up.
         .pitch = 0.001f, .yaw = 0.001f,
         .fov = 90.0f
     };
