@@ -71,7 +71,7 @@ void levelBruhLoad(void)
     playerState.y = 5.0f;
     playerState.z = (CHUNK_DIM + CHUNK_DIM * 1.0) * CHUNK_TILE_DIM;
     camState.pitch = 0.0f;
-    camState.yaw   = M_PI;
+    camState.yaw   = (float)M_PI;
 
     if (!gameState.isEditor)
         spawnersBroadcast(SpawnerInit);
