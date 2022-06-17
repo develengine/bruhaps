@@ -69,7 +69,7 @@ void levelBruhLoad(void)
     // FIXME: should not be hardcoded
     playerState.x = (CHUNK_DIM + CHUNK_DIM * 1.75) * CHUNK_TILE_DIM;
     playerState.y = 5.0f;
-    playerState.z = (CHUNK_DIM + CHUNK_DIM * 1.0) * CHUNK_TILE_DIM;
+    playerState.z = (CHUNK_DIM + CHUNK_DIM * 1.0)  * CHUNK_TILE_DIM;
     camState.pitch = 0.0f;
     camState.yaw   = (float)M_PI;
 
@@ -79,6 +79,9 @@ void levelBruhLoad(void)
 
     level.selectedGun = Glock;
     playerState.hp = PLAYER_HP_FULL;
+    playerState.onGround = false;
+    playerState.vy = 0.0f;
+    playerState.won = false;
 }
 
 

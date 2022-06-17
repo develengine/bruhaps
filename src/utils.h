@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <string.h>
+#include <stdlib.h>
 
 
 #define length(x) (sizeof(x)/sizeof(*x))

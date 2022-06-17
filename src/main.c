@@ -11,6 +11,7 @@
 #include "audio.h"
 #include "gui.h"
 #include "splash.h"
+#include "settings.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,6 +55,7 @@ int bagE_main(int argc, char *argv[])
     initLevels();
     initSplash();
 
+    settingsLoad();
 
     unsigned camUBO = createBufferObject(
         sizeof(Matrix) * 3 + sizeof(float) * 4,
@@ -100,8 +102,8 @@ int bagE_main(int argc, char *argv[])
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         if (!gameState.isPaused) {
-            camState.pitch += inputState.motionPitch * MOUSE_SENSITIVITY;
-            camState.yaw   += inputState.motionYaw   * MOUSE_SENSITIVITY;
+            camState.pitch += inputState.motionPitch * gameState.sensitivity;
+            camState.yaw   += inputState.motionYaw   * gameState.sensitivity;
         }
 
         inputState.motionPitch = 0.0f;
@@ -153,8 +155,11 @@ int bagE_main(int argc, char *argv[])
         if (gameState.inSplash) {
             updateSplash(0.01666f);
         } else {
-            if (!gameState.isPaused)
+            if (gameState.isPaused) {
+                updateMenu(0.01666f);
+            } else {
                 updateLevel(0.01666f);
+            }
         }
 
 
@@ -249,18 +254,11 @@ int bagE_eventHandler(bagE_Event *event)
         case bagE_EventKeyUp: {
             bagE_Key *key = &(event->data.key);
             switch (key->key) {
-                case KEY_A:
-                    inputState.leftDown = keyDown;
-                    break;
-                case KEY_D:
-                    inputState.rightDown = keyDown;
-                    break;
-                case KEY_W:
-                    inputState.forthDown = keyDown;
-                    break;
-                case KEY_S:
-                    inputState.backDown = keyDown;
-                    break;
+                case KEY_A: inputState.leftDown  = keyDown; break;
+                case KEY_D: inputState.rightDown = keyDown; break;
+                case KEY_W: inputState.forthDown = keyDown; break;
+                case KEY_S: inputState.backDown  = keyDown; break;
+
                 case KEY_SPACE:
                     inputState.ascendDown = keyDown;
 
@@ -268,9 +266,11 @@ int bagE_eventHandler(bagE_Event *event)
                      && !gameState.isEditor && playerState.hp <= 0)
                         restartLevel();
                     break;
+
                 case KEY_SHIFT_LEFT:
                     inputState.descendDown = keyDown;
                     break;
+
                 case KEY_F11:
                     if (keyDown) {
                         if(!inputState.f11Down) {
@@ -282,18 +282,21 @@ int bagE_eventHandler(bagE_Event *event)
                         inputState.f11Down = false;
                     }
                     break;
+
                 case KEY_ESCAPE:
+                    if (gameState.inSplash)
+                        break;
+
                     if (keyDown) {
                         if (!inputState.escDown) {
                             inputState.escDown = true;
-                            inputState.playerInput = !inputState.playerInput;
-                            gameState.isPaused = !gameState.isPaused;
-                            bagE_setHiddenCursor(inputState.playerInput);
+                            processEsc();
                         }
                     } else {
                         inputState.escDown = false;
                     }
                     break;
+
                 case KEY_L:
                     if (!keyDown && !gameState.inSplash && gameState.isEditor)
                         levelsSaveCurrent();
@@ -309,10 +312,14 @@ int bagE_eventHandler(bagE_Event *event)
             }
             break;
 
-        case bagE_EventMousePosition:
-            if (gameState.inSplash) {
+        case bagE_EventMousePosition: {
                 bagE_Mouse *m = &(event->data.mouse);
-                splashProcessMouse(m);
+
+                if (gameState.inSplash) {
+                    splashProcessMouse(m);
+                } else if (gameState.isPaused) {
+                    menuProcessMouse(m);
+                }
             }
             break;
 
@@ -322,7 +329,8 @@ int bagE_eventHandler(bagE_Event *event)
         case bagE_EventMouseButtonUp: {
                 bagE_MouseButton *mb = &(event->data.mouseButton);
                 if (gameState.inSplash) {
-                    splashProcessButton(mb);
+                    if (keyDown)
+                        splashProcessButton(mb);
                 } else {
                     levelsProcessButton(mb, keyDown);
                 }

@@ -17,13 +17,15 @@ void initState(void)
     };
 
     appState = (AppState) {
-        .running = true
+        .running = true,
+        .volume  = 1.0f
     };
 
     gameState = (GameState) {
         .inSplash = true,
         .isEditor = false,
-        .isPaused = false
+        .isPaused = false,
+        .sensitivity = 0.005f
     };
 
     camState = (CamState) {

@@ -3,7 +3,12 @@
 
 #include <stdbool.h>
 
-#define MOUSE_SENSITIVITY 0.005f
+// #define MOUSE_SENSITIVITY 0.005f
+#define MAX_SENSITIVITY 0.02f
+#define MIN_SENSITIVITY 0.0005f
+
+#define MINIMUM_FOV 72.0f
+#define MAXIMUM_FOV 144.0f
 
 typedef struct
 {
@@ -33,6 +38,7 @@ typedef struct
     int windowWidth, windowHeight;
     bool running;
     bool fullscreen;
+    float volume;
 } AppState;
 
 extern AppState appState;
@@ -43,6 +49,7 @@ typedef struct
     bool inSplash;
     bool isEditor;
     bool isPaused;
+    float sensitivity;
 } GameState;
 
 extern GameState gameState;

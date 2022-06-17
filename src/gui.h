@@ -3,6 +3,8 @@
 
 #include "linalg.h"
 
+#include <stdbool.h>
+
 
 typedef struct
 {
@@ -27,6 +29,7 @@ extern GUI gui;
 
 
 typedef void (*GUIButtonCallback)(void);
+typedef bool (*GUIElementCallback)(int, int, bool);
 
 
 void initGUI(void);

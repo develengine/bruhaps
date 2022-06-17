@@ -7,7 +7,7 @@
 #include <assert.h>
 
 
-#define TEXT_MUL 3
+#define TEXT_MUL 4
 #define NO_BUTTON -1
 
 
@@ -35,7 +35,6 @@ static_assert(length(buttonNames) == SplashButtonCount,
 
 static void onNewGame(void)
 {
-    printf("New Game\n");
     gameState.inSplash = false;
     playerState.gaming = !gameState.isEditor;
     inputState.playerInput = true;
@@ -302,6 +301,7 @@ void splashProcessButton(bagE_MouseButton *mb)
 
     for (int i = 0; i < SplashButtonCount; ++i) {
         Rect rect = buttonRects[i];
+        // FIXME: rewrite this coz this is retarded
         int length = (int)strlen(buttonNames[i]);
 
         if (x >= rect.x && x <= (rect.x + rect.w * length)

@@ -6,6 +6,7 @@
 #include "state.h"
 #include "audio.h"
 #include "gui.h"
+#include "settings.h"
 
 
 Level level;
@@ -109,12 +110,16 @@ typedef enum
 {
     TerrainPlacing,
     TerrainTexturing,
-    TerrainHeightPaintingAbs,
+    // TerrainHeightPaintingAbs,
     TerrainHeightPaintingRel,
     StaticsPlacing,
     SpawnerPlacing,
-    PickupPlacing
+    PickupPlacing,
+
+    EditorModeCount
 } EditorMode;
+
+#define NoEditorMode EditorModeCount
 
 static EditorMode editorMode = TerrainHeightPaintingRel;
 
@@ -126,10 +131,10 @@ static int brushWidth = 3;
 #define MAX_BRUSH_WIDTH 3
 
 static uint8_t selectedViewID = 1;
-static uint8_t selectedViewTrans = 0;
+// static uint8_t selectedViewTrans = 0;
 
 static float selectedRelHeight = 0.1f;
-static float selectedAbsHeight = 3.0f;
+// static float selectedAbsHeight = 3.0f;
 
 static int selectedStaticID = 0;
 
@@ -140,6 +145,98 @@ static Pickup selectedPickup = HeadPickup;
 static int terrainHeightDown = false;
 
 static void scaleHeights(float scale);
+
+
+static const char *editorModeNames[] = {
+    [TerrainPlacing]           = " Terrain Placing ",
+    [TerrainTexturing]         = "Terrain Texturing",
+    [TerrainHeightPaintingRel] = " Height Painting ",
+    [StaticsPlacing]           = " Statics Placing ",
+    [SpawnerPlacing]           = " Spawner Placing ",
+    [PickupPlacing]            = " Pickups Placing ",
+};
+
+static EditorMode selectedEditorMode = NoEditorMode;
+
+#define EDITOR_FONT_SIZE 32
+
+
+#define TEXT_MUL 4
+
+typedef enum
+{
+    PauseResume,
+    PauseSettings,
+    PauseMainMenu,
+
+    PauseButtonCount
+} PauseButtonID;
+
+#define NO_BUTTON (PauseButtonCount + 1)
+
+static const char *pauseButtonNames[] = {
+    [PauseResume]   = "  RESUME  ",
+    [PauseSettings] = " SETTINGS ",
+    [PauseMainMenu] = "   MENU   ",
+};
+
+static_assert(length(pauseButtonNames) == PauseButtonCount,
+              "unfilled button name");
+
+typedef enum
+{
+    PauseBaseState,
+    PauseSettingsState,
+} PauseState;
+
+static PauseState pauseState = PauseBaseState;
+
+
+static void onPauseResume(void)
+{
+    inputState.playerInput = true;
+    gameState.isPaused = false;
+    bagE_setHiddenCursor(true);
+}
+
+static void onPauseSettings(void)
+{
+    pauseState = PauseSettingsState;
+}
+
+static void onPauseMainMenu(void)
+{
+    gameState.inSplash = true;
+    gameState.isPaused = false;
+    playerState.gaming = gameState.isEditor;
+    inputState.playerInput = false;
+    bagE_setHiddenCursor(false);
+    
+    // COPE: + FIXME:
+    camState.pitch = 0.0001f;
+    camState.yaw = 0.0001f;
+    camState.x = 0.0f;
+    camState.y = 0.0f;
+    camState.z = 0.0f;
+
+    // FIXME:
+    levelUnload(LevelBruh);
+}
+
+
+static GUIButtonCallback pauseButtonCallbacks[] = {
+    [PauseResume]   = onPauseResume,
+    [PauseSettings] = onPauseSettings,
+    [PauseMainMenu] = onPauseMainMenu,
+};
+
+static_assert(length(pauseButtonCallbacks) == PauseButtonCount,
+              "unfilled button callback");
+
+static Rect pauseButtonRects[PauseButtonCount];
+
+static PauseButtonID pauseSelectedButton = NO_BUTTON;
+
 
 
 // TODO: remove me
@@ -345,7 +442,8 @@ void restartLevel(void)
 void exitLevels(void)
 {
     // FIXME:
-    levelUnload(LevelBruh);
+    if (!gameState.inSplash)
+        levelUnload(LevelBruh);
 
     levelExits();
 
@@ -667,8 +765,8 @@ void processPlayerInput(float vx, float vz, bool jump, float dt)
         playSound((Sound) {
             .data  = level.land,
             .end   = level.landLength,
-            .volL  = 0.25f,
-            .volR  = 0.25f,
+            .volL  = 0.5f,
+            .volR  = 0.5f,
             .times = 1,
         });
     }
@@ -839,6 +937,79 @@ void playerShoot(int damage)
         if (level.mobHPs[pos] <= 0)
             removeMob(pos / MAX_MOBS_PER_TYPE, pos % MAX_MOBS_PER_TYPE);
     }
+}
+
+
+void updateMenu(float dt)
+{
+    if (gameState.isEditor) {
+        return;
+    }
+
+    if (pauseState == PauseSettingsState) {
+        settingsUpdate(dt);
+        return;
+    }
+
+    int fontSize = 8 * TEXT_MUL;
+    int padding = 4 * TEXT_MUL;
+    int width = fontSize * strlen(pauseButtonNames[0]);
+    int height = fontSize * 2;
+    int x = (appState.windowWidth - width) / 2;
+    int y = (appState.windowHeight - (height + padding) * PauseButtonCount) / 2;
+
+    for (int i = 0; i < PauseButtonCount; ++i) {
+        pauseButtonRects[i] = (Rect) { x, y, width, height };
+        y += height + padding;
+    }
+}
+
+
+void menuProcessMouse(bagE_Mouse *m)
+{
+    int x = m->x;
+    int y = m->y;
+
+    if (gameState.isEditor && gameState.isPaused) {
+        int menuHeight = EDITOR_FONT_SIZE * EditorModeCount;
+        int menuWidth  = (EDITOR_FONT_SIZE / 2) * strlen(editorModeNames[0]);
+
+        if (x < menuWidth && y < menuHeight) {
+            selectedEditorMode = y / EDITOR_FONT_SIZE;
+            return;
+        }
+
+        selectedEditorMode = NoEditorMode;
+        return;
+    }
+
+    if (pauseState == PauseSettingsState) {
+        settingsProcessMouse(m);
+        return;
+    }
+
+    for (PauseButtonID id = 0; id < PauseButtonCount; ++id) {
+        Rect rect = pauseButtonRects[id];
+
+        if (x >= rect.x && x <= rect.x + rect.w
+         && y >= rect.y && y <= rect.y + rect.h) {
+            if (id == pauseSelectedButton)
+                return;
+
+            playSound((Sound) {
+                .data = level.vineThud,
+                .end   = level.vineThudLength / 16,
+                .volL  = 0.15f,
+                .volR  = 0.15f,
+                .times = 1,
+            });
+
+            pauseSelectedButton = id;
+            return;
+        }
+    }
+
+    pauseSelectedButton = NO_BUTTON;
 }
 
 
@@ -1027,7 +1198,7 @@ void updateLevel(float dt)
                 }
 
                 level.mobTransforms[mobID].ry = atanf(toPlayerX / toPlayerZ)
-                                              + (toPlayerZ > 0.0f ? (float)M_PI : 0.0f);
+                                              + (toPlayerZ > 0.0f ? M_PI : 0.0f);
             }
         }
     }
@@ -1224,19 +1395,19 @@ void renderLevel(void)
         Matrix modelGun = matrixScale(scale, scale, scale);
 
         if (level.selectedGun == Gatling) {
-            mul = matrixRotationZ(level.gunTime * (float)M_PI * 2);
+            mul = matrixRotationZ(level.gunTime * M_PI * 2);
             modelGun = matrixMultiply(&mul, &modelGun);
         } else {
-            mul = matrixRotationX(((float)M_PI / 3) * sinf((level.gunTime / GLOCK_BUMP_TIME) * (float)M_PI));
+            mul = matrixRotationX((M_PI / 3) * sinf((level.gunTime / GLOCK_BUMP_TIME) * M_PI));
             modelGun = matrixMultiply(&mul, &modelGun);
 
-            mul = matrixRotationY((float)M_PI);
+            mul = matrixRotationY(M_PI);
             modelGun = matrixMultiply(&mul, &modelGun);
         }
 
         float offset = level.selectedGun == Gatling
                      ? 0.5f
-                     : 0.75f -  0.2f * sinf((level.gunTime / GLOCK_BUMP_TIME) * (float)M_PI);
+                     : 0.75f -  0.2f * sinf((level.gunTime / GLOCK_BUMP_TIME) * M_PI);
 
         mul = matrixTranslation(-0.5f, -0.5f, offset);
         modelGun = matrixMultiply(&mul, &modelGun);
@@ -1244,7 +1415,7 @@ void renderLevel(void)
         mul = matrixRotationX(camState.pitch);
         modelGun = matrixMultiply(&mul, &modelGun);
 
-        mul = matrixRotationY(-camState.yaw + (float)M_PI);
+        mul = matrixRotationY(-camState.yaw + M_PI);
         modelGun = matrixMultiply(&mul, &modelGun);
 
         mul = matrixTranslation(camState.x, camState.y, camState.z);
@@ -1600,10 +1771,28 @@ void spawnersBroadcast(SpawnerGroup group)
 void levelsProcessButton(bagE_MouseButton *mb, bool down)
 {
     if (!gameState.isEditor) {
+        if (gameState.isPaused) {
+            if (pauseState == PauseSettingsState) {
+                if (settingsClick(mb, down))
+                    pauseState = PauseBaseState;
+
+                return;
+            }
+
+            if (!down || pauseSelectedButton == NO_BUTTON)
+                return;
+
+            pauseButtonCallbacks[pauseSelectedButton]();
+            return;
+        }
+
         if (playerState.hp <= 0)
             return;
 
         if (level.selectedGun == Glock) {
+            if (!down)
+                return;
+
             if (mb->button == bagE_ButtonLeft && level.gunTime == GLOCK_BUMP_TIME) {
                 level.gunTime = 0.0f;
                 playerShoot(20);
@@ -1620,6 +1809,11 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
                 fireDown = down;
         }
     } else {
+        if (gameState.isPaused) {
+            editorMode = selectedEditorMode;
+            return;
+        }
+
         switch (editorMode) {
             case TerrainPlacing:
                 if (!down)
@@ -1631,8 +1825,8 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
                     removeTiles();
                 }
                 break;
-            case TerrainHeightPaintingAbs:
-                /* fallthrough */
+            // case TerrainHeightPaintingAbs:
+                // /* fallthrough */
             case TerrainHeightPaintingRel: {
                     int dir = 0;
                     if (mb->button == bagE_ButtonLeft) {
@@ -1665,7 +1859,7 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
                         .y = atTerrainHeight(&level.terrain, selectedX, selectedZ),
                         .z = selectedZ * CHUNK_TILE_DIM,
                         .scale = 1.0f,
-                        .ry = (((float)M_PI * 2) / 100) * (rand() % 100), // FIXME: temporary
+                        .ry = ((M_PI * 2) / 100) * (rand() % 100), // FIXME: temporary
                     });
                 } else if (mb->button == bagE_ButtonRight) {
                     float x = selectedX * CHUNK_TILE_DIM;
@@ -1703,7 +1897,7 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
                     float y = getHeight(x, z);
 
                     if (mb->button == bagE_ButtonLeft) {
-                        addSpawner((Spawner) { MobWorm, SpawnerInit, x, y + 1.0f, z });
+                        addSpawner((Spawner) { selectedSpawnerType, SpawnerInit, x, y + 1.0f, z });
                     } else {
                         float minDist = 666.666f;
                         int closest = -1;
@@ -1775,8 +1969,8 @@ void levelsProcessWheel(bagE_MouseWheel *mw)
         switch (editorMode) {
             case TerrainPlacing:
                 /* fallthrough */
-            case TerrainHeightPaintingAbs:
-                /* fallthrough */
+            // case TerrainHeightPaintingAbs:
+                // /* fallthrough */
             case TerrainHeightPaintingRel:
                 brushWidth += mw->scrollUp;
                 if (brushWidth < 0)
@@ -1811,6 +2005,20 @@ void levelsSaveCurrent(void)
     fclose(file);
 
     printf("saved \"%s\".\n", level.filePath);
+}
+
+
+void processEsc(void)
+{
+    if (pauseState != PauseBaseState) {
+        if (settingsProcessEsc())
+            pauseState = PauseBaseState;
+        return;
+    }
+
+    inputState.playerInput = !inputState.playerInput;
+    gameState.isPaused = !gameState.isPaused;
+    bagE_setHiddenCursor(inputState.playerInput);
 }
 
 
@@ -1984,6 +2192,35 @@ void renderLevelOverlay(void)
                     (Color) {{ 0.0f, 0.0f, 0.0f, 1.0f }}
             );
         }
+
+        /* pause menu */
+        if (gameState.isPaused) {
+            Color screenTint = {{ 0.2f, 0.3f, 0.4f, 0.75f }};
+            Color textColor  = {{ 0.0f, 0.0f, 0.0f, 1.0f }};
+            Color textColor2 = {{ 1.0f, 1.0f, 1.0f, 1.0f }};
+
+            guiBeginRect();
+            guiDrawRect(0, 0, appState.windowWidth, appState.windowHeight, screenTint);
+
+            if (pauseState == PauseSettingsState) {
+                settingsRender();
+                return;
+            }
+
+            guiBeginText();
+            for (PauseButtonID id = 0; id < PauseButtonCount; ++id) {
+                Rect rect = pauseButtonRects[id];
+                if (id == pauseSelectedButton) {
+                    guiDrawText(pauseButtonNames[id],
+                                rect.x, rect.y, rect.h / 2, rect.h, 0,
+                                textColor2);
+                } else {
+                    guiDrawText(pauseButtonNames[id],
+                                rect.x, rect.y, rect.h / 2, rect.h, 0,
+                                textColor);
+                }
+            }
+        }
     } else {
         /* point */
         if (selected) {
@@ -2008,8 +2245,8 @@ void renderLevelOverlay(void)
                 fromZ = -(height / 2);
                 toZ   =   height / 2 + height % 2;
             } else if (editorMode == TerrainPlacing
-                    || editorMode == TerrainHeightPaintingRel
-                    || editorMode == TerrainHeightPaintingAbs) {
+                    || editorMode == TerrainHeightPaintingRel) {
+                    // || editorMode == TerrainHeightPaintingAbs) {
                 fromZ = -brushWidth;
                 toZ   =  brushWidth;
                 fromX = -brushWidth;
@@ -2051,6 +2288,29 @@ void renderLevelOverlay(void)
             glProgramUniform4fv(pointProgram, 65, pointCount, points->data);
 
             glDrawArraysInstanced(GL_POINTS, 0, 1, pointCount);
+        }
+
+        Color screenTint = {{ 0.2f, 0.3f, 0.4f, 0.75f }};
+        Color textColor  = {{ 1.0f, 1.0f, 1.0f, 1.0f }};
+        Color textColor2 = {{ 0.0f, 0.0f, 0.0f, 1.0f }};
+
+        /* render editor ui */
+        if (gameState.isPaused) {
+            guiBeginRect();
+            guiDrawRect(0, 0, 300, 500, screenTint);
+            guiDrawRect(0, editorMode * EDITOR_FONT_SIZE,
+                        strlen(editorModeNames[0]) * EDITOR_FONT_SIZE / 2, EDITOR_FONT_SIZE,
+                        textColor);
+
+            guiBeginText();
+
+            for (EditorMode mode = 0; mode < EditorModeCount; ++mode) {
+                Color color = (mode == selectedEditorMode && mode != editorMode)
+                            ? textColor : textColor2;
+
+                guiDrawText(editorModeNames[mode], 0, mode * EDITOR_FONT_SIZE,
+                            EDITOR_FONT_SIZE / 2, EDITOR_FONT_SIZE, 0, color);
+            }
         }
     }
 }

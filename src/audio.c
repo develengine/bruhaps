@@ -1,6 +1,7 @@
 #include "audio.h"
 
 #include "utils.h"
+#include "state.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -55,8 +56,8 @@ void audioCallback(int16_t *buffer, unsigned size)
             size_t toWrite = left < size ? left : size;
 
             for (size_t i = 0; i < toWrite; i += 2) {
-                buffer[i + 0] += (int16_t)(sound.data[sound.pos + i + 0] * sound.volL);
-                buffer[i + 1] += (int16_t)(sound.data[sound.pos + i + 1] * sound.volR);
+                buffer[i + 0] += (int16_t)(sound.data[sound.pos + i + 0] * sound.volL * appState.volume);
+                buffer[i + 1] += (int16_t)(sound.data[sound.pos + i + 1] * sound.volR * appState.volume);
             }
 
             sound.pos += toWrite;

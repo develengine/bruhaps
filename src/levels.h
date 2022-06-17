@@ -293,8 +293,11 @@ void exitLevels(void);
 void processPlayerInput(float vx, float vz, bool jump, float dt);
 
 void updateLevel(float dt);
+void updateMenu(float dt);
+void menuProcessMouse(bagE_Mouse *m);
 void renderLevel(void);
 void renderLevelOverlay(void);
+void processEsc(void);
 
 void levelsSaveCurrent(void);
 
