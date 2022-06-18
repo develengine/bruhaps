@@ -111,6 +111,7 @@ void levelBruhInit(void)
 
     // FIXME: and this
     level.atlasViews = atlasViews;
+    level.atlasViewCount = 2;
 
     for (int i = 0; i < TextureIDCount; ++i)
         levelTextures[i] = createTexture(levelTexturePaths[i]);
@@ -122,14 +123,17 @@ void levelBruhInit(void)
     levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelTree],
                                           .texture = levelTextures[TextureTree] },
                              (ColliderType) { true, { {{ 0.0f, 1.5f, 0.0f }},
-                                                      {{ 0.3f, 1.5f, 0.3f }} } });
+                                                      {{ 0.3f, 1.5f, 0.3f }} } },
+                             "Tree");
     levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelBush],
                                           .texture = levelTextures[TextureTree] },
-                             (ColliderType) { false });
+                             (ColliderType) { false },
+                             "Bush");
     levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelRock],
                                           .texture = levelTextures[TextureStone] },
                              (ColliderType) { true, { {{ 0.0f, 0.2f, 0.0f }},
-                                                      {{ 0.6f, 0.4f, 0.6f }} } });
+                                                      {{ 0.6f, 0.4f, 0.6f }} } },
+                             "Rock");
 
 }
 

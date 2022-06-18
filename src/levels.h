@@ -226,6 +226,7 @@ typedef struct
     int carryHeadCount;
 
     const AtlasView *atlasViews;
+    int atlasViewCount;
 
     const char *filePath;
 
@@ -238,6 +239,7 @@ typedef struct
     int          statsTypeOffsets [MAX_STATIC_TYPE_COUNT + 1];
     Object       statsTypeObjects [MAX_STATIC_TYPE_COUNT];
     ColliderType statsTypeCollider[MAX_STATIC_TYPE_COUNT];
+    const char  *statsTypeName    [MAX_STATIC_TYPE_COUNT];
 
     bool recalculateStats;
     int  statsInstanceCount;
@@ -264,7 +266,8 @@ typedef struct
     Pickup pickups        [MAX_PICKUP_COUNT];
     Vector pickupPositions[MAX_PICKUP_COUNT];
     float pickupTime;
-    Object pickupObjects[PickupCount];
+    Object      pickupObjects[PickupCount];
+    const char *pickupNames  [PickupCount];
 } Level;
 
 extern Level level;
@@ -307,7 +310,7 @@ void invalidateAllChunks(void);
 void levelsProcessButton(bagE_MouseButton *mb, bool down);
 void levelsProcessWheel(bagE_MouseWheel *mw);
 
-void levelsInsertStaticObject(Object object, ColliderType collider);
+void levelsInsertStaticObject(Object object, ColliderType collider, const char *name);
 void levelsAddStatic(int statID, ModelTransform transform);
 
 void staticsLoad(FILE *file);

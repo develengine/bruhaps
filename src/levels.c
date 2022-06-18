@@ -160,6 +160,26 @@ static EditorMode selectedEditorMode = NoEditorMode;
 
 #define EDITOR_FONT_SIZE 32
 
+typedef enum
+{
+    EditorMainMenu,
+    EditorSaveLevel,
+
+    EditorButtonCount
+} EditorButtonID;
+
+#define EditorNoButton EditorButtonCount
+
+static EditorButtonID selectedEditorButton = EditorNoButton;
+
+static const char *editorButtonNames[EditorButtonCount] = {
+    [EditorMainMenu]  = "Main Menu ",
+    [EditorSaveLevel] = "Save Level",
+};
+
+static_assert(length(editorButtonNames) == EditorButtonCount,
+              "unfilled editor button name");
+
 
 #define TEXT_MUL 4
 
@@ -419,14 +439,19 @@ void initLevels(void)
         .model = loadModelObject("res/energy.model"),
         .texture = createTexture("res/monser.png")
     };
+    level.pickupNames[HealthPickup] = "Health";
+
     level.pickupObjects[AmmoPickup] = (Object) {
         .model = loadModelObject("res/ammo.model"),
         .texture = createTexture("res/ammo.png")
     };
+    level.pickupNames[AmmoPickup] = "Ammo";
+
     level.pickupObjects[HeadPickup] = (Object) {
         .model = level.head,
         .texture = level.headTexture
     };
+    level.pickupNames[HeadPickup] = "Head";
 }
 
 
@@ -451,12 +476,13 @@ void exitLevels(void)
 }
 
 
-void levelsInsertStaticObject(Object object, ColliderType collider)
+void levelsInsertStaticObject(Object object, ColliderType collider, const char *name)
 {
     assert(level.statsTypeCount < MAX_STATIC_TYPE_COUNT);
 
     level.statsTypeObjects [level.statsTypeCount] = object;
     level.statsTypeCollider[level.statsTypeCount] = collider;
+    level.statsTypeName    [level.statsTypeCount] = name;
     ++level.statsTypeCount;
 }
 
@@ -975,11 +1001,22 @@ void menuProcessMouse(bagE_Mouse *m)
         int menuWidth  = (EDITOR_FONT_SIZE / 2) * strlen(editorModeNames[0]);
 
         if (x < menuWidth && y < menuHeight) {
-            selectedEditorMode = y / EDITOR_FONT_SIZE;
+            selectedEditorMode   = y / EDITOR_FONT_SIZE;
+            selectedEditorButton = EditorNoButton;
             return;
         }
 
-        selectedEditorMode = NoEditorMode;
+        int menu2Height = EDITOR_FONT_SIZE * EditorButtonCount;
+        int menu2Width  = (EDITOR_FONT_SIZE / 2) * strlen(editorButtonNames[0]);
+
+        if (x < menu2Width && y > appState.windowHeight - menu2Height) {
+            selectedEditorButton = (y - appState.windowHeight + menu2Height) / EDITOR_FONT_SIZE;
+            selectedEditorMode   = NoEditorMode;
+            return;
+        }
+
+        selectedEditorButton = EditorNoButton;
+        selectedEditorMode   = NoEditorMode;
         return;
     }
 
@@ -1810,7 +1847,26 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
         }
     } else {
         if (gameState.isPaused) {
-            editorMode = selectedEditorMode;
+            if (!down)
+                return;
+
+            if (selectedEditorMode != NoEditorMode) {
+                editorMode = selectedEditorMode;
+            } else if (selectedEditorButton != EditorNoButton) {
+                switch (selectedEditorButton) {
+                    case EditorMainMenu:
+                        onPauseMainMenu();
+                        break;
+
+                    case EditorSaveLevel:
+                        levelsSaveCurrent();
+                        break;
+
+                    case EditorButtonCount:
+                        unreachable();
+                }
+            }
+
             return;
         }
 
@@ -1953,6 +2009,9 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
                     }
                 }
                 break;
+
+            case EditorModeCount:
+                unreachable();
         }
     }
 }
@@ -1971,6 +2030,7 @@ void levelsProcessWheel(bagE_MouseWheel *mw)
                 /* fallthrough */
             // case TerrainHeightPaintingAbs:
                 // /* fallthrough */
+
             case TerrainHeightPaintingRel:
                 brushWidth += mw->scrollUp;
                 if (brushWidth < 0)
@@ -1978,6 +2038,7 @@ void levelsProcessWheel(bagE_MouseWheel *mw)
                 if (brushWidth > MAX_BRUSH_WIDTH)
                     brushWidth = MAX_BRUSH_WIDTH;
                 break;
+
             case StaticsPlacing:
                 selectedStaticID += mw->scrollUp;
                 if (selectedStaticID < 0)
@@ -1985,6 +2046,28 @@ void levelsProcessWheel(bagE_MouseWheel *mw)
                 if (selectedStaticID >= level.statsTypeCount)
                     selectedStaticID = level.statsTypeCount - 1;
                 break;
+
+            case PickupPlacing:
+                selectedPickup += mw->scrollUp;
+                if (selectedPickup < 0)
+                    selectedPickup = 0;
+                if (selectedPickup >= PickupCount)
+                    selectedPickup = PickupCount - 1;
+                break;
+            
+            case TerrainTexturing:
+                selectedViewID += mw->scrollUp;
+                if (selectedViewID == 255)
+                    selectedViewID = 0;
+                if (selectedViewID >= level.atlasViewCount)
+                    selectedViewID = level.atlasViewCount - 1;
+                break;
+
+            case SpawnerPlacing:
+                break;
+
+            case EditorModeCount:
+                unreachable();
         }
     }
 }
@@ -2294,10 +2377,10 @@ void renderLevelOverlay(void)
         Color textColor  = {{ 1.0f, 1.0f, 1.0f, 1.0f }};
         Color textColor2 = {{ 0.0f, 0.0f, 0.0f, 1.0f }};
 
-        /* render editor ui */
+        /* render editor menu */
         if (gameState.isPaused) {
             guiBeginRect();
-            guiDrawRect(0, 0, 300, 500, screenTint);
+            guiDrawRect(0, 0, 300, appState.windowHeight, screenTint);
             guiDrawRect(0, editorMode * EDITOR_FONT_SIZE,
                         strlen(editorModeNames[0]) * EDITOR_FONT_SIZE / 2, EDITOR_FONT_SIZE,
                         textColor);
@@ -2311,6 +2394,53 @@ void renderLevelOverlay(void)
                 guiDrawText(editorModeNames[mode], 0, mode * EDITOR_FONT_SIZE,
                             EDITOR_FONT_SIZE / 2, EDITOR_FONT_SIZE, 0, color);
             }
+
+            for (EditorButtonID id = 0; id < EditorButtonCount; ++id) {
+                Color color = id == selectedEditorButton ? textColor : textColor2;
+
+                int offset = appState.windowHeight - EDITOR_FONT_SIZE * EditorButtonCount;
+
+                guiDrawText(editorButtonNames[id], 0, offset + id * EDITOR_FONT_SIZE,
+                            EDITOR_FONT_SIZE / 2, EDITOR_FONT_SIZE, 0, color);
+            }
+        }
+
+        char charBuffer[64];
+
+        /* render editor overlay */
+        switch (editorMode) {
+            case TerrainPlacing:
+                /* fallthrough */
+            case TerrainHeightPaintingRel:
+                guiBeginText();
+                snprintf(charBuffer, 64, "brush width: %d", brushWidth + 1);
+                guiDrawText(charBuffer,
+                            appState.windowWidth - strlen(charBuffer) * (EDITOR_FONT_SIZE / 2),
+                            0, EDITOR_FONT_SIZE / 2, EDITOR_FONT_SIZE, 0, textColor);
+                break;
+
+            case StaticsPlacing:
+                guiBeginText();
+                snprintf(charBuffer, 64, "type: %s", level.statsTypeName[selectedStaticID]);
+                guiDrawText(charBuffer,
+                            appState.windowWidth - strlen(charBuffer) * (EDITOR_FONT_SIZE / 2),
+                            0, EDITOR_FONT_SIZE / 2, EDITOR_FONT_SIZE, 0, textColor);
+                break;
+
+            case PickupPlacing:
+                guiBeginText();
+                snprintf(charBuffer, 64, "type: %s", level.pickupNames[selectedPickup]);
+                guiDrawText(charBuffer,
+                            appState.windowWidth - strlen(charBuffer) * (EDITOR_FONT_SIZE / 2),
+                            0, EDITOR_FONT_SIZE / 2, EDITOR_FONT_SIZE, 0, textColor);
+                break;
+
+            case TerrainTexturing:
+                guiBeginImage();
+                guiUseImage(level.terrainAtlas);
+                AtlasView view = level.atlasViews[selectedViewID];
+                guiDrawImage(appState.windowWidth - 100, 0, 100, 100,
+                             view.x, 1.0f - view.y - view.h, view.w, view.h);
         }
     }
 }
