@@ -329,8 +329,7 @@ int bagE_eventHandler(bagE_Event *event)
         case bagE_EventMouseButtonUp: {
                 bagE_MouseButton *mb = &(event->data.mouseButton);
                 if (gameState.inSplash) {
-                    if (keyDown)
-                        splashProcessButton(mb);
+                    splashProcessButton(mb, keyDown);
                 } else {
                     levelsProcessButton(mb, keyDown);
                 }

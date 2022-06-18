@@ -3,6 +3,7 @@
 #include "levels.h"
 #include "gui.h"
 #include "audio.h"
+#include "settings.h"
 
 #include <assert.h>
 
@@ -14,7 +15,7 @@
 typedef enum
 {
     SplashNewGame,
-    SplashContinue,
+    // SplashContinue,
     SplashSettings,
     SplashQuit,
 
@@ -22,9 +23,12 @@ typedef enum
 } SplashButtonID;
 
 
+static bool inSettings = false;
+
+
 static const char *buttonNames[] = {
     [SplashNewGame]  = " NEW GAME ",
-    [SplashContinue] = " CONTINUE ",
+    // [SplashContinue] = " CONTINUE ",
     [SplashSettings] = " SETTINGS ",
     [SplashQuit]     = "   QUIT   ",
 };
@@ -44,14 +48,16 @@ static void onNewGame(void)
     levelLoad(LevelBruh);
 }
 
+/*
 static void onContinue(void)
 {
     printf("Continue\n");
 }
+*/
 
 static void onSettings(void)
 {
-    printf("Settings\n");
+    inSettings = true;
 }
 
 static void onQuit(void)
@@ -61,7 +67,7 @@ static void onQuit(void)
 
 static GUIButtonCallback buttonCallbacks[] = {
     [SplashNewGame]  = onNewGame,
-    [SplashContinue] = onContinue,
+    // [SplashContinue] = onContinue,
     [SplashSettings] = onSettings,
     [SplashQuit]     = onQuit,
 };
@@ -116,6 +122,11 @@ void exitSplash(void)
 void updateSplash(float dt)
 {
     timePassed += dt;
+
+    if (inSettings) {
+        settingsUpdate(dt);
+        return;
+    }
 
     int x = (appState.windowWidth / 5) * 3;
     int height = 16 * TEXT_MUL;
@@ -246,6 +257,11 @@ void renderSplash(void)
 
 void renderSplashOverlay(void)
 {
+    if (inSettings) {
+        settingsRender();
+        return;
+    }
+
     Color rectColor = {{ 0.2f, 0.3f, 0.4f, 0.75f }};
     Color textColor = {{ 1.0f, 1.0f, 1.0f, 1.0f }};
 
@@ -291,8 +307,17 @@ void renderSplashOverlay(void)
 }
 
 
-void splashProcessButton(bagE_MouseButton *mb)
+void splashProcessButton(bagE_MouseButton *mb, bool down)
 {
+    if (inSettings) {
+        if (settingsClick(mb, down))
+            inSettings = false;
+        return;
+    }
+
+    if (!down)
+        return;
+
     if (mb->button != bagE_ButtonLeft)
         return;
 
@@ -322,6 +347,11 @@ void splashProcessButton(bagE_MouseButton *mb)
 
 void splashProcessMouse(bagE_Mouse *m)
 {
+    if (inSettings) {
+        settingsProcessMouse(m);
+        return;
+    }
+
     int x = m->x;
     int y = m->y;
 

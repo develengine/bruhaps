@@ -25,6 +25,9 @@ typedef enum
 
 #define SETTINGS_FILE "settings"
 
+#define SETTINGS_WIDTH 500
+#define SETTINGS_HEIGHT 300
+
 
 static SettingsElementID settingsSelectedElement = NO_ELEMENT;
 static bool buttonDown = false;
@@ -153,6 +156,9 @@ bool settingsClick(bagE_MouseButton *mb, bool down)
 void settingsUpdate(float dt)
 {
     (void)dt;
+
+    xOff = (appState.windowWidth  - SETTINGS_WIDTH)  / 2;
+    yOff = (appState.windowHeight - SETTINGS_HEIGHT) / 2;
 
     settingsElementRects[SettingsVolume] = (Rect)
             { xOff + LABEL_WIDTH, yOff + FONT_SIZE * 0, SLIDER_WIDTH, FONT_SIZE };
