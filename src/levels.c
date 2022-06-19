@@ -2441,6 +2441,13 @@ void renderLevelOverlay(void)
                 AtlasView view = level.atlasViews[selectedViewID];
                 guiDrawImage(appState.windowWidth - 100, 0, 100, 100,
                              view.x, 1.0f - view.y - view.h, view.w, view.h);
+                break;
+
+            case SpawnerPlacing:
+                break;
+
+            case EditorModeCount:
+                unreachable();
         }
     }
 }

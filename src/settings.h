@@ -15,5 +15,8 @@ bool settingsProcessEsc(void);
 void settingsSave(void);
 void settingsLoad(void);
 
+#define SETTINGS_WIDTH 530
+#define SETTINGS_HEIGHT 230
+
 
 #endif

@@ -27,7 +27,7 @@ static bool inSettings = false;
 
 
 static const char *buttonNames[] = {
-    [SplashNewGame]  = " NEW GAME ",
+    [SplashNewGame]  = "   GAME   ",
     // [SplashContinue] = " CONTINUE ",
     [SplashSettings] = " SETTINGS ",
     [SplashQuit]     = "   QUIT   ",
@@ -110,6 +110,9 @@ void initSplash(void)
             "res/Maskonaive2/posz.png",
             "res/Maskonaive2/negz.png"
     );
+
+    if (gameState.isEditor)
+        buttonNames[SplashNewGame] = "   EDIT   ";
 }
 
 
@@ -258,6 +261,13 @@ void renderSplash(void)
 void renderSplashOverlay(void)
 {
     if (inSettings) {
+        Color screenTint = {{ 0.2f, 0.3f, 0.4f, 0.75f }};
+
+        guiBeginRect();
+        guiDrawRect((appState.windowWidth  - SETTINGS_WIDTH)  / 2,
+                    (appState.windowHeight - SETTINGS_HEIGHT) / 2,
+                    SETTINGS_WIDTH, SETTINGS_HEIGHT, screenTint);
+
         settingsRender();
         return;
     }
