@@ -9,6 +9,7 @@
 #include "settings.h"
 
 
+PlayerState playerState;
 Level level;
 
 
@@ -326,6 +327,15 @@ void levelUnload(LevelID id)
 
 void initLevels(void)
 {
+    playerState = (PlayerState) {
+        .gaming = false,
+        .onGround = false,
+        .x = 0.0f, .y = 0.0f, .z = 0.0f,
+        .vy = 0.0f,
+        .tryJump = true
+    };
+
+
     level.skyboxProgram = createProgram(
             "shaders/cubemap_vertex.glsl",
             "shaders/cubemap_fragment.glsl"

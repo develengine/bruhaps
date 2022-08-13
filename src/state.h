@@ -79,7 +79,4 @@ typedef struct
 extern PlayerState playerState;
 
 
-void initState(void);
-void exitState(void);
-
 #endif

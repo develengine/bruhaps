@@ -19,6 +19,42 @@
 #include <stdbool.h>
 
 
+InputState  inputState;
+AppState    appState;
+GameState   gameState;
+CamState    camState;
+
+
+void initState(void)
+{
+    inputState = (InputState) {
+        .motionYaw = 0.0f,
+        .motionPitch = 0.0f
+    };
+
+    appState = (AppState) {
+        .running = true,
+        .volume  = 1.0f        // INDEV: should be in sound or config
+    };
+
+    bagE_getWindowSize(&appState.windowWidth, &appState.windowHeight);
+
+    gameState = (GameState) {
+        .inSplash = true,
+        .isEditor = false,
+        .isPaused = false,
+        .sensitivity = 0.005f  // INDEV: should be in main.c or config
+    };
+
+    camState = (CamState) {
+        .x = 0.0f, .y = 0.0f, .z = 0.0f,
+        // COPE: Slight offset so that skybox doesn't mess up.
+        .pitch = 0.001f, .yaw = 0.001f,
+        .fov = 90.0f
+    };
+}
+
+
 int bagE_main(int argc, char *argv[])
 {
     glEnable(GL_DEBUG_OUTPUT);
@@ -224,7 +260,6 @@ int bagE_main(int argc, char *argv[])
     exitSplash();
     exitLevels();
     exitGUI();
-    exitState();
     exitAudio();
 
     return 0;
