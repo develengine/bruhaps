@@ -40,7 +40,7 @@ static_assert(length(buttonNames) == SplashButtonCount,
 static void onNewGame(void)
 {
     gameState.inSplash = false;
-    playerState.gaming = !gameState.isEditor;
+    player.gaming = !gameState.isEditor;
     inputState.playerInput = true;
     bagE_setHiddenCursor(true);
 
@@ -148,9 +148,9 @@ void renderSplash(void)
     /* skybox */
     glDisable(GL_DEPTH_TEST);
 
-    glUseProgram(level.skyboxProgram);
-    glBindVertexArray(level.boxModel.vao);
-    glBindTextureUnit(0, level.skyboxCubemap);
+    glUseProgram(game.skyboxProgram);
+    glBindVertexArray(game.boxModel.vao);
+    glBindTextureUnit(0, game.defaultSkybox);
 
     glDrawElements(GL_TRIANGLES, BOX_INDEX_COUNT, GL_UNSIGNED_INT, 0);
 
@@ -158,7 +158,7 @@ void renderSplash(void)
 
 
     /* brug */
-    glUseProgram(level.textureProgram);
+    glUseProgram(game.textureProgram);
 
     glBindVertexArray(brugModel.vao);
     glBindTextureUnit(0, brugTexture);
@@ -166,7 +166,7 @@ void renderSplash(void)
     Matrix modelMat = modelTransformToMatrix(brugTransform);
 
     glProgramUniformMatrix4fv(
-            level.textureProgram,
+            game.textureProgram,
             0,
             1,
             GL_FALSE,
@@ -187,18 +187,18 @@ void renderSplash(void)
     mul = matrixTranslation(-1.1f, 0.85f, -2.6f);
     modelGlock = matrixMultiply(&mul, &modelGlock);
 
-    glBindVertexArray(level.glockBase.vao);
-    glBindTextureUnit(0, level.gunTexture);
+    glBindVertexArray(game.glockBase.vao);
+    glBindTextureUnit(0, game.gunTexture);
 
     glProgramUniformMatrix4fv(
-            level.textureProgram,
+            game.textureProgram,
             0,
             1,
             GL_FALSE,
             modelGlock.data
     );
 
-    glDrawElements(GL_TRIANGLES, level.glockBase.indexCount, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, game.glockBase.indexCount, GL_UNSIGNED_INT, 0);
 
     {
         /* gatling base */
@@ -213,17 +213,17 @@ void renderSplash(void)
         mul = matrixTranslation(-0.9f, 0.0f, -1.0f);
         modelGatling = matrixMultiply(&mul, &modelGatling);
 
-        glBindVertexArray(level.gatlingBase.vao);
+        glBindVertexArray(game.gatlingBase.vao);
 
         glProgramUniformMatrix4fv(
-                level.textureProgram,
+                game.textureProgram,
                 0,
                 1,
                 GL_FALSE,
                 modelGatling.data
         );
 
-        glDrawElements(GL_TRIANGLES, level.gatlingBase.indexCount, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, game.gatlingBase.indexCount, GL_UNSIGNED_INT, 0);
     }
 
     /* gatling */
@@ -242,19 +242,19 @@ void renderSplash(void)
     modelGatling = matrixMultiply(&mul, &modelGatling);
 
 
-    glUseProgram(level.metalProgram);
-    glBindVertexArray(level.gatling.vao);
+    glUseProgram(game.metalProgram);
+    glBindVertexArray(game.gatling.vao);
 
-    glProgramUniformMatrix4fv(level.metalProgram, 0, 1, GL_FALSE, modelGatling.data);
+    glProgramUniformMatrix4fv(game.metalProgram, 0, 1, GL_FALSE, modelGatling.data);
 
-    glDrawElements(GL_TRIANGLES, level.gatling.indexCount, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, game.gatling.indexCount, GL_UNSIGNED_INT, 0);
 
 
-    glBindVertexArray(level.glock.vao);
+    glBindVertexArray(game.glock.vao);
 
-    glProgramUniformMatrix4fv(level.metalProgram, 0, 1, GL_FALSE, modelGlock.data);
+    glProgramUniformMatrix4fv(game.metalProgram, 0, 1, GL_FALSE, modelGlock.data);
 
-    glDrawElements(GL_TRIANGLES, level.glock.indexCount, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, game.glock.indexCount, GL_UNSIGNED_INT, 0);
 }
 
 
@@ -341,13 +341,7 @@ void splashProcessButton(bagE_MouseButton *mb, bool down)
 
         if (x >= rect.x && x <= (rect.x + rect.w * length)
          && y >= rect.y && y <= (rect.y + rect.h)) {
-            playSound((Sound) {
-                .data = level.vineThud,
-                .end   = level.vineThudLength,
-                .volL  = 0.25f,
-                .volR  = 0.25f,
-                .times = 1,
-            });
+            emitSound(VineThudSound, 0.25f);
             buttonCallbacks[i]();
             return;
         }
@@ -375,8 +369,8 @@ void splashProcessMouse(bagE_Mouse *m)
                 return;
 
             playSound((Sound) {
-                .data = level.vineThud,
-                .end   = level.vineThudLength / 16,
+                .data  = game.sounds[VineThudSound],
+                .end   = game.soundLengths[VineThudSound] / 16,
                 .volL  = 0.15f,
                 .volR  = 0.15f,
                 .times = 1,

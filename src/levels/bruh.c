@@ -67,9 +67,9 @@ void levelBruhLoad(void)
 
 
     // FIXME: should not be hardcoded
-    playerState.x = (CHUNK_DIM + CHUNK_DIM * 1.75) * CHUNK_TILE_DIM;
-    playerState.y = 5.0f;
-    playerState.z = (CHUNK_DIM + CHUNK_DIM * 1.0)  * CHUNK_TILE_DIM;
+    player.x = (CHUNK_DIM + CHUNK_DIM * 1.75) * CHUNK_TILE_DIM;
+    player.y = 5.0f;
+    player.z = (CHUNK_DIM + CHUNK_DIM * 1.0)  * CHUNK_TILE_DIM;
     camState.pitch = 0.0f;
     camState.yaw   = (float)M_PI;
 
@@ -77,11 +77,11 @@ void levelBruhLoad(void)
         spawnersBroadcast(SpawnerInit);
 
 
-    level.selectedGun = Glock;
-    playerState.hp = PLAYER_HP_FULL;
-    playerState.onGround = false;
-    playerState.vy = 0.0f;
-    playerState.won = false;
+    player.selectedGun = Glock;
+    player.hp = PLAYER_HP_FULL;
+    player.onGround = false;
+    player.vy = 0.0f;
+    player.won = false;
 }
 
 
@@ -94,20 +94,8 @@ void levelBruhUnload(void)
 
 void levelBruhInit(void)
 {
-    // FIXME: this will break when more levels get introduced
-    level.terrainAtlas = createTexture("res/terrain_atlas.png");
-
-    // FIXME: so will this
-    level.skyboxCubemap = createCubeTexture(
-            "res/Maskonaive2/posx.png",
-            "res/Maskonaive2/negx.png",
-
-            "res/Maskonaive2/posy.png",
-            "res/Maskonaive2/negy.png",
-
-            "res/Maskonaive2/posz.png",
-            "res/Maskonaive2/negz.png"
-    );
+    level.terrainAtlas = game.defaultTerrainAtlas;
+    level.skyboxCubemap = game.defaultSkybox;
 
     // FIXME: and this
     level.atlasViews = atlasViews;
@@ -140,9 +128,6 @@ void levelBruhInit(void)
 
 void levelBruhExit(void)
 {
-    glDeleteTextures(1, &level.terrainAtlas);
-    glDeleteTextures(1, &level.skyboxCubemap);
-
     glDeleteTextures(ModelIDCount, levelTextures);
 
     for (int i = 0; i < ModelIDCount; ++i)

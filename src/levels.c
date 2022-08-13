@@ -9,8 +9,37 @@
 #include "settings.h"
 
 
-PlayerState playerState;
+Player player;
+Game game;
 Level level;
+
+
+static const char *soundPaths[SoundCount] = {
+    [VineThudSound]       = "res/vine_thud.wav",       
+    [Bite87Sound]         = "res/bite87.wav",          
+    [SSAmmoPickupSound]   = "res/ss_ammo_pickup.wav",  
+    [Bruh2Sound]          = "res/bruh2.wav",           
+    [GulpSound]           = "res/gulp.wav",            
+    [StoneHitSound]       = "res/stone_hit.wav",       
+    [HappyWheelsWinSound] = "res/happy_wheels_win.wav",
+    [SteveRevSound]       = "res/steve_rev.wav",       
+    [LandSound]           = "res/land.wav",            
+};
+
+static_assert(length(soundPaths) == SoundCount,
+              "unfilled sound path");
+
+
+void emitSound(SoundID id, float volume)
+{
+    playSound((Sound) {
+        .data  = game.sounds[id],
+        .end   = game.soundLengths[id],
+        .volL  = volume,
+        .volR  = volume,
+        .times = 1,
+    });
+}
 
 
 const char *spawnerGroupNames[] = {
@@ -41,19 +70,13 @@ static_assert(length(pickupScales) == PickupCount,
 
 bool pickupHealth(void)
 {
-    if (playerState.hp < PLAYER_HP_FULL) {
-        playerState.hp += 50;
+    if (player.hp < PLAYER_HP_FULL) {
+        player.hp += 50;
 
-        if (playerState.hp > PLAYER_HP_FULL)
-            playerState.hp = PLAYER_HP_FULL;
+        if (player.hp > PLAYER_HP_FULL)
+            player.hp = PLAYER_HP_FULL;
 
-        playSound((Sound) {
-            .data  = level.gulp,
-            .end   = level.gulpLength,
-            .volL  = 0.5f,
-            .volR  = 0.5f,
-            .times = 1,
-        });
+        emitSound(GulpSound, 0.5f);
 
         return true;
     }
@@ -64,15 +87,9 @@ bool pickupHealth(void)
 
 bool pickupAmmo(void)
 {
-    level.gatlingAmmo += 50;
+    player.gatlingAmmo += 50;
 
-    playSound((Sound) {
-        .data  = level.ssAmmoPickup,
-        .end   = level.ssAmmoPickupLength,
-        .volL  = 0.5f,
-        .volR  = 0.5f,
-        .times = 1,
-    });
+    emitSound(SSAmmoPickupSound, 0.5f);
 
     return true;
 }
@@ -80,15 +97,9 @@ bool pickupAmmo(void)
 
 bool pickupHead(void)
 {
-    ++level.carryHeadCount;
+    ++player.carryHeadCount;
 
-    playSound((Sound) {
-        .data  = level.bruh2,
-        .end   = level.bruh2Length,
-        .volL  = 0.5f,
-        .volR  = 0.5f,
-        .times = 1,
-    });
+    emitSound(Bruh2Sound, 0.5f);
 
     return true;
 }
@@ -229,7 +240,7 @@ static void onPauseMainMenu(void)
 {
     gameState.inSplash = true;
     gameState.isPaused = false;
-    playerState.gaming = gameState.isEditor;
+    player.gaming = gameState.isEditor;
     inputState.playerInput = false;
     bagE_setHiddenCursor(false);
     
@@ -327,7 +338,7 @@ void levelUnload(LevelID id)
 
 void initLevels(void)
 {
-    playerState = (PlayerState) {
+    player = (Player) {
         .gaming = false,
         .onGround = false,
         .x = 0.0f, .y = 0.0f, .z = 0.0f,
@@ -336,12 +347,25 @@ void initLevels(void)
     };
 
 
-    level.skyboxProgram = createProgram(
+    game.defaultTerrainAtlas = createTexture("res/terrain_atlas.png");
+    game.defaultSkybox = createCubeTexture(
+            "res/Maskonaive2/posx.png",
+            "res/Maskonaive2/negx.png",
+
+            "res/Maskonaive2/posy.png",
+            "res/Maskonaive2/negy.png",
+
+            "res/Maskonaive2/posz.png",
+            "res/Maskonaive2/negz.png"
+    );
+
+
+    game.skyboxProgram = createProgram(
             "shaders/cubemap_vertex.glsl",
             "shaders/cubemap_fragment.glsl"
     );
 
-    level.terrainProgram = createProgram(
+    game.terrainProgram = createProgram(
             "shaders/terrain_vertex.glsl",
             "shaders/terrain_fragment.glsl"
     );
@@ -351,28 +375,28 @@ void initLevels(void)
             "shaders/point_fragment.glsl"
     );
 
-    level.boxModel = createBoxModelObject();
+    game.boxModel = createBoxModelObject();
 
     levelInits();
 
 
-    level.textureProgram = createProgram(
+    game.textureProgram = createProgram(
             "shaders/texture_vertex.glsl",
             "shaders/texture_fragment.glsl"
     );
 
-    level.metalProgram = createProgram(
+    game.metalProgram = createProgram(
             "shaders/metal_vertex.glsl",
             "shaders/metal_fragment.glsl"
     );
 
     // FIXME: at least free me
-    level.gatling     = loadModelObject("res/gatling_barrel.model");
-    level.gatlingBase = loadModelObject("res/gatling_base.model");
-    level.glock       = loadModelObject("res/glock_top.model");
-    level.glockBase   = loadModelObject("res/glock_base.model");
+    game.gatling     = loadModelObject("res/gatling_barrel.model");
+    game.gatlingBase = loadModelObject("res/gatling_base.model");
+    game.glock       = loadModelObject("res/glock_top.model");
+    game.glockBase   = loadModelObject("res/glock_base.model");
 
-    level.gunTexture = createTexture("res/glock.png");
+    game.gunTexture = createTexture("res/glock.png");
 
 
     // FIXME: at least free me
@@ -406,9 +430,9 @@ void initLevels(void)
 
     // TODO: refactor out
     Animated animated = animatedLoad("res/worm.animated");
-    level.mobArmatures[MobWorm] = animated.armature;
+    game.mobArmatures[MobWorm] = animated.armature;
 
-    level.mobObjects[MobWorm] = (MobObject) {
+    game.mobObjects[MobWorm] = (MobObject) {
         createAnimatedObject(animated),
         createTexture("res/worm.png")
     };
@@ -417,51 +441,44 @@ void initLevels(void)
     free(animated.vertexWeights);
 
 
-    level.vineThud       = loadWAV("res/vine_thud.wav",        &level.vineThudLength);
-    level.bite87         = loadWAV("res/bite87.wav",           &level.bite87Length);
-    level.ssAmmoPickup   = loadWAV("res/ss_ammo_pickup.wav",   &level.ssAmmoPickupLength);
-    level.bruh2          = loadWAV("res/bruh2.wav",            &level.bruh2Length);
-    level.gulp           = loadWAV("res/gulp.wav",             &level.gulpLength);
-    level.stoneHit       = loadWAV("res/stone_hit.wav",        &level.stoneHitLength);
-    level.happyWheelsWin = loadWAV("res/happy_wheels_win.wav", &level.happyWheelsWinLength);
-    level.steveRev       = loadWAV("res/steve_rev.wav",        &level.steveRevLength);
-    level.land           = loadWAV("res/land.wav",             &level.landLength);
+    for (int i = 0; i < SoundCount; ++i)
+        game.sounds[i] = loadWAV(soundPaths[i], game.soundLengths + i);
 
 
     // FIXME:
-    level.guiAtlas = createTexture("res/gui_atlas.png");
+    game.guiAtlas = createTexture("res/gui_atlas.png");
 
 
-    level.lightProgram = createProgram(
+    game.lightProgram = createProgram(
             "shaders/texture_vertex.glsl",
             "shaders/light_fragment.glsl"
     );
 
-    level.platform = loadModelObject("res/platform.model");
-    level.platformTexture = createTexture("res/platform.png");
+    game.platform = loadModelObject("res/platform.model");
+    game.platformTexture = createTexture("res/platform.png");
 
     // FIXME: everything in this function is not freed but it 
     //        unironically doesn't matter since the OS is unretarded
-    level.head        = loadModelObject("res/head.model");
-    level.headTexture = createTexture("res/stone.png");
+    game.head        = loadModelObject("res/head.model");
+    game.headTexture = createTexture("res/stone.png");
 
-    level.pickupObjects[HealthPickup] = (Object) {
+    game.pickupObjects[HealthPickup] = (Object) {
         .model = loadModelObject("res/energy.model"),
         .texture = createTexture("res/monser.png")
     };
-    level.pickupNames[HealthPickup] = "Health";
+    game.pickupNames[HealthPickup] = "Health";
 
-    level.pickupObjects[AmmoPickup] = (Object) {
+    game.pickupObjects[AmmoPickup] = (Object) {
         .model = loadModelObject("res/ammo.model"),
         .texture = createTexture("res/ammo.png")
     };
-    level.pickupNames[AmmoPickup] = "Ammo";
+    game.pickupNames[AmmoPickup] = "Ammo";
 
-    level.pickupObjects[HeadPickup] = (Object) {
-        .model = level.head,
-        .texture = level.headTexture
+    game.pickupObjects[HeadPickup] = (Object) {
+        .model = game.head,
+        .texture = game.headTexture
     };
-    level.pickupNames[HeadPickup] = "Head";
+    game.pickupNames[HeadPickup] = "Head";
 }
 
 
@@ -482,7 +499,7 @@ void exitLevels(void)
 
     levelExits();
 
-    freeModelObject(level.boxModel);
+    freeModelObject(game.boxModel);
 }
 
 
@@ -661,6 +678,7 @@ void addMob(MobType type, ModelTransform trans, Animation anim)
         return;
     }
 
+    // FIXME: Shouldn't there be a MAX_MOBS_PER_TYPE_OFFSET ???
     level.mobAnimations[count] = anim;
     level.mobTransforms[count] = trans;
     level.mobStates    [count] = MobStateWalking;
@@ -743,7 +761,7 @@ static Vec2 clipMovement(float x, float z, float w, float vx, float vz)
 // TODO: a magic function
 void processPlayerInput(float vx, float vz, bool jump, float dt)
 {
-    if (playerState.hp <= 0) {
+    if (player.hp <= 0) {
         vx = 0.0f;
         vz = 0.0f;
         jump = false;
@@ -752,10 +770,10 @@ void processPlayerInput(float vx, float vz, bool jump, float dt)
     float groundTolerance = 0.1f;
     float playerHeight = 2.0f;
 
-    float oldY = playerState.y;
+    float oldY = player.y;
 
-    float newX = playerState.x + vx;
-    float newZ = playerState.z + vz;
+    float newX = player.x + vx;
+    float newZ = player.z + vz;
     float newY = getHeight(newX, newZ);
 
     float distH = sqrtf(vx * vx + vz * vz);
@@ -773,61 +791,49 @@ void processPlayerInput(float vx, float vz, bool jump, float dt)
         }
     }
 
-    if (playerState.onGround) {
+    if (player.onGround) {
         vx *= 0.8f;
         vz *= 0.8f;
     }
 
-    Vec2 clipped = clipMovement(playerState.x, playerState.z, 0.5f, vx, vz);
+    Vec2 clipped = clipMovement(player.x, player.z, 0.5f, vx, vz);
 
-    playerState.x += clipped.x;
-    playerState.z += clipped.y;
+    player.x += clipped.x;
+    player.z += clipped.y;
 
-    float height = getHeight(playerState.x, playerState.z);
+    float height = getHeight(player.x, player.z);
 
-    playerState.y  += playerState.vy * dt;
-    playerState.vy -= 15.0f * dt;
+    player.y  += player.vy * dt;
+    player.vy -= 15.0f * dt;
 
     // TODO: remove (player height)
     height += playerHeight;
     // TODO: remove
 
-    if (!level.inJump && (vx != 0.0f || vz != 0.0f))
-        level.walkTime += dt;
+    if (!player.inJump && (vx != 0.0f || vz != 0.0f))
+        player.walkTime += dt;
 
-    if (!level.inJump && level.walkTime > WALK_LENGTH) {
-        level.walkTime -= WALK_LENGTH;
+    if (!player.inJump && player.walkTime > WALK_LENGTH) {
+        player.walkTime -= WALK_LENGTH;
 
-        playSound((Sound) {
-            .data  = level.land,
-            .end   = level.landLength,
-            .volL  = 0.5f,
-            .volR  = 0.5f,
-            .times = 1,
-        });
+        emitSound(LandSound, 0.5f);
     }
 
-    if (playerState.y < height + groundTolerance) {
-        playerState.y = height;
-        playerState.vy = 0.0f;
-        playerState.onGround = true;
-        level.inJump = false;
+    if (player.y < height + groundTolerance) {
+        player.y = height;
+        player.vy = 0.0f;
+        player.onGround = true;
+        player.inJump = false;
     } else {
-        playerState.onGround = false;
+        player.onGround = false;
     }
 
-    if (jump && playerState.onGround) {
-        playerState.vy += 5.0f;
-        playerState.y += groundTolerance;
-        level.inJump = true;
-        level.walkTime = WALK_LENGTH + 0.1f;
-        playSound((Sound) {
-            .data  = level.steveRev,
-            .end   = level.steveRevLength,
-            .volL  = 0.5f,
-            .volR  = 0.5f,
-            .times = 1,
-        });
+    if (jump && player.onGround) {
+        player.vy += 5.0f;
+        player.y += groundTolerance;
+        player.inJump = true;
+        player.walkTime = WALK_LENGTH + 0.1f;
+        emitSound(SteveRevSound, 0.5f);
     }
 }
 
@@ -1044,8 +1050,8 @@ void menuProcessMouse(bagE_Mouse *m)
                 return;
 
             playSound((Sound) {
-                .data = level.vineThud,
-                .end   = level.vineThudLength / 16,
+                .data  = game.sounds[VineThudSound],
+                .end   = game.soundLengths[VineThudSound] / 16,
                 .volL  = 0.15f,
                 .volR  = 0.15f,
                 .times = 1,
@@ -1178,8 +1184,8 @@ void updateLevel(float dt)
             int mobID = type * MAX_MOBS_PER_TYPE + i;
             ModelTransform transform = level.mobTransforms[mobID];
 
-            float toPlayerX = playerState.x - transform.x;
-            float toPlayerZ = playerState.z - transform.z;
+            float toPlayerX = player.x - transform.x;
+            float toPlayerZ = player.z - transform.z;
             float toPlayerDistance = sqrtf(toPlayerX * toPlayerX + toPlayerZ * toPlayerZ);
 
             level.mobAttackTOs[mobID] -= dt;
@@ -1187,20 +1193,14 @@ void updateLevel(float dt)
                 level.mobAttackTOs[mobID] = 0.0f;
 
             if (toPlayerDistance < MOB_BITE_RANGE) {
-                if (level.mobAttackTOs[mobID] == 0.0f && playerState.hp > 0) {
+                if (level.mobAttackTOs[mobID] == 0.0f && player.hp > 0) {
                     level.mobAttackTOs[mobID] = MOB_ATTACK_TO;
-                    playerState.hp -= PLAYER_HP_FULL / 5;
+                    player.hp -= PLAYER_HP_FULL / 5;
 
-                    if (playerState.hp < 0)
-                        playerState.hp = 0;
+                    if (player.hp < 0)
+                        player.hp = 0;
 
-                    playSound((Sound) {
-                        .data  = level.bite87,
-                        .end   = level.bite87Length,
-                        .volL  = 0.5f,
-                        .volR  = 0.5f,
-                        .times = 1,
-                    });
+                    emitSound(Bite87Sound, 0.5f);
                 }
             } else if (toPlayerDistance < MOB_CHASE_RADIUS) {
                 toPlayerX /= toPlayerDistance;
@@ -1254,7 +1254,7 @@ void updateLevel(float dt)
 
     for (MobType type = 0; type < MobCount; ++type) {
         int count = level.mobTypeCounts[type];
-        int boneCount = level.mobArmatures[type].boneCount;
+        int boneCount = game.mobArmatures[type].boneCount;
 
         for (int i = 0; i < count; ++i) {
             assert(mobBonePoolTaken + boneCount < MOB_BONE_POOL_SIZE);
@@ -1264,7 +1264,7 @@ void updateLevel(float dt)
             updateAnimation(level.mobAnimations + mobID, dt);
             Animation anim = level.mobAnimations[mobID];
             computePoseTransforms(
-                    level.mobArmatures + type,
+                    game.mobArmatures + type,
                     mobTransformScratch,
                     anim.start + anim.time
             );
@@ -1274,7 +1274,7 @@ void updateLevel(float dt)
                     modelMat,
                     mobBonePool + mobBonePoolTaken,
                     mobTransformScratch,
-                    level.mobArmatures + type,
+                    game.mobArmatures + type,
                     0
             );
 
@@ -1283,52 +1283,52 @@ void updateLevel(float dt)
     }
 
     /* update guns */
-    if (level.selectedGun == Glock) {
-        level.gunTime += dt;
-        if (level.gunTime > GLOCK_BUMP_TIME)
-            level.gunTime = GLOCK_BUMP_TIME;
-    } else if (level.selectedGun == Gatling) {
+    if (player.selectedGun == Glock) {
+        player.gunTime += dt;
+        if (player.gunTime > GLOCK_BUMP_TIME)
+            player.gunTime = GLOCK_BUMP_TIME;
+    } else if (player.selectedGun == Gatling) {
         float acc = (GATLING_SPIN_SPEED / GATLING_SPINUP) * dt;
-        level.gatlingSpeed += fireDown ? acc : -acc;
+        player.gatlingSpeed += fireDown ? acc : -acc;
 
-        if (fireDown && level.gatlingSpeed > GATLING_SPIN_SPEED) {
-            level.gatlingSpeed = GATLING_SPIN_SPEED;
+        if (fireDown && player.gatlingSpeed > GATLING_SPIN_SPEED) {
+            player.gatlingSpeed = GATLING_SPIN_SPEED;
 
-            level.gatlingTO -= GATLING_FIRE_RATE * dt;
-            if (level.gatlingTO < 0.0f) {
-                level.gatlingTO = 1.0f;
+            player.gatlingTO -= GATLING_FIRE_RATE * dt;
+            if (player.gatlingTO < 0.0f) {
+                player.gatlingTO = 1.0f;
 
-                if (level.gatlingAmmo > 0) {
+                if (player.gatlingAmmo > 0) {
                     playerShoot(10);
                     playSound((Sound) {
-                        .data  = level.vineThud,
-                        .end   = level.vineThudLength / 8,
+                        .data  = game.sounds[VineThudSound],
+                        .end   = game.soundLengths[VineThudSound] / 8,
                         .volL  = 0.25f,
                         .volR  = 0.25f,
                         .times = 1,
                     });
-                    --level.gatlingAmmo;
+                    --player.gatlingAmmo;
                 }
             }
 
-        } else if (!fireDown && level.gatlingSpeed < 0.0f) {
-            level.gatlingSpeed = 0.0f;
+        } else if (!fireDown && player.gatlingSpeed < 0.0f) {
+            player.gatlingSpeed = 0.0f;
         }
 
-        level.gunTime += level.gatlingSpeed * dt;
+        player.gunTime += player.gatlingSpeed * dt;
     }
 
 
     /* update pickups */
-    level.pickupTime += dt * PICKUP_SPEED;
+    game.pickupTime += dt * PICKUP_SPEED;
 
     for (int i = 0; i < level.pickupCount; ) {
         Vector pos = level.pickupPositions[i];
 
-        float distXS = playerState.x - pos.x;
+        float distXS = player.x - pos.x;
         // FIXME: a hack to account for players height
-        float distYS = playerState.y - pos.y - 2.0f;
-        float distZS = playerState.z - pos.z;
+        float distYS = player.y - pos.y - 2.0f;
+        float distZS = player.z - pos.z;
         distXS *= distXS;
         distYS *= distYS;
         distZS *= distZS;
@@ -1347,16 +1347,16 @@ void updateLevel(float dt)
 
 
     /* update platform */
-    if (playerState.gaming) {
+    if (player.gaming) {
         // FIXME: the position should not be hardcoded
         float platformX = (CHUNK_DIM + CHUNK_DIM * 1.9f) * CHUNK_TILE_DIM;
         float platformZ = (CHUNK_DIM + CHUNK_DIM * 3.3f) * CHUNK_TILE_DIM;
         float platformY = getHeight(platformX, platformZ);
 
-        float distXS = playerState.x - platformX;
+        float distXS = player.x - platformX;
         // FIXME: a hack to account for players height
-        float distYS = playerState.y - platformY - 2.0f;
-        float distZS = playerState.z - platformZ;
+        float distYS = player.y - platformY - 2.0f;
+        float distZS = player.z - platformZ;
         distXS *= distXS;
         distYS *= distYS;
         distZS *= distZS;
@@ -1364,30 +1364,17 @@ void updateLevel(float dt)
         float distS = distXS + distYS + distZS;
 
         if (distS < 4.0f) {
-            level.headCount += level.carryHeadCount;
+            game.headCount += player.carryHeadCount;
 
-            if (level.carryHeadCount > 0) {
-                playSound((Sound) {
-                    .data  = level.stoneHit,
-                    .end   = level.stoneHitLength,
-                    .volL  = 0.5f,
-                    .volR  = 0.5f,
-                    .times = 1,
-                });
-            }
+            if (player.carryHeadCount > 0)
+                emitSound(StoneHitSound, 0.5f);
 
-            level.carryHeadCount = 0;
+            player.carryHeadCount = 0;
 
-            if (level.headCount == 3 && !playerState.won) {
-                playSound((Sound) {
-                    .data  = level.happyWheelsWin,
-                    .end   = level.happyWheelsWinLength,
-                    .volL  = 0.5f,
-                    .volR  = 0.5f,
-                    .times = 1,
-                });
+            if (game.headCount == 3 && !player.won) {
+                emitSound(HappyWheelsWinSound, 0.5f);
 
-                playerState.won = true;
+                player.won = true;
             }
         }
     }
@@ -1404,8 +1391,8 @@ void renderLevel(void)
     /* render skybox */
     glDisable(GL_DEPTH_TEST);
 
-    glUseProgram(level.skyboxProgram);
-    glBindVertexArray(level.boxModel.vao);
+    glUseProgram(game.skyboxProgram);
+    glBindVertexArray(game.boxModel.vao);
     glBindTextureUnit(0, level.skyboxCubemap);
 
     glDrawElements(GL_TRIANGLES, BOX_INDEX_COUNT, GL_UNSIGNED_INT, 0);
@@ -1413,7 +1400,7 @@ void renderLevel(void)
     glEnable(GL_DEPTH_TEST);
 
     /* render terrain */
-    glUseProgram(level.terrainProgram);
+    glUseProgram(game.terrainProgram);
     glBindTextureUnit(0, level.terrainAtlas);
 
     for (int z = 0; z < MAX_MAP_DIM; ++z) {
@@ -1425,7 +1412,7 @@ void renderLevel(void)
                 float zp = (float)z * CHUNK_TILE_DIM * CHUNK_DIM;
                 Matrix modelChunk = matrixTranslation(xp, 0.0f, zp);
 
-                glProgramUniformMatrix4fv(level.terrainProgram, 0, 1, GL_FALSE, modelChunk.data);
+                glProgramUniformMatrix4fv(game.terrainProgram, 0, 1, GL_FALSE, modelChunk.data);
 
                 ChunkObject object = level.terrain.objects[chunkID];
                 glBindVertexArray(object.vao);
@@ -1437,24 +1424,24 @@ void renderLevel(void)
     Matrix mul;
 
     /* render gun */
-    if (playerState.gaming) {
-        float scale = level.selectedGun == Gatling ? 0.5f : 0.2f;
+    if (player.gaming) {
+        float scale = player.selectedGun == Gatling ? 0.5f : 0.2f;
         Matrix modelGun = matrixScale(scale, scale, scale);
 
-        if (level.selectedGun == Gatling) {
-            mul = matrixRotationZ(level.gunTime * M_PI * 2);
+        if (player.selectedGun == Gatling) {
+            mul = matrixRotationZ(player.gunTime * M_PI * 2);
             modelGun = matrixMultiply(&mul, &modelGun);
         } else {
-            mul = matrixRotationX((M_PI / 3) * sinf((level.gunTime / GLOCK_BUMP_TIME) * M_PI));
+            mul = matrixRotationX((M_PI / 3) * sinf((player.gunTime / GLOCK_BUMP_TIME) * M_PI));
             modelGun = matrixMultiply(&mul, &modelGun);
 
             mul = matrixRotationY(M_PI);
             modelGun = matrixMultiply(&mul, &modelGun);
         }
 
-        float offset = level.selectedGun == Gatling
+        float offset = player.selectedGun == Gatling
                      ? 0.5f
-                     : 0.75f -  0.2f * sinf((level.gunTime / GLOCK_BUMP_TIME) * M_PI);
+                     : 0.75f -  0.2f * sinf((player.gunTime / GLOCK_BUMP_TIME) * M_PI);
 
         mul = matrixTranslation(-0.5f, -0.5f, offset);
         modelGun = matrixMultiply(&mul, &modelGun);
@@ -1468,22 +1455,22 @@ void renderLevel(void)
         mul = matrixTranslation(camState.x, camState.y, camState.z);
         modelGun = matrixMultiply(&mul, &modelGun);
 
-        glUseProgram(level.metalProgram);
-        glProgramUniformMatrix4fv(level.metalProgram, 0, 1, GL_FALSE, modelGun.data);
+        glUseProgram(game.metalProgram);
+        glProgramUniformMatrix4fv(game.metalProgram, 0, 1, GL_FALSE, modelGun.data);
 
-        if (level.selectedGun == Gatling) {
-            glBindVertexArray(level.gatling.vao);
-            glDrawElements(GL_TRIANGLES, level.gatling.indexCount, GL_UNSIGNED_INT, 0);
+        if (player.selectedGun == Gatling) {
+            glBindVertexArray(game.gatling.vao);
+            glDrawElements(GL_TRIANGLES, game.gatling.indexCount, GL_UNSIGNED_INT, 0);
         } else {
-            glBindVertexArray(level.glock.vao);
-            glDrawElements(GL_TRIANGLES, level.glock.indexCount, GL_UNSIGNED_INT, 0);
+            glBindVertexArray(game.glock.vao);
+            glDrawElements(GL_TRIANGLES, game.glock.indexCount, GL_UNSIGNED_INT, 0);
 
-            glUseProgram(level.textureProgram);
-            glProgramUniformMatrix4fv(level.textureProgram, 0, 1, GL_FALSE, modelGun.data);
+            glUseProgram(game.textureProgram);
+            glProgramUniformMatrix4fv(game.textureProgram, 0, 1, GL_FALSE, modelGun.data);
 
-            glBindVertexArray(level.glockBase.vao);
-            glBindTextureUnit(0, level.gunTexture);
-            glDrawElements(GL_TRIANGLES, level.glockBase.indexCount, GL_UNSIGNED_INT, 0);
+            glBindVertexArray(game.glockBase.vao);
+            glBindTextureUnit(0, game.gunTexture);
+            glDrawElements(GL_TRIANGLES, game.glockBase.indexCount, GL_UNSIGNED_INT, 0);
         }
     }
 
@@ -1518,12 +1505,12 @@ void renderLevel(void)
 
     int mobOffset = 0;
     for (MobType type = 0; type < MobCount; ++type) {
-        MobObject object = level.mobObjects[type];
+        MobObject object = game.mobObjects[type];
         glBindVertexArray(object.animated.model.vao);
         glBindTextureUnit(0, object.texture);
 
         glProgramUniform1ui(mobProgram, 0, mobOffset);
-        glProgramUniform1ui(mobProgram, 1, level.mobArmatures[type].boneCount);
+        glProgramUniform1ui(mobProgram, 1, game.mobArmatures[type].boneCount);
 
         glDrawElementsInstanced(
                 GL_TRIANGLES,
@@ -1533,15 +1520,15 @@ void renderLevel(void)
                 level.mobTypeCounts[type]
         );
 
-        mobOffset += level.mobTypeCounts[type] * level.mobArmatures[type].boneCount;
+        mobOffset += level.mobTypeCounts[type] * game.mobArmatures[type].boneCount;
     }
 
 
     /* render pickups */
-    glUseProgram(level.textureProgram);
+    glUseProgram(game.textureProgram);
 
     for (Pickup pickup = 0; pickup < PickupCount; ++pickup) {
-        Object object = level.pickupObjects[pickup];
+        Object object = game.pickupObjects[pickup];
         glBindVertexArray(object.model.vao);
         glBindTextureUnit(0, object.texture);
 
@@ -1552,13 +1539,13 @@ void renderLevel(void)
                 float scale = pickupScales[pickup];
                 Matrix modelMat = matrixScale(scale, scale, scale);
 
-                mul = matrixRotationY(level.pickupTime);
+                mul = matrixRotationY(game.pickupTime);
                 modelMat = matrixMultiply(&mul, &modelMat);
 
                 mul = matrixTranslation(pos.x, pos.y + 0.25f, pos.z);
                 modelMat = matrixMultiply(&mul, &modelMat);
 
-                glProgramUniformMatrix4fv(level.textureProgram, 0, 1, GL_FALSE, modelMat.data);
+                glProgramUniformMatrix4fv(game.textureProgram, 0, 1, GL_FALSE, modelMat.data);
                 glDrawElements(GL_TRIANGLES, object.model.indexCount, GL_UNSIGNED_INT, 0);
             }
         }
@@ -1567,10 +1554,10 @@ void renderLevel(void)
 
     // FIXME: render platform
     //        hardcoded for now but should not be here
-    glUseProgram(level.lightProgram);
+    glUseProgram(game.lightProgram);
 
-    glBindVertexArray(level.platform.vao);
-    glBindTextureUnit(0, level.platformTexture);
+    glBindVertexArray(game.platform.vao);
+    glBindTextureUnit(0, game.platformTexture);
 
     float platformX = (CHUNK_DIM + CHUNK_DIM * 1.9f) * CHUNK_TILE_DIM;
     float platformZ = (CHUNK_DIM + CHUNK_DIM * 3.3f) * CHUNK_TILE_DIM;
@@ -1581,51 +1568,51 @@ void renderLevel(void)
     mul = matrixTranslation(platformX, platformY, platformZ);
     platformMat = matrixMultiply(&mul, &platformMat);
 
-    glProgramUniformMatrix4fv(level.lightProgram, 0, 1, GL_FALSE, platformMat.data);
-    glProgramUniform4f(level.lightProgram, 1, platformX, platformY + 1.0f, platformZ, 0.0f);
-    glProgramUniform4f(level.lightProgram, 2, 1.0f, 0.0f, 0.0f, 1.0f);
-    glDrawElements(GL_TRIANGLES, level.platform.indexCount, GL_UNSIGNED_INT, 0);
+    glProgramUniformMatrix4fv(game.lightProgram, 0, 1, GL_FALSE, platformMat.data);
+    glProgramUniform4f(game.lightProgram, 1, platformX, platformY + 1.0f, platformZ, 0.0f);
+    glProgramUniform4f(game.lightProgram, 2, 1.0f, 0.0f, 0.0f, 1.0f);
+    glDrawElements(GL_TRIANGLES, game.platform.indexCount, GL_UNSIGNED_INT, 0);
 
-    if (level.headCount >= 1) {
-        glBindVertexArray(level.head.vao);
-        glBindTextureUnit(0, level.headTexture);
+    if (game.headCount >= 1) {
+        glBindVertexArray(game.head.vao);
+        glBindTextureUnit(0, game.headTexture);
 
-        Matrix headMat = matrixRotationY(level.pickupTime * PICKUP_SPEED);
+        Matrix headMat = matrixRotationY(game.pickupTime * PICKUP_SPEED);
 
         mul = matrixTranslation(platformX - 2.0f, platformY + 1.5f, platformZ);
         headMat = matrixMultiply(&mul, &headMat);
 
-        glProgramUniformMatrix4fv(level.lightProgram, 0, 1, GL_FALSE, headMat.data);
-        glDrawElements(GL_TRIANGLES, level.head.indexCount, GL_UNSIGNED_INT, 0);
+        glProgramUniformMatrix4fv(game.lightProgram, 0, 1, GL_FALSE, headMat.data);
+        glDrawElements(GL_TRIANGLES, game.head.indexCount, GL_UNSIGNED_INT, 0);
     }
 
-    if (level.headCount >= 2) {
-        Matrix headMat = matrixRotationY(level.pickupTime * PICKUP_SPEED);
+    if (game.headCount >= 2) {
+        Matrix headMat = matrixRotationY(game.pickupTime * PICKUP_SPEED);
 
         mul = matrixTranslation(platformX + 2.0f, platformY + 1.5f, platformZ);
         headMat = matrixMultiply(&mul, &headMat);
 
-        glProgramUniformMatrix4fv(level.lightProgram, 0, 1, GL_FALSE, headMat.data);
-        glDrawElements(GL_TRIANGLES, level.head.indexCount, GL_UNSIGNED_INT, 0);
+        glProgramUniformMatrix4fv(game.lightProgram, 0, 1, GL_FALSE, headMat.data);
+        glDrawElements(GL_TRIANGLES, game.head.indexCount, GL_UNSIGNED_INT, 0);
     }
 
-    if (level.headCount >= 3) {
-        Matrix headMat = matrixRotationY(level.pickupTime * PICKUP_SPEED);
+    if (game.headCount >= 3) {
+        Matrix headMat = matrixRotationY(game.pickupTime * PICKUP_SPEED);
 
         mul = matrixTranslation(platformX, platformY + 1.5f, platformZ + 2.0f);
         headMat = matrixMultiply(&mul, &headMat);
 
-        glProgramUniformMatrix4fv(level.lightProgram, 0, 1, GL_FALSE, headMat.data);
-        glDrawElements(GL_TRIANGLES, level.head.indexCount, GL_UNSIGNED_INT, 0);
+        glProgramUniformMatrix4fv(game.lightProgram, 0, 1, GL_FALSE, headMat.data);
+        glDrawElements(GL_TRIANGLES, game.head.indexCount, GL_UNSIGNED_INT, 0);
     }
 
 
     /* editor render mob spawners */
-    if (!playerState.gaming && editorMode == SpawnerPlacing) {
-        glUseProgram(level.textureProgram);
+    if (!player.gaming && editorMode == SpawnerPlacing) {
+        glUseProgram(game.textureProgram);
 
         for (MobType type = 0; type < MobCount; ++type) {
-            MobObject object = level.mobObjects[type];
+            MobObject object = game.mobObjects[type];
             glBindVertexArray(object.animated.model.vao);
             glBindTextureUnit(0, object.texture);
 
@@ -1637,14 +1624,14 @@ void renderLevel(void)
                 // FIXME: This rendering is busted but it looks cool so
                 //        I don't care for now
                 Matrix modelMat = matrixTranslation(s.x, s.y, s.z);
-                glProgramUniformMatrix4fv(level.textureProgram, 0, 1, GL_FALSE, modelMat.data);
+                glProgramUniformMatrix4fv(game.textureProgram, 0, 1, GL_FALSE, modelMat.data);
                 glDrawElements(GL_TRIANGLES, object.animated.model.indexCount, GL_UNSIGNED_INT, 0);
             }
         }
     }
 
     /* editor render static colliders */
-    if (!playerState.gaming && editorMode == StaticsPlacing) {
+    if (!player.gaming && editorMode == StaticsPlacing) {
         glUseProgram(pointProgram);
 
         Vector colors2[] = {
@@ -1802,11 +1789,11 @@ void spawnersBroadcast(SpawnerGroup group)
             continue;
 
         // FIXME: this currently works for worms only
-        float animLength = level.mobArmatures[MobWorm].timeStamps[2];
+        float animLength = game.mobArmatures[MobWorm].timeStamps[2];
 
         addMob(MobWorm,
                 (ModelTransform) { s.x, s.y, s.z, 2.0f },
-                (Animation) { .start = level.mobArmatures[MobWorm].timeStamps[0],
+                (Animation) { .start = game.mobArmatures[MobWorm].timeStamps[0],
                               .end   = animLength,
                               .time  = (animLength / 10) * (rand() % 10) });
 
@@ -1833,25 +1820,19 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
             return;
         }
 
-        if (playerState.hp <= 0)
+        if (player.hp <= 0)
             return;
 
-        if (level.selectedGun == Glock) {
+        if (player.selectedGun == Glock) {
             if (!down)
                 return;
 
-            if (mb->button == bagE_ButtonLeft && level.gunTime == GLOCK_BUMP_TIME) {
-                level.gunTime = 0.0f;
+            if (mb->button == bagE_ButtonLeft && player.gunTime == GLOCK_BUMP_TIME) {
+                player.gunTime = 0.0f;
                 playerShoot(20);
-                playSound((Sound) {
-                    .data = level.vineThud,
-                    .end   = level.vineThudLength,
-                    .volL  = 0.25f,
-                    .volR  = 0.25f,
-                    .times = 1,
-                });
+                emitSound(VineThudSound, 0.25f);
             }
-        } else if (level.selectedGun == Gatling) {
+        } else if (player.selectedGun == Gatling) {
             if (mb->button == bagE_ButtonLeft)
                 fireDown = down;
         }
@@ -2030,10 +2011,10 @@ void levelsProcessButton(bagE_MouseButton *mb, bool down)
 void levelsProcessWheel(bagE_MouseWheel *mw)
 {
     if (!gameState.isEditor) {
-        if (playerState.hp <= 0)
+        if (player.hp <= 0)
             return;
 
-        level.selectedGun = (level.selectedGun + 1) % GunTypeCount;
+        player.selectedGun = (player.selectedGun + 1) % GunTypeCount;
     } else {
         switch (editorMode) {
             case TerrainPlacing:
@@ -2143,7 +2124,7 @@ void renderLevelOverlay(void)
         guiDrawRect(
                 margin + healthSize + padding,
                 appState.windowHeight - margin - barHeight + padding,
-                (int)(((float)barWidth / PLAYER_HP_FULL) * playerState.hp) - 2 * padding,
+                (int)(((float)barWidth / PLAYER_HP_FULL) * player.hp) - 2 * padding,
                 barHeight - 2 * padding,
                 healthColor
         );
@@ -2162,14 +2143,14 @@ void renderLevelOverlay(void)
 
         int deathThickness = 300;
 
-        if (playerState.won) {
+        if (player.won) {
             guiDrawRect(
                     0,
                     (appState.windowHeight - deathThickness) / 2,
                     appState.windowWidth, deathThickness,
                     (Color) {{ 1.0f, 1.0f, 1.0f, 1.0f }}
             );
-        } else if (playerState.hp <= 0) {
+        } else if (player.hp <= 0) {
             guiDrawRect(
                     0,
                     (appState.windowHeight - deathThickness) / 2,
@@ -2179,7 +2160,7 @@ void renderLevelOverlay(void)
         }
 
         guiBeginImage();
-        guiUseImage(level.guiAtlas);
+        guiUseImage(game.guiAtlas);
         guiDrawImage(
                 margin / 2,
                 appState.windowHeight - healthSize,
@@ -2203,8 +2184,8 @@ void renderLevelOverlay(void)
                 margin / 2,
                 ammoSize, ammoSize,
                 0.0f, 0.25f, 0.25f, 0.25f,
-                (level.carryHeadCount == 0 ? (Color) {{ 0.0f, 0.0f, 0.0f, 1.0f }}
-                                           : (Color) {{ 1.0f, 1.0f, 1.0f, 1.0f }})
+                (player.carryHeadCount == 0 ? (Color) {{ 0.0f, 0.0f, 0.0f, 1.0f }}
+                                            : (Color) {{ 1.0f, 1.0f, 1.0f, 1.0f }})
         );
 
         int crossSize = 32;
@@ -2244,7 +2225,7 @@ void renderLevelOverlay(void)
         );
 
         char buffer[64] = { 0 };
-        int written = snprintf(buffer, 64, "%d", level.gatlingAmmo);
+        int written = snprintf(buffer, 64, "%d", player.gatlingAmmo);
         guiDrawText(buffer,
                 appState.windowWidth  - margin - (ammoSize + written * ammoTextSize) / 2,
                 appState.windowHeight - margin / 2 - ammoTextSize * 2,
@@ -2252,7 +2233,7 @@ void renderLevelOverlay(void)
                 textColor
         );
 
-        written = snprintf(buffer, 64, "x%d", level.carryHeadCount);
+        written = snprintf(buffer, 64, "x%d", player.carryHeadCount);
         guiDrawText(buffer,
                 appState.windowWidth - margin - ammoTextSize * 2,
                 margin,
@@ -2260,14 +2241,14 @@ void renderLevelOverlay(void)
                 textColor
         );
 
-        if (playerState.won) {
+        if (player.won) {
             guiDrawText("YOU WIN!",
                     (appState.windowWidth - 8 * 160) / 2,
                     (appState.windowHeight - 320) / 2,
                     160, 320, 0,
                     (Color) {{ 0.0f, 0.0f, 0.0f, 1.0f }}
             );
-        } else if (playerState.hp <= 0) {
+        } else if (player.hp <= 0) {
             guiDrawText("YOU DIED",
                     (appState.windowWidth - 8 * 160) / 2,
                     (appState.windowHeight - 320) / 2,
@@ -2439,7 +2420,7 @@ void renderLevelOverlay(void)
 
             case PickupPlacing:
                 guiBeginText();
-                snprintf(charBuffer, 64, "type: %s", level.pickupNames[selectedPickup]);
+                snprintf(charBuffer, 64, "type: %s", game.pickupNames[selectedPickup]);
                 guiDrawText(charBuffer,
                             appState.windowWidth - strlen(charBuffer) * (EDITOR_FONT_SIZE / 2),
                             0, EDITOR_FONT_SIZE / 2, EDITOR_FONT_SIZE, 0, textColor);

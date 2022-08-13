@@ -162,42 +162,56 @@ typedef bool (*PickupAction)(void);
 #define WALK_LENGTH 0.3f
 
 
+typedef enum
+{
+    VineThudSound,
+    Bite87Sound,
+    SSAmmoPickupSound,
+    Bruh2Sound,
+    GulpSound,
+    StoneHitSound,
+    HappyWheelsWinSound,
+    SteveRevSound,
+    LandSound,
+
+    SoundCount
+} SoundID;
+
 typedef struct
 {
-    // TODO: This stuff should not be here but for
-    //       now it's fine
-    //       This whole file should be named something
-    //       more like 'game' rather then 'levels'
-    uint64_t vineThudLength;
-    int16_t *vineThud;
-    uint64_t bite87Length;
-    int16_t *bite87;
-    uint64_t ssAmmoPickupLength;
-    int16_t *ssAmmoPickup;
-    uint64_t bruh2Length;
-    int16_t *bruh2;
-    uint64_t gulpLength;
-    int16_t *gulp;
-    uint64_t stoneHitLength;
-    int16_t *stoneHit;
-    uint64_t happyWheelsWinLength;
-    int16_t *happyWheelsWin;
-    uint64_t steveRevLength;
-    int16_t *steveRev;
-    uint64_t landLength;
-    int16_t *land;
+    bool gaming;
+    bool onGround;
+    float x, y, z;
+    float vy;
+    bool tryJump;
+    int hp;
+    bool won;
 
     float walkTime;
     bool inJump;
+    GunType selectedGun;
 
+    float gunTime;
+    float gatlingSpeed;
+    float gatlingTO;
+    int gatlingAmmo;
+    int carryHeadCount;
+} Player;
+
+extern Player player;
+
+
+typedef struct
+{
     unsigned guiAtlas;
 
     unsigned terrainProgram;
-    unsigned terrainAtlas;
     
     ModelObject boxModel;
     unsigned skyboxProgram;
-    unsigned skyboxCubemap;
+
+    unsigned defaultTerrainAtlas;
+    unsigned defaultSkybox;
 
     unsigned textureProgram;
 
@@ -213,20 +227,32 @@ typedef struct
     ModelObject glock;
     ModelObject glockBase;
     unsigned gunTexture;
-    float gunTime;
-    float gatlingSpeed;
-    float gatlingTO;
-    int gatlingAmmo;
-
-    GunType selectedGun;
 
     ModelObject head;
     unsigned headTexture;
     int headCount;
-    int carryHeadCount;
 
-    const AtlasView *atlasViews;
+    Armature       mobArmatures[MobCount];
+    MobObject      mobObjects  [MobCount];
+
+    float pickupTime;
+    Object      pickupObjects[PickupCount];
+    const char *pickupNames  [PickupCount];
+
+    uint64_t soundLengths[SoundCount];
+    int16_t *sounds      [SoundCount];
+} Game;
+
+extern Game game;
+
+
+typedef struct
+{
+    unsigned terrainAtlas;
     int atlasViewCount;
+    const AtlasView *atlasViews;
+
+    unsigned skyboxCubemap;
 
     const char *filePath;
 
@@ -251,8 +277,6 @@ typedef struct
     Collider statsColliders        [MAX_STATIC_INSTANCE_COUNT];
 
     int            mobTypeCounts[MobCount];
-    Armature       mobArmatures [MobCount];
-    MobObject      mobObjects   [MobCount];
     Animation      mobAnimations[MobCount * MAX_MOBS_PER_TYPE];
     ModelTransform mobTransforms[MobCount * MAX_MOBS_PER_TYPE];
     MobState       mobStates    [MobCount * MAX_MOBS_PER_TYPE];
@@ -265,9 +289,6 @@ typedef struct
     int pickupCount;
     Pickup pickups        [MAX_PICKUP_COUNT];
     Vector pickupPositions[MAX_PICKUP_COUNT];
-    float pickupTime;
-    Object      pickupObjects[PickupCount];
-    const char *pickupNames  [PickupCount];
 } Level;
 
 extern Level level;
@@ -292,6 +313,8 @@ Matrix modelTransformToMatrix(ModelTransform transform);
 
 void initLevels(void);
 void exitLevels(void);
+
+void emitSound(SoundID id, float volume);
 
 void processPlayerInput(float vx, float vz, bool jump, float dt);
 

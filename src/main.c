@@ -168,13 +168,13 @@ int bagE_main(int argc, char *argv[])
 
             if (!gameState.isEditor) {
                 if (!gameState.isPaused) {
-                    processPlayerInput(vx, vz, playerState.tryJump && inputState.ascendDown, 0.01666f);
+                    processPlayerInput(vx, vz, player.tryJump && inputState.ascendDown, 0.01666f);
 
-                    playerState.tryJump = !inputState.ascendDown;
+                    player.tryJump = !inputState.ascendDown;
 
-                    camState.x = playerState.x;
-                    camState.y = playerState.y;
-                    camState.z = playerState.z;
+                    camState.x = player.x;
+                    camState.y = player.y;
+                    camState.z = player.z;
                 }
             } else {
                 if (inputState.ascendDown)
@@ -298,7 +298,7 @@ int bagE_eventHandler(bagE_Event *event)
                     inputState.ascendDown = keyDown;
 
                     if (!keyDown && !gameState.inSplash
-                     && !gameState.isEditor && playerState.hp <= 0)
+                     && !gameState.isEditor && player.hp <= 0)
                         restartLevel();
                     break;
 
