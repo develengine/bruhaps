@@ -1,6 +1,6 @@
 #include "splash.h"
 
-#include "levels.h"
+#include "game.h"
 #include "gui.h"
 #include "audio.h"
 #include "settings.h"

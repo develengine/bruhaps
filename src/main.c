@@ -6,7 +6,7 @@
 #include "animation.h"
 #include "terrain.h"
 #include "core.h"
-#include "levels.h"
+#include "game.h"
 #include "state.h"
 #include "audio.h"
 #include "gui.h"
