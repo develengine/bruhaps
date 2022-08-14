@@ -317,7 +317,6 @@ f.write(struct.pack("=" + "I" * len(mesh_data.indices), *mesh_data.indices))
 # bone ids, weights
 for vertex in mesh_data.vertices:
     weight_length = math.sqrt(sum(map(lambda x: x * x, weights[vertex.pos_id][1])))
-    print("weight length:", weight_length)
     zipped = list(zip(*weights[vertex.pos_id]))
     zipped.sort(key = lambda x: x[1], reverse = True)
 

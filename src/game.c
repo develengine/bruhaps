@@ -287,6 +287,16 @@ static JointTransform mobTransformScratch[MAX_BONES_PER_MOB];
 static bool fireDown = false;
 
 
+static unsigned animationProgram;
+static Matrix brugBones[128];
+
+static AnimatedObject brugAnimated;
+static unsigned       brugTexture;
+static Armature       brugArmature;
+static Animation      brugAnimation;
+static ModelTransform brugTransform;
+
+
 #include "levels/bruh.c"
 
 
@@ -440,6 +450,32 @@ void initGame(void)
     modelFree(animated.model);
     free(animated.vertexWeights);
 
+
+    // TODO: test (remove)
+    // ============
+    animationProgram = createProgram(
+            "shaders/animated_vertex.glsl",
+            "shaders/animated_fragment.glsl"
+    );
+
+    Animated brugAnim = animatedLoad("res/brug.animated");
+    brugArmature = brugAnim.armature;
+
+    brugAnimated = createAnimatedObject(brugAnim);
+    brugTexture = createTexture("res/brug.png");
+
+    modelFree(brugAnim.model);
+    free(brugAnim.vertexWeights);
+
+    brugTransform = (ModelTransform) { 0.0f, 0.0f, 0.0f, 2.0f },
+    brugTransform.rx = -M_PI / 2;
+    brugAnimation = (Animation) {
+        .start = brugArmature.timeStamps[0],
+        .end   = brugArmature.timeStamps[2],
+        .time  = 0.0f
+    };
+
+    // =============
 
     for (int i = 0; i < SoundCount; ++i)
         game.sounds[i] = loadWAV(soundPaths[i], game.soundLengths + i);
@@ -1283,6 +1319,26 @@ void updateGame(float dt)
         }
     }
 
+    // TODO: test (remove)
+    // =============
+    updateAnimation(&brugAnimation, dt);
+    computePoseTransforms(
+            &brugArmature,
+            mobTransformScratch,
+            brugAnimation.start + brugAnimation.time
+    );
+
+    Matrix brugModelMat = modelTransformToMatrix(brugTransform);
+    computeArmatureMatrices(
+            brugModelMat,
+            brugBones,
+            mobTransformScratch,
+            &brugArmature,
+            0
+    );
+    // =============
+
+
     /* update guns */
     if (player.selectedGun == Glock) {
         player.gunTime += dt;
@@ -1523,6 +1579,18 @@ void renderGame(void)
 
         mobOffset += level.mobTypeCounts[type] * game.mobArmatures[type].boneCount;
     }
+
+    // TODO: test (remove)
+    // ==========
+    glUseProgram(animationProgram);
+
+    glBindVertexArray(brugAnimated.model.vao);
+    glBindTextureUnit(0, brugTexture);
+
+    glProgramUniformMatrix4fv(animationProgram, 0, brugArmature.boneCount, 0, (float*)brugBones);
+
+    glDrawElements(GL_TRIANGLES, brugAnimated.model.indexCount, GL_UNSIGNED_INT, 0);
+    // ==========
 
 
     /* render pickups */
