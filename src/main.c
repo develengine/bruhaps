@@ -88,7 +88,7 @@ int bagE_main(int argc, char *argv[])
         gameState.isEditor = strcmp(argv[1], "--editor") == 0;
 
     initGUI();
-    initLevels();
+    initGame();
     initSplash();
 
     settingsLoad();
@@ -194,7 +194,7 @@ int bagE_main(int argc, char *argv[])
             if (gameState.isPaused) {
                 updateMenu(0.01666f);
             } else {
-                updateLevel(0.01666f);
+                updateGame(0.01666f);
             }
         }
 
@@ -235,7 +235,7 @@ int bagE_main(int argc, char *argv[])
         if (gameState.inSplash) {
             renderSplash();
         } else {
-            renderLevel();
+            renderGame();
         }
 
 
@@ -248,7 +248,7 @@ int bagE_main(int argc, char *argv[])
         if (gameState.inSplash) {
             renderSplashOverlay();
         } else {
-            renderLevelOverlay();
+            renderGameOverlay();
         }
 
         glEnable(GL_DEPTH_TEST);
@@ -258,7 +258,7 @@ int bagE_main(int argc, char *argv[])
     }
   
     exitSplash();
-    exitLevels();
+    exitGame();
     exitGUI();
     exitAudio();
 
@@ -366,7 +366,7 @@ int bagE_eventHandler(bagE_Event *event)
                 if (gameState.inSplash) {
                     splashProcessButton(mb, keyDown);
                 } else {
-                    levelsProcessButton(mb, keyDown);
+                    gameProcessButton(mb, keyDown);
                 }
             }
             break;
@@ -375,7 +375,7 @@ int bagE_eventHandler(bagE_Event *event)
             if (inputState.playerInput) {
                 bagE_MouseWheel *mw = &(event->data.mouseWheel);
                 if (!gameState.inSplash)
-                    levelsProcessWheel(mw);
+                    gameProcessWheel(mw);
             }
             break;
 

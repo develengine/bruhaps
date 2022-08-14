@@ -108,20 +108,20 @@ void levelBruhInit(void)
         levelModels[i] = loadModelObject(levelModelPaths[i]);
 
     // FIXME: and also this
-    levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelTree],
-                                          .texture = levelTextures[TextureTree] },
-                             (ColliderType) { true, { {{ 0.0f, 1.5f, 0.0f }},
-                                                      {{ 0.3f, 1.5f, 0.3f }} } },
-                             "Tree");
-    levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelBush],
-                                          .texture = levelTextures[TextureTree] },
-                             (ColliderType) { false },
-                             "Bush");
-    levelsInsertStaticObject((Object)   { .model   = levelModels  [ModelRock],
-                                          .texture = levelTextures[TextureStone] },
-                             (ColliderType) { true, { {{ 0.0f, 0.2f, 0.0f }},
-                                                      {{ 0.6f, 0.4f, 0.6f }} } },
-                             "Rock");
+    gameInsertStaticObject((Object)   { .model   = levelModels  [ModelTree],
+                                        .texture = levelTextures[TextureTree] },
+                           (ColliderType) { true, { {{ 0.0f, 1.5f, 0.0f }},
+                                                    {{ 0.3f, 1.5f, 0.3f }} } },
+                            "Tree");
+    gameInsertStaticObject((Object)   { .model   = levelModels  [ModelBush],
+                                        .texture = levelTextures[TextureTree] },
+                           (ColliderType) { false },
+                            "Bush");
+    gameInsertStaticObject((Object)   { .model   = levelModels  [ModelRock],
+                                        .texture = levelTextures[TextureStone] },
+                           (ColliderType) { true, { {{ 0.0f, 0.2f, 0.0f }},
+                                                    {{ 0.6f, 0.4f, 0.6f }} } },
+                            "Rock");
 
 }
 
