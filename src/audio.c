@@ -138,7 +138,7 @@ int16_t *loadWAV(const char *path, uint64_t *length)
 
     // FIXME: add a file length check
 
-    fread(buffer, 1, 4, file);
+    safe_read(buffer, 1, 4, file);
     if (strncmp(buffer, "RIFF", 4)) {
         fprintf(stderr, "Can't parse file \"%s\". Wrong format.\n", path);
         fprintf(stderr, "here\n");
@@ -146,7 +146,7 @@ int16_t *loadWAV(const char *path, uint64_t *length)
     }
 
     fseek(file, 4, SEEK_CUR);
-    fread(buffer, 1, 4, file);
+    safe_read(buffer, 1, 4, file);
     if (strncmp(buffer, "WAVE", 4)) {
         fprintf(stderr, "Can't parse file \"%s\". Wrong format.\n", path);
         fprintf(stderr, "there\n");
@@ -156,14 +156,14 @@ int16_t *loadWAV(const char *path, uint64_t *length)
     fseek(file, 4, SEEK_CUR);
 
     int32_t lof;
-    fread(&lof, 1, 4, file);
+    safe_read(&lof, 1, 4, file);
 
-    fread(&typeOfFormat, 1, 2, file);
-    fread(&channelCount, 1, 2, file);
-    fread(&sampleRate, 1, 4, file);
+    safe_read(&typeOfFormat, 1, 2, file);
+    safe_read(&channelCount, 1, 2, file);
+    safe_read(&sampleRate, 1, 4, file);
     fseek(file, 4, SEEK_CUR);
-    fread(&frameSize, 1, 2, file);
-    fread(&bitsPerSample, 1, 2, file);
+    safe_read(&frameSize, 1, 2, file);
+    safe_read(&bitsPerSample, 1, 2, file);
 
     // NOTE: not sure why it can have some extra garbage in it
     // FIXME: just horrible, but add a file size check
@@ -198,7 +198,7 @@ int16_t *loadWAV(const char *path, uint64_t *length)
         state = ' ';
     }
 
-    fread(&dataSize, 1, 4, file);
+    safe_read(&dataSize, 1, 4, file);
     
 #if 0
     printf("WAV file: %s\n"
@@ -223,7 +223,7 @@ int16_t *loadWAV(const char *path, uint64_t *length)
         exit(666);
     }
 
-    fread(data, 1, dataSize, file);
+    safe_read(data, 1, dataSize, file);
     *length = dataSize / (bitsPerSample / 8);
 
     fclose(file);
