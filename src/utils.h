@@ -4,14 +4,12 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 
 #define length(x) (sizeof(x)/sizeof(*x))
 
-#ifdef _DEBUG
-    #include <assert.h>
-    #define NOT_IMPLEMENTED 0
-#endif
+#define NOT_IMPLEMENTED 0
 
 #ifdef _DEBUG
     #define unreachable()                                                           \

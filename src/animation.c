@@ -56,6 +56,7 @@ static float getBoneTransforms(
         float time
 ) {
     unsigned frameCount  = armature->frameCounts[index];
+
     if (frameCount == 0)
         assert(NOT_IMPLEMENTED);
 

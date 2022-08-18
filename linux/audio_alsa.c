@@ -192,6 +192,12 @@ void *startAlsa(void *param)
     }
 
     snd_pcm_close(device);
+
+#ifdef _DEBUG
+    /* necessary for debugging memory leaks */
+    snd_config_update_free_global();
+#endif
+
     free(writeBuffer);
 
     pthread_exit(0);
