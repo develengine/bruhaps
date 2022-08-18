@@ -551,23 +551,25 @@ static void bagX11_translateEvent(bagE_Event *events, XEvent *xevent)
 
         case GenericEvent:
             if (xevent->xcookie.extension == bagX11.xiOpCode
-             && XGetEventData(bagX11.display, &xevent->xcookie)
-             && xevent->xcookie.evtype == XI_RawMotion
-            ) {
-                XIRawEvent* rawEvent = (XIRawEvent*)xevent->xcookie.data;
+             && XGetEventData(bagX11.display, &xevent->xcookie)) {
+                if (xevent->xcookie.evtype == XI_RawMotion) {
+                    XIRawEvent* rawEvent = (XIRawEvent*)xevent->xcookie.data;
 
-                if (rawEvent->valuators.mask_len) {
-                    event->data.mouseMotion.x = 0;
-                    event->data.mouseMotion.y = 0;
+                    if (rawEvent->valuators.mask_len) {
+                        event->data.mouseMotion.x = 0;
+                        event->data.mouseMotion.y = 0;
 
-                    if (XIMaskIsSet(rawEvent->valuators.mask, 0))
-                        event->data.mouseMotion.x = (int)rawEvent->raw_values[0];
-                    if (XIMaskIsSet(rawEvent->valuators.mask, 1))
-                        event->data.mouseMotion.y = (int)rawEvent->raw_values[1];
+                        if (XIMaskIsSet(rawEvent->valuators.mask, 0))
+                            event->data.mouseMotion.x = (int)rawEvent->raw_values[0];
+                        if (XIMaskIsSet(rawEvent->valuators.mask, 1))
+                            event->data.mouseMotion.y = (int)rawEvent->raw_values[1];
 
-                    if (event->data.mouseMotion.x != 0 || event->data.mouseMotion.y != 0)
-                        event->type = bagE_EventMouseMotion;
+                        if (event->data.mouseMotion.x != 0 || event->data.mouseMotion.y != 0)
+                            event->type = bagE_EventMouseMotion;
+                    }
                 }
+
+                XFreeEventData(bagX11.display, &xevent->xcookie);
             }
             break;
     }

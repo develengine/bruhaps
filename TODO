@@ -1,8 +1,9 @@
-- collision engine
-- windowing and text
-- sound engine
+[ ] Do a code cleanup.
+[ ] Fix up all the memory leaks.
+[ ] Optimize for performance.
 
-- animation system
-
-- explicit kys
-- file format rework
+[ ] Fix dae_parser to work with incomplete dae files.
+[ ] Add another mob into the game.
+[ ] Implement better grass (texture + tile variation)
+[ ] Implement tall grass and leaves.
+[ ] Implement circle shadows.
