@@ -522,6 +522,9 @@ void restartLevel(void)
 {
     // FIXME: this should work for other levels as well
 
+    game.headCount = 0;
+    player.carryHeadCount = 0;
+
     levelUnload(LevelBruh);
     levelLoad(LevelBruh);
 }

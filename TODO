@@ -1,3 +1,8 @@
+# Bugs:
+[ ] After death restart the number of heads doesn't reset
+
+
+# TODO:
 [ ] Do a code cleanup.
 [ ] Fix up all the memory leaks.
 [ ] Optimize for performance.
