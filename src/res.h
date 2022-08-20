@@ -66,4 +66,6 @@ void modelFree(Model model);
 Animated animatedLoad(const char *path);
 void animatedFree(Animated animated);
 
+void armatureFree(Armature armature);
+
 #endif

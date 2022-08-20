@@ -64,6 +64,7 @@ int bagE_main(int argc, char *argv[])
 
     bagE_setWindowTitle("BRUHAPS");
 
+
     // TODO: for now the game is frame dependent
     //       swap interval must be set to 1
     bagE_setSwapInterval(1);
@@ -257,10 +258,12 @@ int bagE_main(int argc, char *argv[])
         bagE_swapBuffers();
     }
   
+    /* audio before all the sounds get freed */
+    exitAudio();
+
     exitSplash();
     exitGame();
     exitGUI();
-    exitAudio();
 
     return 0;
 }

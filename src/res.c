@@ -137,11 +137,15 @@ void animatedFree(Animated animated)
     modelFree(animated.model);
     free(animated.vertexWeights);
     free(animated.armature.ibms);
-    free(animated.armature.frameCounts);
-    free(animated.armature.timeStamps);
-    free(animated.armature.transforms);
-    free(animated.armature.childCounts);
-    free(animated.armature.hierarchy);
+    armatureFree(animated.armature);
 }
 
+void armatureFree(Armature armature)
+{
+    free(armature.frameCounts);
+    free(armature.timeStamps);
+    free(armature.transforms);
+    free(armature.childCounts);
+    free(armature.hierarchy);
+}
 

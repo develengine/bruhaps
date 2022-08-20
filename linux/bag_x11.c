@@ -421,8 +421,10 @@ int main(int argc, char *argv[])
 
     int programReturn = bagE_main(argc, argv);
 
+    gladLoaderUnloadGL();
     glXMakeCurrent(bagX11.display, 0, 0);
     glXDestroyContext(bagX11.display, bagX11.context);
+
     XDestroyWindow(bagX11.display, bagX11.window);
     XFreeColormap(bagX11.display, colormap);
     XCloseDisplay(bagX11.display);

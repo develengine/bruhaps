@@ -36,9 +36,12 @@ void initGUI(void)
 
 void exitGUI(void)
 {
+    glDeleteVertexArrays(1, &gui.dummyVao);
+
     glDeleteProgram(gui.rectProgram);
     glDeleteProgram(gui.textProgram);
     glDeleteProgram(gui.imageProgram);
+
     glDeleteTextures(1, &gui.textFont);
 }
 

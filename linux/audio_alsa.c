@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <limits.h>
 #include <math.h>
+#include <xmmintrin.h>
 
 
 static pthread_t thread;
@@ -209,6 +210,8 @@ static AudioInfo audioInfo;
 void initAudioEngine(AudioInfo info)
 {
     audioInfo = info;
+
+    _mm_mfence();
 
     int ret = pthread_create(&thread, NULL, startAlsa, &audioInfo);
 

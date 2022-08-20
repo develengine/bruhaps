@@ -324,6 +324,9 @@ static void levelExits(void)
 
 void levelLoad(LevelID id)
 {
+    game.headCount = 0;
+    player.carryHeadCount = 0;
+
     switch (id) {
         case LevelBruh:  levelBruhLoad(); break;
         case LevelCount: break;
@@ -493,8 +496,6 @@ void initGame(void)
     game.platform = loadModelObject("res/platform.model");
     game.platformTexture = createTexture("res/platform.png");
 
-    // FIXME: everything in this function is not freed but it 
-    //        unironically doesn't matter since the OS is unretarded
     game.head        = loadModelObject("res/head.model");
     game.headTexture = createTexture("res/stone.png");
 
@@ -522,9 +523,6 @@ void restartLevel(void)
 {
     // FIXME: this should work for other levels as well
 
-    game.headCount = 0;
-    player.carryHeadCount = 0;
-
     levelUnload(LevelBruh);
     levelLoad(LevelBruh);
 }
@@ -539,6 +537,39 @@ void exitGame(void)
     levelExits();
 
     freeModelObject(game.boxModel);
+    freeModelObject(game.platform);
+    freeModelObject(game.gatling);
+    freeModelObject(game.gatlingBase);
+    freeModelObject(game.glock);
+    freeModelObject(game.glockBase);
+    freeModelObject(game.head);
+
+    glDeleteTextures(1, &game.guiAtlas);
+    glDeleteTextures(1, &game.defaultTerrainAtlas);
+    glDeleteTextures(1, &game.defaultSkybox);
+    glDeleteTextures(1, &game.platformTexture);
+    glDeleteTextures(1, &game.gunTexture);
+    glDeleteTextures(1, &game.headTexture);
+
+    glDeleteProgram(game.terrainProgram);
+    glDeleteProgram(game.skyboxProgram);
+    glDeleteProgram(game.textureProgram);
+    glDeleteProgram(game.lightProgram);
+    glDeleteProgram(game.metalProgram);
+
+    for (int i = 0; i < MobCount; ++i) {
+        armatureFree(game.mobArmatures[i]);
+        freeAnimatedObject(game.mobObjects[i].animated);
+        glDeleteTextures(1, &(game.mobObjects[i].texture));
+    }
+
+    for (int i = 0; i < PickupCount; ++i) {
+        freeModelObject(game.pickupObjects[i].model);
+        glDeleteTextures(1, &(game.pickupObjects[i].texture));
+    }
+
+    for (int i = 0; i < SoundCount; ++i)
+        free(game.sounds[i]);
 }
 
 

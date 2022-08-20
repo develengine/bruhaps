@@ -118,7 +118,9 @@ void initSplash(void)
 
 void exitSplash(void)
 {
-    // TODO: free things
+    glDeleteTextures(1, &brugTexture);
+    freeModelObject(brugModel);
+    glDeleteTextures(1, &envMap);
 }
 
 

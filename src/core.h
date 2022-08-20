@@ -28,6 +28,12 @@ typedef struct
     unsigned weights;
 } AnimatedObject;
 
+static inline void freeAnimatedObject(AnimatedObject object)
+{
+    freeModelObject(object.model);
+    glDeleteBuffers(1, &object.weights);
+}
+
 
 void GLAPIENTRY openglCallback(
         GLenum source,
