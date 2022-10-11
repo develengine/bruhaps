@@ -2,6 +2,8 @@
 
 
 # TODO:
+[ ] Remove framerate dependency.
+
 [ ] Do a code cleanup.
 [ ] Fix up all the memory leaks.
 [ ] Optimize for performance.
